@@ -76,6 +76,26 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   die vom portablen Pfad abweichen (Median 54 dB Rauschabstand untereinander). Referenz ist der portable Pfad.
 - **Tonhöhe** (Simulator, `tests/fm6.txt`-Aufnahmen): C4 auf E.PIANO 261,88 Hz (Soll 261,63 Hz, DTUN 2),
   FM ORGAN 130,83 Hz (16', Soll 130,81 Hz).
+- **Knacken beim Wiederanschlag** (Fabios Browser-Test 26.10., `docs/tests/FM6.md`: „knackt“ bei sehr schnellem
+  Spiel): msfas Note-Start (Port: `fm_note_init`) setzt bei jedem Operator Phase und Hüllkurve auf 0, und der
+  Stimmen-Host gibt einem noch klingenden Ton dieselbe Stimme (`dsp/engines.c`, „the same note again“). Gemessen im
+  Simulator (Töne über MIDI, ca. 40 ms Abstand; gezählt: Samples, deren zweite Differenz mehr als das Fünffache der
+  größten in den 10 ms davor ist):
+
+  | Fall | vorher | mit `fm_note_retrigger` |
+  | --- | --- | --- |
+  | C4 16-mal, GLASS BELL / FM ORGAN | 15 / 15 | 0 / 0 |
+  | Akkord C-E-G 12-mal: E.PIANO, GLASS BELL, BRASS, MARIMBA | 11, 9, 11, 9 | 4, 0, 0, 2 |
+  | Akkord 12-mal: FM BASS, FM ORGAN, WARM PAD, CLAV | 0 | 0 |
+  | Glissando aus 16 Tönen (ab dem 7. gestohlene Stimmen), GLASS BELL / FM ORGAN | 0 / 0 | 0 / 0 |
+
+  Die übrigen Treffer sind kleine Anschläge nach fast völliger Stille (zweite Differenz 21–42, davor 2–4; vorher an
+  denselben Stellen bis 204). Erster Versuch (jeder Operator macht weiter) machte FM BASS schlechter (0 → 5), weil
+  ein schon unhörbarer Ton dann an alter Phase statt bei 0 neu einsetzt; daher nur Operatoren über −42 dB
+  (`RETRIG_KEEP`). Frische Noten laufen wie bisher über `fm_note_init` (unverändert). Nur Simulator.
+- **Browser-Emulator:** rechnet das ganze Gerät im Audio-Thread, je 128 Samples, auch das Neuzeichnen des
+  Bildschirms (`base/web/emu/emu_web.c` `web_render`, `worklet.js`). Ob das bei schnellem Spiel Aussetzer macht, ist
+  nicht gemessen; die Seite zeigt die mittlere Last („… uses …% of this computer's time“).
 
 ## Neuheits-Check der Signatur-Ideen
 

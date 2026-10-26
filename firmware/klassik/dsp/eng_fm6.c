@@ -183,7 +183,10 @@ static fm_note_t *fm6_voice(struct track *t, voice_t *v) { return &fm6_note[t - 
 static void fm6_note_on(struct track *t, voice_t *v)
 {
     fm6_sync(t);
-    fm_note_init(fm6_voice(t, v), fm6_part[t - trk].patch, v->note, v->vel);
+    if (retrig)                                     /* the voice still sounds: on from where it is, no click */
+        fm_note_retrigger(fm6_voice(t, v), fm6_part[t - trk].patch, v->note, v->vel);
+    else
+        fm_note_init(fm6_voice(t, v), fm6_part[t - trk].patch, v->note, v->vel);
     fm_lfo_keydown(&fm6_part[t - trk].lfo);
 }
 

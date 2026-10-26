@@ -214,3 +214,30 @@ wait 1000
 wavstop
 wait 8000
 expect voices 0
+# the same key again while it rings (GLASS BELL): its voice goes on from where it is (msfa.c fm_note_retrigger), no
+# step in the wave as a fresh start would make (fm6-repeat.wav; the measurement in docs/RESEARCH.md)
+spin PRESET -6
+wait 50
+expect preset 1
+wav fm6-repeat.wav
+midi 90 3C 64
+wait 40
+midi 80 3C 00
+midi 90 3C 64
+wait 40
+midi 80 3C 00
+midi 90 3C 64
+wait 40
+midi 80 3C 00
+midi 90 3C 64
+wait 40
+midi 80 3C 00
+midi 90 3C 64
+wait 40
+midi 80 3C 00
+midi 90 3C 64
+wait 40
+midi 80 3C 00
+expect voices 1
+wait 3000
+wavstop

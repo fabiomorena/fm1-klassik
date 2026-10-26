@@ -33,6 +33,7 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `docs/design/` | Mockups aller Screens (HTML + PNG, Übersicht `index.html`, siehe `docs/design/README.md`), **maßgebliche Design-Quelle** |
 | `docs/RESEARCH.md` | Recherche mit Quellen: Hardware, Firmwares, Engines, Lizenzen, Entwicklungsumgebung |
 | `docs/DECISIONS.md` | Entscheidungen mit Datum und Status, offene Punkte |
+| `docs/tests/` | Testprotokolle zum Abhaken (Browser-Emulator): Fabio füllt sie aus, Claude wertet sie am Ende der Datei aus |
 
 ## Bauen und testen (Mac, im Repo-Stamm)
 ```

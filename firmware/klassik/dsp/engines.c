@@ -22,6 +22,7 @@ typedef struct track {
     voice_t v[NVOICE];
 } track_t;
 static track_t trk[NPART];
+static int retrig;                                  /* the voice a note_on starts still sounds (FM6 goes on from it) */
 
 #include "dsp.c"
 #include "eng_analog.c"
@@ -207,6 +208,7 @@ static void voice_start(int note, int vel)
         v->fine = 0;
         if (!sounding)
             v->env = v->env_out = 0;
+        retrig = sounding;
         en->note_on(t, v);
         if (sounding) {
             v->ph[0] = ph0;

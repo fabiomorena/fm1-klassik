@@ -14,6 +14,8 @@
  *   - no controllers (pitch bend at its middle), no NEON kernels; FmCore's two buses shared by every voice (one
  *     render at a time)
  *   - added: fm_note_algorithm, fm_note_done, fm_carrier; the LFO's random state starts at 0
+ *   - added: fm_note_retrigger, a sounding voice started again without a step (its operators' phases, gains and
+ *     envelope levels kept, and its feedback)
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License in LICENSE beside this file, or at
  * http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software
@@ -492,6 +494,35 @@ void fm_note_init(fm_note_t *n, const uint8_t patch[FM_PATCH], int midinote, int
     n->pitchmodsens = PITCHMODSENSTAB[patch[143] & 7];
     n->fb_buf[0] = n->fb_buf[1] = 0;
     n->down = 1;
+}
+
+/* added: fm_note_init for a voice that still sounds (its key again, or the voice taken for another note). There
+ * every operator would start at phase 0 and silence: a step in the wave as large as the operator, a click. Here an
+ * operator still above RETRIG_KEEP goes on from its phase, gain and envelope level (the attack rises from there, or
+ * falls to its first level); a quieter one starts afresh, its step under RETRIG_KEEP, and keeps the attack that
+ * oscillator key sync gives a note. The feedback goes on (its samples are the quiet operator's when it starts). */
+#define RETRIG_KEEP (1 << 18)                       /* 1/128 of an operator at full level (2^25): -42 dB */
+void fm_note_retrigger(fm_note_t *n, const uint8_t patch[FM_PATCH], int midinote, int velocity)
+{
+    uint32_t phase[6];
+    int32_t gain[6], level[6], fb0 = n->fb_buf[0], fb1 = n->fb_buf[1];
+    int op;
+    for (op = 0; op < 6; op++) {
+        phase[op] = n->op[op].phase;
+        gain[op] = n->op[op].gain[1];
+        level[op] = n->env[op].level;
+    }
+    fm_note_init(n, patch, midinote, velocity);
+    for (op = 0; op < 6; op++) {
+        if (gain[op] < RETRIG_KEEP)
+            continue;
+        n->op[op].phase = phase[op];
+        n->op[op].gain[1] = gain[op];
+        n->env[op].level = level[op];
+        env_advance(&n->env[op], 0);                /* rising or falling from that level */
+    }
+    n->fb_buf[0] = fb0;
+    n->fb_buf[1] = fb1;
 }
 
 void fm_note_compute(fm_note_t *n, int32_t *buf, int32_t lfo_val, int32_t lfo_delay)

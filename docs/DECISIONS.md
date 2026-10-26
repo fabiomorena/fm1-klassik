@@ -24,6 +24,8 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 | 26.10. | K1 wählt die Engines in der Reihenfolge des Racks (FM6, VA, PD, ORGAN); die Engine-Nummern bleiben (FM6 = 3) | Bedienung folgt dem Bildschirm; Tests und Speicherformat bleiben lesbar | umgesetzt |
 | 26.10. | Speicherformat `KLS3`: Einstellungen von v0.1 werden verworfen | ein USER-Sound mehr; noch kein Gerät im Einsatz | umgesetzt |
 | 26.10. | Die CI baut bei jedem Push auch den Browser-Emulator (`web.yml`, Emscripten 6.0.13 aus emsdk) | ein Namenskonflikt mit `emu_web.c` (seit v0.1) fiel nur im Web-Build auf | Fabios Entscheidung, umgesetzt |
+| 26.10. | Manuelle Tests als Protokoll zum Abhaken in `docs/tests/` (erstes: `FM6.md`) | Fabio testet im Browser und gibt die Ergebnisse gesammelt zurück | Fabios Wunsch (Ort von Claude gewählt); FM6 getestet, alles wie erwartet bis auf Knacken bei sehr schnellem Spiel |
+| 26.10. | FM6: Ein Wiederanschlag einer noch klingenden Stimme macht je Operator dort weiter, wo er ist (über −42 dB); leisere Operatoren starten frisch (`fm_note_retrigger` in `msfa.c`) | msfas Note-Start setzt Phase und Hüllkurve auf 0: Knacken (Messung in RESEARCH.md) | Fabios Entscheidung, umgesetzt, im Simulator gemessen; im Browser noch anzuhören |
 
 ## Offene Punkte
 
@@ -32,6 +34,7 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 - Geräte-Build (Docker, JieLi-Toolchain) einrichten und im fm1-emu testen.
 - Beim Kauf des Geräts: ausgelieferte Firmware-Version prüfen (Werkzeuge sind auf V15 ausgelegt).
 - Lizenz MPL-2.0 bestätigen oder ändern.
-- FM6-Presets nach Gehör prüfen (`fm6-*.wav` aus `tests/fm6.txt`, Browser-Emulator) und nachstimmen.
+- FM6-Knacken bei sehr schnellem Spiel im Browser nach `fm_note_retrigger` erneut anhören; bleibt es, die Last des
+  Emulators prüfen (RESEARCH.md, „Browser-Emulator“).
 - FM6-Rechenlast auf dem Gerät messen (Schätzung: 7–13 % von 360 MHz bei sechs Stimmen, unsicher).
 - FM6-Edit-Seite nach dem Mockup `Edit-FM6` (Algorithmus-Grafik, Pegel je Operator).

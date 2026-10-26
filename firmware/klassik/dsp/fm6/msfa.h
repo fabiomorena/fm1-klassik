@@ -58,6 +58,8 @@ void fm_note_keyup(fm_note_t *n);
  * of its carriers sounds any more */
 void fm_note_algorithm(fm_note_t *n, int algorithm, int feedback);
 int fm_note_done(const fm_note_t *n);
+/* added: fm_note_init for a voice still sounding, going on from where its operators are (no click) */
+void fm_note_retrigger(fm_note_t *n, const uint8_t patch[FM_PATCH], int midinote, int velocity);
 int fm_carrier(int algorithm, int op);  /* op 0..5 as the patch has them (0 = OP6): 1 = it is heard */
 
 /* the LFO: its six parameters (the patch's bytes 137..142), a value 0..1 (Q24) and the delay's 0..1 a block */
