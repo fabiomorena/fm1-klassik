@@ -7,7 +7,7 @@
 #pragma once
 #include <stdint.h>
 
-enum { KL_ANALOG, KL_PHASE, KL_WHEEL, KL_NENG };
+enum { KL_ANALOG, KL_PHASE, KL_WHEEL, KL_FM6, KL_NENG };
 enum { KL_INT, KL_PCT, KL_ENUM };           /* how a parameter's value reads */
 
 typedef struct {
@@ -18,7 +18,7 @@ typedef struct {
     uint8_t fmt;                            /* KL_* */
 } kl_param_t;
 
-const char *kl_engine_name(int e);          /* Felucca-Engines' name: "ANALOG", "PHASE", "WHEEL" */
+const char *kl_engine_name(int e);          /* the engine's own name: "ANALOG", "PHASE", "WHEEL", "FM6" */
 int kl_presets(int e);
 const char *kl_preset_name(int e, int p);
 void kl_preset_values(int e, int p, int8_t v[8]);   /* the preset's eight parameters */

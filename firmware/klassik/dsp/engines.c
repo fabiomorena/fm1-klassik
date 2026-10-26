@@ -2,11 +2,11 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments (the voice start and the render loop,
  *   from Felucca-Engines' tests/fe_host.c)
  * Copyright (C) 2026 fabiomorena */
-/* KLASSIK's engine host: three of Felucca-Engines' MIT engines (ANALOG, PHASE, WHEEL) on one part of six voices.
- * Built as one translation unit with the engines, as felucca_engine.h asks. A first version: its envelope is a
- * plain ADSR of its own (not Felucca's voice.c), and there is no LFO, glide, unison or effect yet. The eight
- * parameters come from the app with each sound asked for (an edit plays from the next block: the engines read
- * them every block); the preset gives the rest. */
+/* KLASSIK's engine host: three of Felucca-Engines' MIT engines (ANALOG, PHASE, WHEEL) and KLASSIK's FM6 (eng_fm6.c,
+ * on msfa) on one part of six voices. Built as one translation unit with the engines, as felucca_engine.h asks. A
+ * first version: its envelope is a plain ADSR of its own (not Felucca's voice.c), and there is no LFO, glide, unison
+ * or effect yet; FM6 has envelopes of its own (ownenv). The eight parameters come from the app with each sound asked
+ * for (an edit plays from the next block: the engines read them every block); the preset gives the rest. */
 #include <stdint.h>
 #include <string.h>
 #include "klassik_dsp.h"
@@ -16,7 +16,7 @@
 #include "fe_tables.h"
 #include "felucca_engine.h"
 
-enum { P_ATK, P_REL, P_FTYPE, P_E0, P_E1, P_E2, P_E3, P_E4, P_E5, P_E6, P_E7, P_COUNT };
+enum { P_ATK, P_REL, P_FTYPE, P_E0, P_E1, P_E2, P_E3, P_E4, P_E5, P_E6, P_E7, P_PRESET, P_COUNT };   /* P_PRESET: FM6's */
 typedef struct track {
     int16_t p[P_COUNT];
     voice_t v[NVOICE];
@@ -27,8 +27,9 @@ static track_t trk[NPART];
 #include "eng_analog.c"
 #include "eng_phase.c"
 #include "eng_wheel.c"
+#include "eng_fm6.c"
 
-static const engine_t *const ENG[KL_NENG] = {&ENG_ANALOG, &ENG_PHASE, &ENG_WHEEL};
+static const engine_t *const ENG[KL_NENG] = {&ENG_ANALOG, &ENG_PHASE, &ENG_WHEEL, &ENG_FM6};
 
 /* ------------------------------------------------------------ the app's questions --- */
 static int eng_ok(int e) { return e >= 0 && e < KL_NENG; }
@@ -148,6 +149,7 @@ static void load(int e, int p)
     t->p[P_ATK] = pr->env[0];
     t->p[P_REL] = pr->env[3];
     t->p[P_FTYPE] = 0;
+    t->p[P_PRESET] = (int16_t)p;
     memcpy(env_set, pr->env, sizeof env_set);
     env_fenv = pr->fenv;
     mono_mode = pr->mono;
@@ -298,12 +300,21 @@ void kl_render(int32_t *mono, uint32_t n)
             uint32_t base;
             if (!v->active)
                 continue;
-            a = env = env_tick(v);
-            if (en->amp)
-                a = en->amp(t, v, a);
-            if (!v->active)
-                continue;
-            a = a * (40 + v->vel) / 167;               /* velocity: 0.24 .. 1 */
+            if (en->ownenv) {                           /* its own envelopes and velocity: full, until done */
+                if (en->done(t, v)) {
+                    v->active = 0;
+                    v->stage = 0;
+                    continue;
+                }
+                a = env = 1 << 15;
+            } else {
+                a = env = env_tick(v);
+                if (en->amp)
+                    a = en->amp(t, v, a);
+                if (!v->active)
+                    continue;
+                a = a * (40 + v->vel) / 167;           /* velocity: 0.24 .. 1 */
+            }
             base = pitch_inc((uint32_t)clamp(v->pitch16, 0, 2047));
             memset(&m, 0, sizeof m);
             m.pitch16 = v->pitch16;

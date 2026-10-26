@@ -16,6 +16,13 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 | 26.10. | Repo `fabiomorena/fm1-klassik`, CI mit Host-Tests | Sicherung und automatische Prüfung | umgesetzt, CI grün |
 | 26.10. | Arbeit nur noch in PyCharm mit Claude Code; `docs/design/` ersetzt das Canvas | Fabios Wunsch | fest |
 | 26.10. | v0.1: EDIT mit zwei Seiten à vier Parametern auf K1–K4, Live-Glyphe, ein USER-Sound je Engine (SAVE); Hüllkurve, Pegel und Regler-Beschleunigung erst mit Gerät | acht Parameter je Engine (`engine_t.edit[8]`, `page_title[2]`) passen auf K1–K4; Feinabstimmung braucht Hardware | umgesetzt, im Simulator getestet (Commit `aa1433c`) |
+| 26.10. | Edit-Seiten: das Mockup `Edit-VA` (fünf Seiten, Filterkurve) bleibt Ziel; v0.1 (zwei Seiten, große Glyphe) ist eine Zwischenstufe | Fabios Entscheidung | fest |
+| 26.10. | FM6 auf msfa aus dem Original-Repo von Google (Apache-2.0), nach C portiert; Tabellen beim Build (Python) | der Build ist C99 ohne `double` (`base/tools/build.py`), Dexed ist GPL-3.0 | umgesetzt, im Simulator getestet; gegen das Original geprüft (RESEARCH.md) |
+| 26.10. | FM6-Presets: acht eigene Klänge, keine DX7-Werksklänge | Rechte an den Werksklängen bei Yamaha, für eine freie Firmware ungeklärt | Fabios Entscheidung, fest; Klang nach Gehör noch zu prüfen |
+| 26.10. | FM6-Parameter als absolute Makros: ALGO, FEEDBK, MOD, DTUN / ATK, DEC, SUS, REL; ein Preset ist eine DX7-Stimme plus die acht Werte, die sie beschreiben, gedreht wird relativ dazu | Glyphen der Presets unterscheiden sich; die Stimme behält ihren Charakter | Fabios Entscheidung, fest; Bearbeitung je Operator (Mockup `Edit-FM6`) bleibt Ziel |
+| 26.10. | Keine 64-Bit-Multiplikation inline in DSP-Schleifen; FM6-Gain in 32 Bit, `app_render` über `noinline`-Funktion | `base/bsp/docs/CPU.md` (Rechenfehler neben Ladebefehlen) | umgesetzt; Genauigkeit gemessen (RESEARCH.md) |
+| 26.10. | K1 wählt die Engines in der Reihenfolge des Racks (FM6, VA, PD, ORGAN); die Engine-Nummern bleiben (FM6 = 3) | Bedienung folgt dem Bildschirm; Tests und Speicherformat bleiben lesbar | umgesetzt |
+| 26.10. | Speicherformat `KLS3`: Einstellungen von v0.1 werden verworfen | ein USER-Sound mehr; noch kein Gerät im Einsatz | umgesetzt |
 
 ## Offene Punkte
 
@@ -24,3 +31,6 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 - Geräte-Build (Docker, JieLi-Toolchain) einrichten und im fm1-emu testen.
 - Beim Kauf des Geräts: ausgelieferte Firmware-Version prüfen (Werkzeuge sind auf V15 ausgelegt).
 - Lizenz MPL-2.0 bestätigen oder ändern.
+- FM6-Presets nach Gehör prüfen (`fm6-*.wav` aus `tests/fm6.txt`, Browser-Emulator) und nachstimmen.
+- FM6-Rechenlast auf dem Gerät messen (Schätzung: 7–13 % von 360 MHz bei sechs Stimmen, unsicher).
+- FM6-Edit-Seite nach dem Mockup `Edit-FM6` (Algorithmus-Grafik, Pegel je Operator).

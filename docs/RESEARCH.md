@@ -56,6 +56,27 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
 | Juno | KR-106 | GPL-3.0, CPU-hungrig | kayrock.org/kr106, altstrument.org (FM-106) |
 | Strings | kein MIT-Kandidat gefunden; Plan: ANALOG + Ensemble-Chorus | – | – |
 
+## FM6: msfa (Stand 26.10.2026)
+
+- **Quelle:** github.com/google/music-synthesizer-for-android, Ordner `app/src/main/jni/`. Lizenz Apache-2.0 (laut
+  GitHub-API; Lizenztext `COPYING`, byteweise gleich mit apache.org/licenses/LICENSE-2.0.txt), Repo archiviert,
+  letzter Push 23.11.2021, keine `NOTICE`-Datei im Stamm. Dateiköpfe: „Copyright 2012/2013 Google Inc“.
+- **Übernommen** (nach C portiert, `firmware/klassik/dsp/fm6/msfa.c`): dx7note, env, pitchenv, lfo, fm_core,
+  fm_op_kernel (portabler Teil), sin, exp2, freqlut. Nicht übernommen: synth_unit (MIDI, Stimmen), Filter, NEON.
+- **Warum C:** `base/tools/build.py` übersetzt nur C (`-std=c99` bzw. `gnu99`) und meldet „soft-double routines“
+  als Fehler; msfa ist C++ und füllt seine Tabellen beim Start mit `double`.
+- **Gerät:** `base/bsp/docs/CPU.md`: Inline-64-Bit-Multiplikationen neben 16-/32-Bit-Ladebefehlen lassen auf dem
+  FM-1 (360 MHz) gelegentlich ein Register um ein Bit falsch; Abhilfe: Multiplikation in einer `noinline`-Funktion.
+  msfa multipliziert pro Sample mit 64 Bit (`sin.h`, `fm_op_kernel.cc`). Die Felucca-Engines nutzen kein `int64_t`.
+- **Prüfung des Ports** (Mac, 64 zufällige gültige DX7-Stimmen, alle Algorithmen und Feedback-Stufen, je 64 000
+  Samples, Block 32): Tabellen bitgleich (20 484 B); mit exakter 64-Bit-Gain-Multiplikation ist der Port
+  **bitgleich** mit dem Original (16 384 000 B). Mit der 32-Bit-Gain-Multiplikation des Ports: Rauschabstand je
+  Stimme im Median 89,6 dB, schlechtester Fall 62,2 dB (Feedback 7). Nur Simulator, nicht auf Hardware.
+- **Achtung beim Vergleichen:** Auf arm64 (Apple Silicon) nimmt msfa seine NEON-Kernel (`synth.h`: `__aarch64__`),
+  die vom portablen Pfad abweichen (Median 54 dB Rauschabstand untereinander). Referenz ist der portable Pfad.
+- **Tonhöhe** (Simulator, `tests/fm6.txt`-Aufnahmen): C4 auf E.PIANO 261,88 Hz (Soll 261,63 Hz, DTUN 2),
+  FM ORGAN 130,83 Hz (16', Soll 130,81 Hz).
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

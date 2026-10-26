@@ -22,9 +22,12 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `base/` | fm1-base (Submodul, MPL-2.0): Plattform, Host-Simulator, Browser-Emulator, `tools/build.py`. **Nicht ändern.** |
 | `engines/` | Felucca-Engines (Submodul, MIT): ANALOG, PHASE, WHEEL, LOFI, TRIO, NOISE. **Nicht ändern.** |
 | `firmware/klassik/app.c`, `app.h` | die App (Unity-Build nach der Plattform): UI, Eingabe, Einstellungen, Audio-Ausgabe |
-| `firmware/klassik/dsp/engines.c` | Stimmen-Host (o2-Einheit, MIT, nach `engines/tests/fe_host.c`): 1 Part, 6 Stimmen, eigene einfache ADSR |
+| `firmware/klassik/dsp/engines.c` | Stimmen-Host (o2-Einheit, MIT, nach `engines/tests/fe_host.c`): 1 Part, 6 Stimmen, eigene einfache ADSR; FM6 mit eigenen Hüllkurven (`ownenv`, `done`) |
+| `firmware/klassik/dsp/eng_fm6.c` | FM6 als `engine_t` (MPL-2.0): acht Makros, eigene Presets (DX7-Stimmen) |
+| `firmware/klassik/dsp/fm6/` | msfa nach C portiert (o2-Einheit, Apache-2.0, `LICENSE`); Änderungen im Dateikopf von `msfa.c` |
+| `firmware/klassik/tools/gen_fm6_tables.py` | rechnet msfas Tabellen beim Build (`gen` → `fm6_tables.h`, Apache-2.0) |
 | `firmware/klassik/dsp/klassik_dsp.h` | Schnittstelle App ↔ DSP |
-| `firmware/klassik/fm1.toml` | Build-Einstellungen (o2, include, gen für `fe_tables.h`) |
+| `firmware/klassik/fm1.toml` | Build-Einstellungen (o2, include, gen für `fe_tables.h` und `fm6_tables.h`) |
 | `firmware/klassik/tests/*.txt` | Host-Tests (Syntax: Kopfkommentar von `base/host/plat_host.c`; eigene Prüfungen über `app_expect`) |
 | `docs/CONCEPT.md` | Konzept und Fahrplan |
 | `docs/design/` | Mockups aller Screens (HTML + PNG, Übersicht `index.html`, siehe `docs/design/README.md`), **maßgebliche Design-Quelle** |
@@ -50,17 +53,23 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   Eine Zeichenfläche ist höchstens 240×144: in Streifen zeichnen.
 - Budget (base/README.md): 581 KB App-Slot, 96 KB RAM für .data/.bss, 336 KB Pool.
 - Den Update-Weg der Plattform nie entfernen oder umgehen (sonst ist ein Gerät ohne Rückweg gesperrt).
+- Keine 64-Bit-Multiplikation inline in DSP-Schleifen: Neben Ladebefehlen rechnet der FM-1 dann gelegentlich falsch
+  (`base/bsp/docs/CPU.md`). Stattdessen 32 Bit mit Rechenweg, oder eine `noinline`-Hilfsfunktion. Kein `double`.
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
-## Klang (Stand v0)
-- Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL. Je Engine acht Parameter (`engines/src/felucca_engine.h`:
+## Klang (Stand v0.2)
+- Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL, FM6 = msfa (`KL_FM6`, im Rack links von VA; K1 folgt der
+  Rack-Reihenfolge). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
   `engine_t.edit[8]`, `page_title[2]`, `presets`). Festkomma, keine Allokation.
+- FM6: Presets sind ganze DX7-Stimmen plus acht beschreibende Werte; die Makros verschieben die Stimme relativ zum
+  Preset (Regel im Kopf von `eng_fm6.c`). ALGO/FEEDBK live, die anderen ab der nächsten Note. Der Port ist gegen
+  das Original-msfa (portabler Pfad, nicht NEON) geprüft, siehe `docs/RESEARCH.md`.
 - Pegel: ×32 bei vollem MASTER; eine Stimme misst im Simulator −31,5 dBFS bei MASTER 50 % (Gain quadratisch:
   0,5² = 0,25 ≈ −12 dB), also etwa −19,5 dBFS bei vollem MASTER. Feinabstimmung erst mit Gerät.
 
 ## Lizenz-Regeln
-- Eigene Dateien MPL-2.0, `dsp/engines.c` MIT. **Keine GPL-Quellen** übernehmen (z. B. Dexed, Felucca-App-Code,
-  KR-106, Shine On). Erlaubt und geplant: Felucca-Engines (MIT), msfa (Apache-2.0) für FM6, Open303 (MIT) für ACID.
+- Eigene Dateien MPL-2.0, `dsp/engines.c` MIT, `dsp/fm6/` und `tools/gen_fm6_tables.py` Apache-2.0.
+  **Keine GPL-Quellen** übernehmen (z. B. Dexed, Felucca-App-Code, KR-106, Shine On). Erlaubt und geplant: Felucca-Engines (MIT), msfa (Apache-2.0) für FM6, Open303 (MIT) für ACID.
 - Jede neue Quelle vor der Übernahme in `LICENSING.md` eintragen.
 - `id_prefix = "FM-1_77"` ist noch nicht auf Kollisionen geprüft.
 
@@ -83,7 +92,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | --- | --- | --- |
 | v0 | Rack, VA / PD / ORGAN, Glyphen, Speichern, Host-Tests, CI | erledigt (Simulator) |
 | v0.1 | Edit-Seiten (EDIT → 2 Seiten × 4 Parameter auf K1–K4), Live-Glyphe, eigener Sound pro Engine (SAVE), README-Hinweis fribidi/.venv, Tests mit Screenshots | erledigt (Simulator) |
-| v0.2 | FM6 (msfa, Apache-2.0) | offen |
+| v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | ACID (Open303, MIT), STRINGS (ANALOG + Ensemble-Chorus) | offen |
 | v0.4 | Preset-Liste, Glyphen-Browser | offen |
 | v0.5 | Sequencer, Mixer, Effekte | offen |

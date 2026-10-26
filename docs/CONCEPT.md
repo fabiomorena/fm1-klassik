@@ -1,6 +1,6 @@
 # KLASSIK – Konzept und Fahrplan
 
-Design-Canvas mit allen Screens (240×240, in 2× gezeichnet): https://claude.ai/artifact/UXJPpB8aJ7mUdHbRiAjrCc
+Mockups aller Screens (240×240, in 2× gezeichnet): [docs/design/](design/README.md), Übersicht `docs/design/index.html`.
 
 ## Leitidee
 
@@ -27,7 +27,7 @@ gerade halten).
 | v0 | Rack, VA / PD / ORGAN, Glyphen, Speichern, Host-Tests | erledigt (Simulator) |
 | v0.1 | Edit-Seiten je Engine (zwei Seiten à vier Regler), Live-Glyphe, USER-Sound je Engine (SAVE) | erledigt (Simulator) |
 | mit Gerät | eigene Hüllkurve verfeinern, Pegel auf Hardware einmessen, Beschleunigung der Regler | offen |
-| v0.2 | FM6 (msfa, Apache-2.0) | offen |
+| v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | ACID (Open303, MIT), STRINGS (ANALOG + Ensemble-Chorus) | offen |
 | v0.4 | Preset-Liste und Glyphen-Browser | offen |
 | v0.5 | Sequencer, Mixer, Effekte | offen |

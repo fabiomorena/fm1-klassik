@@ -1,12 +1,14 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0.1: the rack and its edit pages. Three engines of Felucca-Engines (ANALOG, PHASE, WHEEL) play from the
- * keys and from MIDI; K1 picks the engine, PRESET its sound, OCT- / OCT+ the octave. EDIT opens the engine's two
- * pages of four parameters on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once.
+/* KLASSIK v0.2: the rack and its edit pages. Four engines, FM6 (msfa's six operators) and three of Felucca-Engines
+ * (ANALOG, PHASE, WHEEL), play from the keys and from MIDI; K1 picks the engine (in the rack's order), PRESET its
+ * sound, OCT- / OCT+ the octave. EDIT opens the engine's two
+ * pages of four parameters on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once
+ * (FM6's MOD, DTUN, ATK, DEC, SUS and REL from the next note).
  * SAVE keeps the engine, the sounds and the octave across a power cycle, an edited sound as its engine's USER sound.
  * The screen: the header (the engine, the sound's glyph and name, the octave, the battery), then the six engine
- * tiles (three playing, three to come) or an edit page (its tabs, the sound's glyph large, its spokes named), and a
+ * tiles (four playing, two to come) or an edit page (its tabs, the sound's glyph large, its spokes named), and a
  * row of what the knobs hold.
  * A sound's glyph: its eight parameters as eight spokes, each as long as its value in its range, in the engine's
  * colour. Part of the unity build (base/device/unity.c, base/host/plat_host.c), after the platform: gfx.c and
@@ -31,17 +33,34 @@ typedef struct {
     uint16_t col;
 } tile_t;
 static const tile_t TILES[6] = {
-    {"FM6", "6-OP FM", -1, RGB(92, 200, 255)},
+    {"FM6", "6-OP FM", KL_FM6, RGB(92, 200, 255)},
     {"VA", "ANALOG", KL_ANALOG, RGB(255, 180, 84)},
     {"PD", "PHASE DIST", KL_PHASE, RGB(255, 122, 182)},
     {"ORGAN", "DRAWBAR", KL_WHEEL, RGB(126, 224, 138)},
     {"STRINGS", "ENSEMBLE", -1, RGB(185, 162, 255)},
     {"ACID", "MONO BASS", -1, RGB(227, 244, 94)},
 };
-static const uint8_t TILE_OF[KL_NENG] = {1, 2, 3};   /* engine -> its tile */
+static const uint8_t TILE_OF[KL_NENG] = {1, 2, 3, 0};   /* engine -> its tile */
+
+static int engine_pos(int e)                         /* its place among the playing tiles, as the rack shows them */
+{
+    int i, n = 0;
+    for (i = 0; i < TILE_OF[e]; i++)
+        n += TILES[i].eng >= 0;
+    return n;
+}
+
+static int engine_at(int pos)                        /* the engine at that place */
+{
+    int i;
+    for (i = 0; i < 6; i++)
+        if (TILES[i].eng >= 0 && pos-- == 0)
+            return TILES[i].eng;
+    return KL_ANALOG;
+}
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5332u                        /* "KLS2": another magic (v0's KLS1 too) loads defaults */
+#define SET_MAGIC 0x4B4C5333u                        /* "KLS3": another magic (v0.1's KLS2, v0's KLS1) loads defaults */
 typedef struct {
     int8_t v[8];                                     /* the eight parameters */
     uint8_t base;                                    /* the preset it was made from: its envelopes and MONO */
@@ -123,6 +142,10 @@ static int32_t mono[APP_BLOCK];
 static int32_t gain_q8;                              /* MASTER's gain, gliding: no step at a block's edge */
 static volatile uint32_t midi_seen;
 
+/* (a * b) >> 7 in 64 bits, out of line: an inlined 64-bit multiply beside loads now and then leaves a register a bit
+ * off on the FM-1 (base/bsp/docs/CPU.md) */
+static __attribute__((noinline)) int64_t mul_shr7(int32_t a, int32_t b) { return ((int64_t)a * b) >> 7; }
+
 static void midi_in(void)                            /* audio interrupt: the packets that came in */
 {
     uint32_t pkt;
@@ -151,7 +174,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
     for (i = 0; i < n; i++) {
         int64_t s;
         gain_q8 += (target - gain_q8) >> 8;          /* ~6 ms */
-        s = ((int64_t)mono[i] * (gain_q8 >> 8)) >> 7;   /* x32 at full MASTER, toward 24-bit */
+        s = mul_shr7(mono[i], gain_q8 >> 8);         /* x32 at full MASTER, toward 24-bit */
         if (s > 8388607)
             s = 8388607;
         else if (s < -8388607)
@@ -321,10 +344,11 @@ static void speak(void)
 
 static void engine_step(int32_t d)
 {
-    int32_t e = ((int32_t)set.engine + d) % KL_NENG;
+    int32_t e = (engine_pos(set.engine) + d) % KL_NENG;
     char t[48];
     if (e < 0)
         e += KL_NENG;
+    e = engine_at(e);
     set.engine = (uint8_t)e;
     set_dirty = 1;
     sound_select();
@@ -638,7 +662,7 @@ static void footer_rack(char lab[4][16], char v[4][12], int32_t frac[4])
         text_cat(lab[i], LAB[i]);
     }
     text_cat(v[0], TILES[TILE_OF[e]].name);
-    frac[0] = e * 256 / (KL_NENG - 1);
+    frac[0] = engine_pos(e) * 256 / (KL_NENG - 1);
     if (is_user(e)) {
         text_cat(v[1], "USER");
     } else {

@@ -1,0 +1,216 @@
+# KLASSIK's FM6 in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/fm6.txt firmware/klassik/build/host
+wait 600
+expect engine 0
+# K1 goes in the rack's order: FM6 is the tile before VA
+listen
+spin K1 -1
+wait 50
+expect engine 3
+expect preset 0
+said ENGINE FM6. E.PIANO
+shot fm6.png
+# a key plays a voice of E.PIANO, about as loud as VA's (measured -29.3 dBFS at MASTER 50 %)
+key 7 down
+wait 60
+expect voices 1
+peakreset
+wait 400
+expect peak_db_min -36
+expect peak_db_max -24
+key 7 up
+# its own envelopes end the voice (E.PIANO's release is short)
+wait 800
+expect voices 0
+# MIDI in plays it too
+midi 90 3C 64
+wait 60
+expect voices 1
+midi 80 3C 00
+wait 800
+expect voices 0
+# EDIT: ALGO, FEEDBK, MOD, DTUN on K1..K4; ALGO plays at once, on a held note too
+tap EDIT
+wait 30
+expect edit 1
+expect page 1
+said EDIT ALGO
+shot fm6-edit-1.png
+key 7 down
+wait 200
+spin K1 27
+wait 30
+expect v0 32
+expect dsp0 32
+expect glyph0 255
+said ALGO 32
+expect edited 1
+key 7 up
+wait 800
+spin K2 9
+wait 30
+expect v1 7
+said FEEDBK 7
+spin K3 -99
+wait 30
+expect v2 0
+expect dsp2 0
+expect glyph2 0
+said MOD 0
+spin K1 -27
+spin K2 -4
+spin K3 76
+wait 30
+expect v0 5
+expect v1 3
+expect v2 76
+# the second page: ATK, DEC, SUS, REL; ATK 99 is a slow attack from the next note (E.PIANO's own: -29.3 dBFS in its
+# first 150 ms; at ATK 99, -71.1)
+tap EDIT
+wait 30
+expect page 2
+said EDIT ENV
+shot fm6-edit-2.png
+spin K1 99
+wait 30
+expect v4 99
+expect dsp4 99
+said ATK 99
+peakreset
+key 7 down
+wait 150
+expect peak_db_max -55
+key 7 up
+wait 3000
+expect voices 0
+spin K1 -94
+wait 30
+expect v4 5
+peakreset
+key 7 down
+wait 150
+expect peak_db_min -36
+key 7 up
+wait 800
+# DTUN 5 on the first page, then SAVE: the edited sound is FM6's USER sound, kept across a power cycle
+tap OCT+
+wait 30
+spin K4 3
+wait 30
+expect v3 5
+said DTUN 5
+tap SAVE
+wait 30
+expect dirty 0
+expect user 1
+expect preset 8
+said SAVED USER
+reboot
+wait 600
+expect engine 3
+expect preset 8
+expect user 1
+expect v3 5
+expect dsp3 5
+key 7 down
+wait 200
+expect voices 1
+key 7 up
+wait 800
+expect voices 0
+# every preset: a chord held and let go (fm6-*.wav to listen to; GLASS BELL and WARM PAD ring on)
+spin PRESET 1
+wait 50
+expect preset 0
+wav fm6-epiano.wav
+key 7 down
+key 11 down
+key 14 down
+wait 1500
+key 7 up
+key 11 up
+key 14 up
+wait 1500
+wavstop
+spin PRESET 1
+wait 50
+expect preset 1
+shot fm6-bell.png
+wav fm6-glass-bell.wav
+key 7 down
+key 11 down
+key 14 down
+wait 1500
+key 7 up
+key 11 up
+key 14 up
+wait 3000
+wavstop
+spin PRESET 1
+wait 50
+expect preset 2
+wav fm6-fm-bass.wav
+key 0 down
+wait 800
+key 0 up
+key 7 down
+wait 800
+key 7 up
+wait 800
+wavstop
+spin PRESET 1
+wait 50
+expect preset 3
+wav fm6-brass.wav
+key 7 down
+key 11 down
+key 14 down
+wait 1500
+key 7 up
+key 11 up
+key 14 up
+wait 1000
+wavstop
+spin PRESET 1
+wait 50
+expect preset 4
+wav fm6-marimba.wav
+strum 4 11 150
+wait 1500
+wavstop
+spin PRESET 1
+wait 50
+expect preset 5
+wav fm6-fm-organ.wav
+key 7 down
+key 11 down
+key 14 down
+wait 1500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+wavstop
+spin PRESET 1
+wait 50
+expect preset 6
+wav fm6-warm-pad.wav
+key 7 down
+key 11 down
+key 14 down
+wait 3000
+key 7 up
+key 11 up
+key 14 up
+wait 4000
+wavstop
+spin PRESET 1
+wait 50
+expect preset 7
+wav fm6-clav.wav
+strum 4 11 120
+wait 1000
+wavstop
+wait 8000
+expect voices 0
