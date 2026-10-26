@@ -724,7 +724,7 @@ static void draw_footer(void)                        /* what the controls hold, 
 #define EDIT_CX 120                                  /* the live glyph's centre on the screen */
 #define EDIT_CY 124
 
-static void ring(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* a circle, one pixel wide */
+static void ring_draw(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* a circle, one pixel wide */
 {
     int32_t x = r, y = 0, err = 1 - r;
     while (x >= y) {
@@ -772,7 +772,7 @@ static void draw_edit(int32_t y0)
     cv_rect(0, 40 - y0, 240, 1, K_LINE);
     cv_text(8, 46 - y0, &FONT_T, "LIVE", K_MUTED);
     kl_shape(e, work[e], sh);
-    ring(EDIT_CX, cy, 60, K_LINE);
+    ring_draw(EDIT_CX, cy, 60, K_LINE);
     glyph_draw(EDIT_CX, cy, 56, sh, tl->col, K_GROUND);
     for (i = 0; i < 8; i++) {                        /* a name beyond each spoke's end, away from the centre */
         kl_param_t d;
