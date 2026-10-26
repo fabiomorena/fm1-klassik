@@ -1,0 +1,30 @@
+# Every push: the browser emulator built (tools/build.py --web, Emscripten from emsdk); the page kept as an artifact.
+# The host tests do not compile the emulator's own file (base/web/emu/emu_web.c) with the app: this does.
+name: web
+on: [push, pull_request]
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    env:
+      EMSDK_VERSION: "6.0.13"           # the version the emulator was built with on the Mac (Homebrew, 26.10.2026)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: pip install pillow
+      - name: Emscripten
+        run: |
+          git clone --depth 1 --branch "$EMSDK_VERSION" https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$EMSDK_VERSION"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSDK_VERSION"
+      - run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          emcc --version | head -1
+          python3 base/tools/build.py firmware/klassik --web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emu
+          path: |
+            firmware/klassik/build/emu/index.html
+            firmware/klassik/build/emu/worklet.js
+            firmware/klassik/build/emu/app.wasm

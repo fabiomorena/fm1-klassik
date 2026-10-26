@@ -23,6 +23,7 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 | 26.10. | Keine 64-Bit-Multiplikation inline in DSP-Schleifen; FM6-Gain in 32 Bit, `app_render` über `noinline`-Funktion | `base/bsp/docs/CPU.md` (Rechenfehler neben Ladebefehlen) | umgesetzt; Genauigkeit gemessen (RESEARCH.md) |
 | 26.10. | K1 wählt die Engines in der Reihenfolge des Racks (FM6, VA, PD, ORGAN); die Engine-Nummern bleiben (FM6 = 3) | Bedienung folgt dem Bildschirm; Tests und Speicherformat bleiben lesbar | umgesetzt |
 | 26.10. | Speicherformat `KLS3`: Einstellungen von v0.1 werden verworfen | ein USER-Sound mehr; noch kein Gerät im Einsatz | umgesetzt |
+| 26.10. | Die CI baut bei jedem Push auch den Browser-Emulator (`web.yml`, Emscripten 6.0.13 aus emsdk) | ein Namenskonflikt mit `emu_web.c` (seit v0.1) fiel nur im Web-Build auf | Fabios Entscheidung, umgesetzt |
 
 ## Offene Punkte
 

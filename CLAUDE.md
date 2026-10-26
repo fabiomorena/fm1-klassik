@@ -43,7 +43,9 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - Die Variable braucht Pillow, um libfribidi zu finden (libraqm für die Schriften); sie steht auch in `~/.zshrc`.
 - Nach jeder Änderung: bauen, alle Tests laufen lassen (jede Zeile „ok“, Exit-Code 0). Bei UI-Änderungen die PNGs in
   `firmware/klassik/build/host/` ansehen und mit `docs/design/png/` vergleichen.
-- Die CI (`.github/workflows/host.yml`) macht dasselbe bei jedem Push.
+- Die CI macht dasselbe bei jedem Push (`.github/workflows/host.yml`) und baut den Browser-Emulator
+  (`.github/workflows/web.yml`, Emscripten 6.0.13 aus emsdk). Lokal: `base/tools/build.py firmware/klassik --web`
+  (Emscripten per Homebrew), ansehen mit `python3 -m http.server 8000 -d firmware/klassik/build/emu`.
 - Geräte-Build (`base/tools/build.py firmware/klassik`) braucht Docker und die JieLi-Toolchain: noch nicht eingerichtet.
 
 ## Plattform-Regeln (fm1-base)
