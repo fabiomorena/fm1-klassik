@@ -212,3 +212,4 @@ knacken zu hören, aber das war ein extremfall
   `docs/RESEARCH.md`, Abschnitt FM6).
 - Offen: im Browser noch einmal schnell spielen. Bleibt ein Knacken, liegt es eher am Emulator (er rechnet das
   Zeichnen des Bildschirms im Audio-Thread), unsicher.
+- Nachtest (Fabio, 26.10.2026, nach Commit `6d06045`): bei sehr schnellem Spiel „jetzt viel besser“.

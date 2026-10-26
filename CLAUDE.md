@@ -22,12 +22,14 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `base/` | fm1-base (Submodul, MPL-2.0): Plattform, Host-Simulator, Browser-Emulator, `tools/build.py`. **Nicht ändern.** |
 | `engines/` | Felucca-Engines (Submodul, MIT): ANALOG, PHASE, WHEEL, LOFI, TRIO, NOISE. **Nicht ändern.** |
 | `firmware/klassik/app.c`, `app.h` | die App (Unity-Build nach der Plattform): UI, Eingabe, Einstellungen, Audio-Ausgabe |
-| `firmware/klassik/dsp/engines.c` | Stimmen-Host (o2-Einheit, MIT, nach `engines/tests/fe_host.c`): 1 Part, 6 Stimmen, eigene einfache ADSR; FM6 mit eigenen Hüllkurven (`ownenv`, `done`) |
+| `firmware/klassik/dsp/engines.c` | Stimmen-Host (o2-Einheit, MIT, nach `engines/tests/fe_host.c`): 1 Part, 6 Stimmen, eigene einfache ADSR; FM6 und DRUMS mit eigenen Hüllkurven (`ownenv`, `done`); DRUMS: eine Stimme je Instrument (`same_note`) |
 | `firmware/klassik/dsp/eng_fm6.c` | FM6 als `engine_t` (MPL-2.0): acht Makros, eigene Presets (DX7-Stimmen) |
 | `firmware/klassik/dsp/fm6/` | msfa nach C portiert (o2-Einheit, Apache-2.0, `LICENSE`); Änderungen im Dateikopf von `msfa.c` |
 | `firmware/klassik/tools/gen_fm6_tables.py` | rechnet msfas Tabellen beim Build (`gen` → `fm6_tables.h`, Apache-2.0) |
+| `firmware/klassik/dsp/eng_drums.c` | DRUMS als `engine_t` (MPL-2.0): vier Kits, Tastenbelegung je Halbton, Clap/Rimshot/Cowbell, Choke, Accent |
+| `firmware/klassik/dsp/drums/` | Plaits-Drums nach C portiert (o2-Einheit, MIT, `float`): 808-BD/SD/Hi-Hat, 909-artige BD/SD; Änderungen im Dateikopf von `drums.c` |
 | `firmware/klassik/dsp/klassik_dsp.h` | Schnittstelle App ↔ DSP |
-| `firmware/klassik/fm1.toml` | Build-Einstellungen (o2, include, gen für `fe_tables.h` und `fm6_tables.h`) |
+| `firmware/klassik/fm1.toml` | Build-Einstellungen (o2: `engines.c`, `msfa.c`, `drums.c`; include; gen für `fe_tables.h` und `fm6_tables.h`) |
 | `firmware/klassik/tests/*.txt` | Host-Tests (Syntax: Kopfkommentar von `base/host/plat_host.c`; eigene Prüfungen über `app_expect`) |
 | `docs/CONCEPT.md` | Konzept und Fahrplan |
 | `docs/design/` | Mockups aller Screens (HTML + PNG, Übersicht `index.html`, siehe `docs/design/README.md`), **maßgebliche Design-Quelle** |
@@ -60,19 +62,24 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (`base/bsp/docs/CPU.md`). Stattdessen 32 Bit mit Rechenweg, oder eine `noinline`-Hilfsfunktion. Kein `double`.
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
-## Klang (Stand v0.2)
+## Klang (Stand v0.3, Teil DRUMS)
 - Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL, FM6 = msfa (`KL_FM6`, im Rack links von VA; K1 folgt der
-  Rack-Reihenfolge). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
+  Rack-Reihenfolge), DRUMS (`KL_DRUMS` = 4, Kachel der früheren STRINGS). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
   `engine_t.edit[8]`, `page_title[2]`, `presets`). Festkomma, keine Allokation.
 - FM6: Presets sind ganze DX7-Stimmen plus acht beschreibende Werte; die Makros verschieben die Stimme relativ zum
   Preset (Regel im Kopf von `eng_fm6.c`). ALGO/FEEDBK live, die anderen ab der nächsten Note. Der Port ist gegen
   das Original-msfa (portabler Pfad, nicht NEON) geprüft, siehe `docs/RESEARCH.md`.
+- DRUMS: Kits „606“, „707“, „808“, „909“ (Presets); Taste je Halbton → Instrument (`DR_OF_PC`); die acht Makros setzen,
+  was sie nennen (BD/SD/TOM TUNE in Halbtönen, HAT DEC/TONE für CH und OH). Pegel je Modell über `DM_NORM` eingemessen
+  (BD ~−24, SD ~−26, Hats ~−29 dBFS bei MASTER 50 %). Port gegen Plaits geprüft (RESEARCH.md). Edit-Seite: Pads statt
+  Glyphe (`draw_pads`).
 - Pegel: ×32 bei vollem MASTER; eine Stimme misst im Simulator −31,5 dBFS bei MASTER 50 % (Gain quadratisch:
   0,5² = 0,25 ≈ −12 dB), also etwa −19,5 dBFS bei vollem MASTER. Feinabstimmung erst mit Gerät.
 
 ## Lizenz-Regeln
-- Eigene Dateien MPL-2.0, `dsp/engines.c` MIT, `dsp/fm6/` und `tools/gen_fm6_tables.py` Apache-2.0.
-  **Keine GPL-Quellen** übernehmen (z. B. Dexed, Felucca-App-Code, KR-106, Shine On). Erlaubt und geplant: Felucca-Engines (MIT), msfa (Apache-2.0) für FM6, Open303 (MIT) für ACID.
+- Eigene Dateien MPL-2.0, `dsp/engines.c` und `dsp/drums/` MIT, `dsp/fm6/` und `tools/gen_fm6_tables.py` Apache-2.0.
+  **Keine GPL-Quellen** übernehmen (z. B. Dexed, Felucca-App-Code, KR-106, Shine On). Erlaubt und geplant: Felucca-Engines (MIT), msfa (Apache-2.0) für FM6, Plaits-Drums (MIT) für DRUMS,
+  Open303 (MIT, aus dem Original-Repo) für ACID. Keine Samples aus Rolands Geräten.
 - Jede neue Quelle vor der Übernahme in `LICENSING.md` eintragen.
 - `id_prefix = "FM-1_77"` ist noch nicht auf Kollisionen geprüft.
 
@@ -81,7 +88,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   Fußzeile 32 px (was die Regler gerade halten, je Feld ein Balken).
 - Farben (RGB): ground 11,13,17 · head 17,21,28 · surface 21,25,34 · surface2 28,34,48 · line 42,50,66 ·
   text 232,234,237 · muted 154,163,178.
-  Engines: FM6 92,200,255 · VA 255,180,84 · PD 255,122,182 · ORGAN 126,224,138 · STRINGS 185,162,255 · ACID 227,244,94.
+  Engines: FM6 92,200,255 · VA 255,180,84 · PD 255,122,182 · ORGAN 126,224,138 · DRUMS 185,162,255 · ACID 227,244,94.
 - **Glyphe:** die acht Parameter eines Sounds als acht Strahlen, im Uhrzeigersinn ab oben, Länge
   r × (0,25 + 0,75 × Wert/255) (Wert = Position im Bereich des Parameters, `kl_shape`), Fläche 3/8 Engine-Farbe über
   dem Hintergrund, Rand 2 px in Engine-Farbe, Mittelpunkt 3×3. Erscheint überall, wo ein Sound genannt wird.
@@ -96,7 +103,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0 | Rack, VA / PD / ORGAN, Glyphen, Speichern, Host-Tests, CI | erledigt (Simulator) |
 | v0.1 | Edit-Seiten (EDIT → 2 Seiten × 4 Parameter auf K1–K4), Live-Glyphe, eigener Sound pro Engine (SAVE), README-Hinweis fribidi/.venv, Tests mit Screenshots | erledigt (Simulator) |
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
-| v0.3 | ACID (Open303, MIT), STRINGS (ANALOG + Ensemble-Chorus) | offen |
+| v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | DRUMS erledigt (Simulator), ACID offen |
 | v0.4 | Preset-Liste, Glyphen-Browser | offen |
 | v0.5 | Sequencer, Mixer, Effekte | offen |
 | v0.6 | Klang-Atlas, Klang-Stammbaum | offen |

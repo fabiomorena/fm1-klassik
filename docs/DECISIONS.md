@@ -25,7 +25,15 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 | 26.10. | Speicherformat `KLS3`: Einstellungen von v0.1 werden verworfen | ein USER-Sound mehr; noch kein Gerät im Einsatz | umgesetzt |
 | 26.10. | Die CI baut bei jedem Push auch den Browser-Emulator (`web.yml`, Emscripten 6.0.13 aus emsdk) | ein Namenskonflikt mit `emu_web.c` (seit v0.1) fiel nur im Web-Build auf | Fabios Entscheidung, umgesetzt |
 | 26.10. | Manuelle Tests als Protokoll zum Abhaken in `docs/tests/` (erstes: `FM6.md`) | Fabio testet im Browser und gibt die Ergebnisse gesammelt zurück | Fabios Wunsch (Ort von Claude gewählt); FM6 getestet, alles wie erwartet bis auf Knacken bei sehr schnellem Spiel |
-| 26.10. | FM6: Ein Wiederanschlag einer noch klingenden Stimme macht je Operator dort weiter, wo er ist (über −42 dB); leisere Operatoren starten frisch (`fm_note_retrigger` in `msfa.c`) | msfas Note-Start setzt Phase und Hüllkurve auf 0: Knacken (Messung in RESEARCH.md) | Fabios Entscheidung, umgesetzt, im Simulator gemessen; im Browser noch anzuhören |
+| 26.10. | FM6: Ein Wiederanschlag einer noch klingenden Stimme macht je Operator dort weiter, wo er ist (über −42 dB); leisere Operatoren starten frisch (`fm_note_retrigger` in `msfa.c`) | msfas Note-Start setzt Phase und Hüllkurve auf 0: Knacken (Messung in RESEARCH.md) | Fabios Entscheidung, umgesetzt, im Simulator gemessen; im Browser von Fabio angehört: „viel besser“ |
+| 26.10. | v0.3: **DRUMS ersetzt STRINGS** im Rack (FM6, VA, PD / ORGAN, DRUMS, ACID); DRUMS übernimmt die Farbe von STRINGS (185,162,255) | Fabio wünscht Drums; STRINGS gab es noch nicht und hatte keine eigene Quelle (nur ANALOG + Chorus), ORGAN ist fertig und getestet | Fabios Entscheidung (Claudes Empfehlung), fest |
+| 26.10. | DRUMS: vier Kits im Stil von TR-606, TR-707, TR-808, TR-909, auf dem Gerät „606“, „707“, „808“, „909“ genannt | für Spieler am klarsten | Fabios Entscheidung; markenrechtlich ungeklärt (offene Punkte) |
+| 26.10. | DRUMS-Klänge synthetisch: Plaits-Drums (MIT) nach C portiert und eigener Code; keine Original-Samples | 707 und die Hats/Becken der 909 sind Samples, Rechte bei Roland (RESEARCH.md) | umgesetzt; Port gegen Plaits geprüft (RESEARCH.md) |
+| 26.10. | DRUMS-Tasten je Halbton, in jeder Oktave gleich: C BD, C# RS, D SD, D# CP, E CB, F LT, F# CH, G MT, G# CH, A HT, A# OH, B CY (BD, RS, SD, CP, CH, OH wie General MIDI); Anschlag = Accent; CH beendet OH | spielbar auf jeder Oktave; ein GM-Sequencer trifft die wichtigsten Instrumente | Mockup `Edit-DRUMS` von Fabio angenommen; umgesetzt, im Simulator getestet |
+| 26.10. | Reihenfolge v0.3: erst DRUMS, dann ACID (Open303, MIT), je mit Mockup, Testprotokoll und eigenem Commit | Fabios Wunsch nach Drums zuerst | DRUMS umgesetzt, ACID offen |
+| 26.10. | DRUMS-Edit-Seite: die Tasten einer Oktave als Pads statt der großen Glyphe (Glyphe bleibt in der Kopfzeile); die Instrumente der Seite umrandet, das zuletzt gespielte leuchtet 250 ms | ohne Anzeige weiß man nicht, welche Taste was spielt | Fabio hat das Mockup angenommen; umgesetzt |
+| 26.10. | DRUMS: eine Stimme je Instrument (wie bei den Originalen), ein neuer Schlag klingt vom aktuellen Zustand weiter; CH beendet OH in ~5 ms; eine Stimme endet, wenn sie 8 Blöcke unter ~−84 dBFS (bei vollem MASTER) war | Spielgefühl der Vorbilder; Stimmen frei für andere Instrumente | umgesetzt, im Simulator getestet |
+| 26.10. | Speicherformat `KLS4`: Einstellungen von v0.2 werden verworfen | eine Engine mehr (DRUMS) | umgesetzt |
 
 ## Offene Punkte
 
@@ -34,7 +42,9 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 - Geräte-Build (Docker, JieLi-Toolchain) einrichten und im fm1-emu testen.
 - Beim Kauf des Geräts: ausgelieferte Firmware-Version prüfen (Werkzeuge sind auf V15 ausgelegt).
 - Lizenz MPL-2.0 bestätigen oder ändern.
-- FM6-Knacken bei sehr schnellem Spiel im Browser nach `fm_note_retrigger` erneut anhören; bleibt es, die Last des
-  Emulators prüfen (RESEARCH.md, „Browser-Emulator“).
+- Kit-Namen „606“, „707“, „808“, „909“ vor dem ersten Release markenrechtlich prüfen (DPMA, USPTO; Roland hat 2019
+  Designs von TR-808 und TB-303 angemeldet, RESEARCH.md).
+- DRUMS nach Gehör prüfen (Protokoll `docs/tests/DRUMS.md`, `drums-*.wav`) und die Kits nachstimmen.
+- DRUMS-Rechenlast auf dem Gerät messen (Schätzung: 10–22 % von 360 MHz bei sechs Snare-Stimmen, unsicher).
 - FM6-Rechenlast auf dem Gerät messen (Schätzung: 7–13 % von 360 MHz bei sechs Stimmen, unsicher).
 - FM6-Edit-Seite nach dem Mockup `Edit-FM6` (Algorithmus-Grafik, Pegel je Operator).

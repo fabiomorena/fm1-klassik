@@ -52,9 +52,10 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
 | --- | --- | --- | --- |
 | VA, PD, ORGAN (+ LOFI, TRIO, NOISE) | Felucca-Engines | MIT (PHASE im Code geprüft) | github.com/hugelton/Felucca-Engines |
 | FM6 | msfa (Kern von Dexed) | Apache-2.0; Dexed selbst GPL-3.0 | github.com/asb2m10/dexed |
-| ACID | Open303 (Robin Schmidt), schon auf den FM-1 portiert (X0X) | MIT | github.com/mediaworkbench/Felucca (Lizenzhinweis) |
+| ACID | Open303 (Robin Schmidt), schon auf den FM-1 portiert (X0X, in einem GPL-Fork: nicht von dort übernehmen) | MIT | github.com/RobinSchmidt/Open303 (`License.txt`), github.com/mediaworkbench/Felucca (Lizenzhinweis) |
+| DRUMS | Plaits-Drums (Mutable Instruments) und eigener Code | MIT | github.com/pichenettes/eurorack, siehe „DRUMS“ unten |
 | Juno | KR-106 | GPL-3.0, CPU-hungrig | kayrock.org/kr106, altstrument.org (FM-106) |
-| Strings | kein MIT-Kandidat gefunden; Plan: ANALOG + Ensemble-Chorus | – | – |
+| Strings | kein MIT-Kandidat gefunden; Plan war ANALOG + Ensemble-Chorus (am 26.10. durch DRUMS ersetzt) | – | – |
 
 ## FM6: msfa (Stand 26.10.2026)
 
@@ -96,6 +97,66 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
 - **Browser-Emulator:** rechnet das ganze Gerät im Audio-Thread, je 128 Samples, auch das Neuzeichnen des
   Bildschirms (`base/web/emu/emu_web.c` `web_render`, `worklet.js`). Ob das bei schnellem Spiel Aussetzer macht, ist
   nicht gemessen; die Seite zeigt die mittlere Last („… uses …% of this computer's time“).
+
+## DRUMS und ACID: Quellen (Stand 26.10.2026)
+
+- **Die Vorbilder:**
+  - TR-909: Bassdrum, Snare und Toms analog, Hi-Hats, Ride und Crash als 6-Bit-Samples
+    (attackmagazine.com, Interview mit Atsushi Hoshiai).
+  - TR-707: alle Klänge Samples, 8 Bit, Crash und Ride 6 Bit, 25 kHz (vintagesynth.com/roland/tr-707).
+  - TR-808: Hi-Hats und Becken aus sechs Rechteck-Oszillatoren (Hex-Inverter), etwa 200–800 Hz
+    (docs.cherryaudio.com/misfit-audio/transistor-808-hats); die genauen Frequenzen streuen von Gerät zu Gerät.
+  - TR-606: analog laut allgemeiner Kenntnis; eine belastbare Quelle zum Aufbau fehlt noch (unsicher).
+  - Samples aus den Geräten übernehmen wir nicht (Rechte bei Roland); 707 und die Becken der 909 werden synthetisch
+    angenähert.
+- **Plaits** (github.com/pichenettes/eurorack, `plaits/dsp/drums/`):
+  - `analog_bass_drum.h` („808 bass drum model, revisited“), `analog_snare_drum.h` (808), `hi_hat.h` (808, mit
+    Parametern „to push things to the CY territory“), `synthetic_bass_drum.h` („Inadvertently 909-ish“),
+    `synthetic_snare_drum.h` (Werte aus den 909-Schaltplänen, z. B. Verhältnis der Moden 1,47).
+  - Lizenz: MIT im Kopf jeder Datei („Copyright 2016 Emilie Gillet“) und in der README („Code (STM32F projects):
+    MIT license“; AVR-Projekte GPL-3.0, Plaits ist STM32). Die GitHub-API meldet keine Lizenz (keine `LICENSE`-Datei
+    im Stamm).
+  - C++ mit `float` und stmlib (Filter, Rauschen): nach C zu portieren. Der AC79 hat eine FPU für einfache
+    Genauigkeit (`base/tools/build.py:113`), `double` bleibt verboten.
+  - Hi-Hat-Verhältnisse der sechs Oszillatoren in `hi_hat.h`: 1,0 · 1,304 · 1,466 · 1,787 · 1,932 · 2,536.
+- **Open303** (github.com/RobinSchmidt/Open303): MIT laut `License.txt` („Copyright (c) 2009 Robin Schmidt“); die
+  GitHub-API meldet „NOASSERTION“, letzter Push 29.03.2024. Rechnet in `double`: nach C mit `float` zu portieren.
+- **Marken:** Roland hat 2019 in Deutschland die Designs von TR-808 und TB-303 als Marken angemeldet (factmag.com/roland,
+  synthanatomy.com, 02/2019). Ob die Nummern als Wortmarken geschützt sind, ist nicht geklärt (DPMA, USPTO prüfen).
+
+## DRUMS: Port und Messungen (Stand 26.10.2026, nur Simulator)
+
+- **Port gegen Plaits:** Plaits' Original (C++, eurorack `f4cfa76`, stmlib `d18def8`) und der C-Port
+  (`firmware/klassik/dsp/drums/drums.c`) auf dem Mac nebeneinander, beide 48 kHz, Blöcke zu 32, je 2 s mit einem
+  zweiten Schlag nach 1 s, zwei Parametersätze je Modell. Rauschabstand Port gegen Original:
+
+  | Modell | Satz 1 | Satz 2 |
+  | --- | --- | --- |
+  | 808-Bassdrum | 94,3 dB | 98,8 dB |
+  | 909-artige Bassdrum | 68,6 dB | 64,1 dB |
+  | 808-Snare | 78,0 dB | 75,2 dB |
+  | 909-artige Snare | 78,0 dB | 72,3 dB |
+  | 808-Hi-Hat | 78,3 dB | 55,7 dB |
+
+  Nicht bitgleich, weil der Port eigene Näherungen nutzt (`exp2` bis 1,5·10⁻⁴, `sin` bis 0,1 %, `sqrt`) und den
+  Zufallswert auf 24 Bit kürzt statt rundet. Der erste Vergleich zeigte bei der 909-Bassdrum nur 10 dB: stmlibs
+  `ParameterInterpolator` übernimmt am Blockende den erreichten Wert, nicht das Ziel, und zählt während des
+  FM-Pulses nicht weiter; nachgebaut.
+- **Pegel** (je Instrument ein Schlag, Velocity 100, MASTER 50 %, `DM_NORM` in `eng_drums.c`): Bassdrums −22,7 bis
+  −26,1 dBFS, Snares −25,1 bis −27,2, Toms −24,7 bis −26,9, Clap −25,9 bis −28,3, Rimshot und Cowbell −28,6 bis
+  −29,7, Hi-Hats −27,4 bis −30,1, Becken −27,6 bis −30,6. Zum Vergleich: eine FM6-Stimme −29,3, eine VA-Stimme −31,5.
+- **Accent:** 808-Bassdrum bei Velocity 127 −21,5 dBFS, bei 30 −26,7 dBFS (`tests/drums.txt`).
+- **Ausklang** (bis 40 dB unter der Spitze): CH 65–84 ms, OH 430–623 ms, Snares 160–274 ms, Becken 1,07–1,11 s,
+  808-Bassdrum 1,17 s (BD DEC 70), 909-Bassdrum 242 ms (BD DEC 50).
+- **Tonhöhe** (Autokorrelation, 60–260 ms nach dem Schlag): Bassdrums und Toms von 606, 707 und 808 innerhalb von
+  1–2 % des Kit-Werts (z. B. 808-BD 52,2 Hz, Soll 52); die 909-artigen Toms 2–3 % höher (Rest des Pitch-Sweeps).
+- **Speicher:** Zustand je Stimme höchstens 140 B (808-Snare: sechs Filter) plus ~20 B, sechs Stimmen also rund
+  1 KB RAM. Code: `drums.c` 8,1 KB auf dem Mac (`size`, arm64, -O2); auf dem AC79 unbekannt.
+- **Rechenlast (Schätzung, unsicher):** Die 808-Snare ist das teuerste Modell, mit etwa 115 Gleitkomma-Operationen
+  und einer Division je Sample (fünf Resonatoren und das Rauschfilter zu je ~10 Operationen). Bei 1 bis 2,5 Takten
+  je Operation und ~15 Takten je Division kostet eine Stimme 130 bis 300 Takte je Sample. Mal 44 100 Samples je
+  Sekunde sind das 5,7 bis 13,2 Mio. Takte je Sekunde. Sechs Snare-Stimmen auf einmal (der ungünstigste Fall)
+  brauchen 34 bis 79 Mio. Takte, das sind 10 bis 22 % von 360 MHz. Messbar erst mit Gerät.
 
 ## Neuheits-Check der Signatur-Ideen
 

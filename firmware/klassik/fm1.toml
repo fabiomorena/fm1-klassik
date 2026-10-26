@@ -3,7 +3,8 @@ name = "KLASSIK"                # APP_NAME is in app.h; this names the build's f
 id_prefix = "FM-1_77"           # package identity, each firmware its own: check the community lists before a release
 usb_manufacturer = "fabiomorena"
 usb_product = "KLASSIK FM-1"
-o2 = ["dsp/engines.c", "dsp/fm6/msfa.c"]   # the sound, compiled apart at -O2 (msfa: FM6's voice, Apache-2.0)
+o2 = ["dsp/engines.c", "dsp/fm6/msfa.c", "dsp/drums/drums.c"]   # the sound, compiled apart at -O2 (msfa: FM6's
+                                # voice, Apache-2.0; drums: Plaits' drum models, MIT)
 include = ["../../engines/src"] # Felucca-Engines (a git submodule at the repository's root)
 gen = ["../../engines/tools/gen_engine_tables.py {gen}/fe_tables.h",   # the engines' tables, 44.1 kHz
        "tools/gen_fm6_tables.py --fs 44100 {gen}/fm6_tables.h"]       # msfa's, at the same rate
@@ -13,4 +14,4 @@ ble = false                     # no Bluetooth yet: more room for the engines
 tagline = "classic synth sounds, one rack"
 repo = "https://github.com/fabiomorena/fm1-klassik"
 licence = "MPL-2.0"
-credits = "Built on fm1-base and felucca-bsp (MPL-2.0) with Felucca-Engines (MIT) and msfa (Apache-2.0)."
+credits = "Built on fm1-base and felucca-bsp (MPL-2.0) with Felucca-Engines (MIT), msfa (Apache-2.0) and Plaits' drum models (MIT)."

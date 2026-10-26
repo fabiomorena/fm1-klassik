@@ -1,0 +1,304 @@
+# KLASSIK's DRUMS in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/drums.txt firmware/klassik/build/host
+wait 600
+expect engine 0
+# K1 goes in the rack's order: FM6, VA, PD, ORGAN, DRUMS (the tile STRINGS had)
+listen
+spin K1 3
+wait 50
+expect engine 4
+expect preset 0
+said ENGINE DRUMS. 606
+shot drums.png
+# one instrument a semitone, the same in every octave: key 7 (C4) BD, key 0 (F3) LT, key 26 (G5) MT
+key 7 down
+wait 30
+expect pad 0
+expect voices 1
+key 7 up
+key 0 down
+wait 30
+expect pad 5
+key 0 up
+key 26 down
+wait 30
+expect pad 7
+key 26 up
+wait 1500
+expect voices 0
+# MIDI plays them too; an instrument plays on one voice: CH on F# and G# share one, so do BD on C2 and C3
+midi 90 2A 64
+midi 90 2C 64
+wait 20
+expect voices 1
+midi 90 24 64
+wait 20
+midi 90 30 64
+wait 20
+expect voices 2
+wait 2000
+expect voices 0
+# the closed hat ends a sounding open one
+midi 90 2E 64
+wait 300
+expect voices 1
+midi 90 2A 64
+wait 45
+expect voices 1
+wait 1000
+expect voices 0
+# velocity is the accent: the 808's bass drum at 127 and at 30 (measured -21.5 and -26.7 dBFS, MASTER 50 %)
+spin PRESET 2
+wait 50
+expect preset 2
+said 808
+peakreset
+midi 90 3C 7F
+wait 100
+expect peak_db_min -23
+expect peak_db_max -20
+wait 2000
+peakreset
+midi 90 3C 1E
+wait 100
+expect peak_db_min -28
+expect peak_db_max -25
+wait 2000
+expect voices 0
+# EDIT: DRUM (BD TUNE, BD DEC, SD TUNE, SNAPPY), KIT (TOM TUNE, HAT DEC, HAT TONE, DRIVE); the pads light what plays
+tap EDIT
+wait 30
+expect edit 1
+expect page 1
+said EDIT DRUM
+expect v1 70
+expect v3 45
+midi 90 26 64
+wait 30
+expect pad 2
+shot drums-edit-1.png
+spin K1 5
+wait 30
+expect v0 5
+expect dsp0 5
+said BD TUNE +5
+expect edited 1
+spin K1 20
+wait 30
+expect v0 12
+expect glyph0 255
+spin K1 -12
+wait 30
+expect v0 0
+tap EDIT
+wait 30
+expect page 2
+said EDIT KIT
+midi 90 2E 64
+wait 30
+expect pad 10
+shot drums-edit-2.png
+spin K4 50
+wait 30
+expect v7 50
+expect dsp7 50
+said DRIVE 50
+wait 2000
+# SAVE: the edited kit is DRUMS' USER sound, kept across a power cycle
+tap SAVE
+wait 30
+expect dirty 0
+expect user 1
+expect preset 4
+said SAVED USER
+reboot
+wait 600
+expect engine 4
+expect preset 4
+expect user 1
+expect v7 50
+expect dsp7 50
+# each kit: a bar of a groove and its first beat again (drums-606.wav .. drums-909.wav, to listen to)
+spin PRESET 1
+wait 50
+expect preset 0
+said 606
+wav drums-606.wav
+midi 90 24 7F
+midi 90 2A 7F
+wait 125
+wait 125
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 26 64
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 24 64
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 24 64
+midi 90 2A 64
+wait 125
+midi 90 28 64
+wait 125
+midi 90 2A 64
+midi 90 25 64
+wait 125
+wait 125
+midi 90 26 64
+midi 90 27 64
+midi 90 2A 64
+wait 125
+midi 90 29 64
+wait 125
+midi 90 2E 64
+midi 90 2B 64
+wait 125
+midi 90 2D 64
+wait 125
+midi 90 24 7F
+midi 90 2F 7F
+wait 125
+wait 1500
+wavstop
+spin PRESET 1
+wait 50
+expect preset 1
+said 707
+wav drums-707.wav
+midi 90 24 7F
+midi 90 2A 7F
+wait 125
+wait 125
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 26 64
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 24 64
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 24 64
+midi 90 2A 64
+wait 125
+midi 90 28 64
+wait 125
+midi 90 2A 64
+midi 90 25 64
+wait 125
+wait 125
+midi 90 26 64
+midi 90 27 64
+midi 90 2A 64
+wait 125
+midi 90 29 64
+wait 125
+midi 90 2E 64
+midi 90 2B 64
+wait 125
+midi 90 2D 64
+wait 125
+midi 90 24 7F
+midi 90 2F 7F
+wait 125
+wait 1500
+wavstop
+spin PRESET 1
+wait 50
+expect preset 2
+said 808
+wav drums-808.wav
+midi 90 24 7F
+midi 90 2A 7F
+wait 125
+wait 125
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 26 64
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 24 64
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 24 64
+midi 90 2A 64
+wait 125
+midi 90 28 64
+wait 125
+midi 90 2A 64
+midi 90 25 64
+wait 125
+wait 125
+midi 90 26 64
+midi 90 27 64
+midi 90 2A 64
+wait 125
+midi 90 29 64
+wait 125
+midi 90 2E 64
+midi 90 2B 64
+wait 125
+midi 90 2D 64
+wait 125
+midi 90 24 7F
+midi 90 2F 7F
+wait 125
+wait 1500
+wavstop
+spin PRESET 1
+wait 50
+expect preset 3
+said 909
+wav drums-909.wav
+midi 90 24 7F
+midi 90 2A 7F
+wait 125
+wait 125
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 26 64
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 24 64
+midi 90 2A 64
+wait 125
+wait 125
+midi 90 24 64
+midi 90 2A 64
+wait 125
+midi 90 28 64
+wait 125
+midi 90 2A 64
+midi 90 25 64
+wait 125
+wait 125
+midi 90 26 64
+midi 90 27 64
+midi 90 2A 64
+wait 125
+midi 90 29 64
+wait 125
+midi 90 2E 64
+midi 90 2B 64
+wait 125
+midi 90 2D 64
+wait 125
+midi 90 24 7F
+midi 90 2F 7F
+wait 125
+wait 1500
+wavstop
+wait 6000
+expect voices 0

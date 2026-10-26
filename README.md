@@ -4,19 +4,24 @@ Eine eigene Firmware für den M-VAVE FM-1: mehrere klassische Synth-Engines in e
 übersichtlichen Oberfläche, in der jeder Sound ein eigenes Symbol hat (seine **Glyphe**: die acht Parameter des
 Sounds als acht Strahlen).
 
-**Status: v0.2, experimentell.** Getestet nur im Host-Simulator, noch nicht auf einem FM-1.
+**Status: v0.3 in Arbeit (DRUMS fertig, ACID folgt), experimentell.** Getestet nur im Host-Simulator und im
+Browser-Emulator, noch nicht auf einem FM-1.
 
 ![Rack im Host-Simulator (240×240)](docs/img/rack-va.png)
+![DRUMS: die Tasten einer Oktave als Pads (240×240)](docs/img/drums-edit.png)
 
-## Was v0.2 kann
+## Was es kann (Stand v0.3, Teil DRUMS)
 
-- Vier Engines, sechs Stimmen:
+- Fünf Engines, sechs Stimmen:
   - **FM6**: sechs Operatoren wie ein DX7, 32 Algorithmen, auf dem FM-Kern
     [msfa](https://github.com/google/music-synthesizer-for-android) (Apache-2.0, nach C portiert); acht eigene
     Presets (keine DX7-Werksklänge).
   - Drei aus [Felucca-Engines](https://github.com/hugelton/Felucca-Engines) (MIT): **VA** (ANALOG),
     **PD** (PHASE, Phase Distortion), **ORGAN** (WHEEL, Zugriegel-Orgel).
-- Rack-Bildschirm mit Glyphen, Kopfzeile, Reglerzeile; STRINGS und ACID als Kacheln „SOON“.
+  - **DRUMS**: vier Kits im Stil von TR-606, TR-707, TR-808 und TR-909, elf Instrumente je Kit, eins je Taste
+    einer Oktave; berechnet auf den Drum-Modellen von [Plaits](https://github.com/pichenettes/eurorack) (MIT, nach
+    C portiert) und eigenen (Clap, Rimshot, Cowbell), keine Samples aus den Geräten.
+- Rack-Bildschirm mit Glyphen, Kopfzeile, Reglerzeile; ACID als Kachel „SOON“.
 - Edit-Seiten: EDIT öffnet je Engine zwei Seiten mit je vier Parametern auf K1–K4. Die Glyphe in der Kopfzeile
   und eine große Live-Glyphe verformen sich beim Drehen, der Klang ändert sich sofort.
 - Eigener Sound: SAVE speichert einen geänderten Sound als USER-Sound seiner Engine (einer je Engine).
@@ -37,6 +42,8 @@ Bedienung: [firmware/klassik/docs/MANUAL.md](firmware/klassik/docs/MANUAL.md). K
 | `firmware/klassik/dsp/eng_fm6.c` | FM6: die acht Parameter und die Presets |
 | `firmware/klassik/dsp/fm6/` | msfa, nach C portiert (Apache-2.0, Lizenztext in `LICENSE`) |
 | `firmware/klassik/tools/gen_fm6_tables.py` | rechnet msfas Tabellen beim Build (Apache-2.0) |
+| `firmware/klassik/dsp/eng_drums.c` | DRUMS: die Kits, die Tastenbelegung, Clap, Rimshot und Cowbell |
+| `firmware/klassik/dsp/drums/` | die Drum-Modelle von Plaits, nach C portiert (MIT) |
 | `firmware/klassik/fm1.toml` | Build-Einstellungen |
 | `firmware/klassik/tests/*.txt` | Tests für den Host-Simulator (mit Screenshots und WAV) |
 | `tools/setup.sh` | holt die Submodule in den getesteten Versionen |
@@ -70,9 +77,9 @@ Voraussetzungen: Git, ein C-Compiler (`xcode-select --install`), [Homebrew](http
        .venv/bin/python base/tools/build.py firmware/klassik --host
        for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_host "$t" firmware/klassik/build/host || break; done
 
-Die Screenshots (u. a. `boot.png`, `edit-va-1.png`, `fm6.png`, `fm6-edit-1.png`) und die WAVs (`va.wav`;
-`edit-cut.wav`, ein Filter-Sweep beim Drehen; `fm6-*.wav`, je FM6-Preset ein Akkord) liegen danach in
-`firmware/klassik/build/host/`.
+Die Screenshots (u. a. `boot.png`, `edit-va-1.png`, `fm6.png`, `fm6-edit-1.png`, `drums.png`, `drums-edit-1.png`)
+und die WAVs (`va.wav`; `edit-cut.wav`, ein Filter-Sweep beim Drehen; `fm6-*.wav`, je FM6-Preset ein Akkord;
+`drums-606.wav` … `drums-909.wav`, je Kit ein Takt) liegen danach in `firmware/klassik/build/host/`.
 
 Im Browser (braucht Emscripten, z. B. `brew install emscripten`):
 

@@ -3,9 +3,10 @@
  *   from Felucca-Engines' tests/fe_host.c)
  * Copyright (C) 2026 fabiomorena */
 /* KLASSIK's engine host: three of Felucca-Engines' MIT engines (ANALOG, PHASE, WHEEL) and KLASSIK's FM6 (eng_fm6.c,
- * on msfa) on one part of six voices. Built as one translation unit with the engines, as felucca_engine.h asks. A
- * first version: its envelope is a plain ADSR of its own (not Felucca's voice.c), and there is no LFO, glide, unison
- * or effect yet; FM6 has envelopes of its own (ownenv). The eight parameters come from the app with each sound asked
+ * on msfa) and DRUMS (eng_drums.c, on Plaits' drum models) on one part of six voices. Built as one translation unit
+ * with the engines, as felucca_engine.h asks. A first version: its envelope is a plain ADSR of its own (not
+ * Felucca's voice.c), and there is no LFO, glide, unison or effect yet; FM6 and DRUMS have envelopes of their own
+ * (ownenv), and DRUMS plays each instrument on one voice (same_note). The eight parameters come from the app with each sound asked
  * for (an edit plays from the next block: the engines read them every block); the preset gives the rest. */
 #include <stdint.h>
 #include <string.h>
@@ -29,8 +30,9 @@ static int retrig;                                  /* the voice a note_on start
 #include "eng_phase.c"
 #include "eng_wheel.c"
 #include "eng_fm6.c"
+#include "eng_drums.c"
 
-static const engine_t *const ENG[KL_NENG] = {&ENG_ANALOG, &ENG_PHASE, &ENG_WHEEL, &ENG_FM6};
+static const engine_t *const ENG[KL_NENG] = {&ENG_ANALOG, &ENG_PHASE, &ENG_WHEEL, &ENG_FM6, &ENG_DRUMS};
 
 /* ------------------------------------------------------------ the app's questions --- */
 static int eng_ok(int e) { return e >= 0 && e < KL_NENG; }
@@ -49,6 +51,13 @@ void kl_preset_values(int e, int p, int8_t v[8])
 }
 
 const char *kl_page_title(int e, int page) { return eng_ok(e) ? ENG[e]->page_title[page & 1] : ""; }
+
+const char *kl_drum_name(int pc) { return DR_NAME[DR_OF_PC[pc % 12]]; }
+int kl_drum_pages(int pc)
+{
+    int i = DR_OF_PC[pc % 12];
+    return i == DR_BD || i == DR_SD ? 1 : i == DR_LT || i == DR_MT || i == DR_HT || i == DR_CH || i == DR_OH ? 2 : 0;
+}
 
 static track_t ask_t;                               /* a sound's values, for an engine's desc hook (it reads p[]) */
 
@@ -131,6 +140,8 @@ static uint8_t env_set[4];                          /* the preset's ATK DEC SUS 
 static int32_t env_fenv;                            /* its ENV -> FILTER, -64..63 */
 static uint8_t mono_mode;
 static uint32_t vage;
+static volatile uint32_t hits;                      /* notes started, and the last one's (the app's DRUMS pads) */
+static volatile uint8_t hit_note;
 static int32_t last_amp[NVOICE];
 
 static void load(int e, int p)
@@ -173,6 +184,11 @@ static void ensure_loaded(void)
     cur_n = n;
 }
 
+static int same_note(int a, int b)                  /* DRUMS: the same instrument (eng_drums.c), one voice each */
+{
+    return cur_e == KL_DRUMS ? DR_OF_PC[a % 12] == DR_OF_PC[b % 12] : a == b;
+}
+
 static void voice_start(int note, int vel)
 {
     const engine_t *en = ENG[cur_e];
@@ -182,7 +198,7 @@ static void voice_start(int note, int vel)
     if (mono_mode)
         v = &t->v[0];
     for (k = 0; !v && k < NVOICE; k++)              /* the same note again: that voice */
-        if (t->v[k].active && t->v[k].note == note)
+        if (t->v[k].active && same_note(t->v[k].note, note))
             v = &t->v[k];
     for (k = 0; !v && k < NVOICE; k++)              /* a free one */
         if (!t->v[k].active)
@@ -204,6 +220,8 @@ static void voice_start(int note, int vel)
         v->active = 1;
         v->stage = 1;
         v->age = ++vage;
+        hit_note = (uint8_t)note;
+        hits = hits + 1u;
         v->pitch16 = v->pitch_cur = (int32_t)note * 16;
         v->fine = 0;
         if (!sounding)
@@ -332,6 +350,12 @@ void kl_render(int32_t *mono, uint32_t n)
         for (i = 0; i < CTL; i++)
             mono[b + i] += out[i];
     }
+}
+
+uint32_t kl_hits(int *note)
+{
+    *note = hit_note;
+    return hits;
 }
 
 int kl_voices(void)

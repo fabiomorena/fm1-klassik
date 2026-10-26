@@ -4,7 +4,7 @@ Alle Screens des UI-Konzepts, gezeichnet in 2× (480×480 = 240×240 auf dem Ger
 Ordner die maßgebliche Quelle** für das Design; das frühere Design-Canvas in claude.ai wird nicht mehr gepflegt.
 
 **Ansehen:** `index.html` im Browser öffnen (in PyCharm: Rechtsklick auf die Datei → im Browser öffnen). Die Seite
-zeigt alle zehn Screens nebeneinander, jeweils direkt aus der HTML-Datei.
+zeigt alle Screens nebeneinander, jeweils direkt aus der HTML-Datei.
 
 **Ändern:** direkt in der jeweiligen `*.dc.html`. Maße und Farben stehen in den Inline-Styles, alle Werte sind 2× der
 Geräte-Pixel. `<x-dc>`, `<helmet>`, `support.js` und das Skript am Dateiende stammen aus dem Canvas und haben im
@@ -22,11 +22,13 @@ Browser keine Wirkung.
 | `Atlas` | 08 Klang-Atlas |
 | `Glyphs` | 09 Glyphen-Browser |
 | `Family` | 10 Klang-Stammbaum |
+| `Edit-DRUMS` | 11 DRUMS: eine Oktave als Pads (jede Taste mit ihrem Instrument), Seiten DRUM und KIT |
 
 `png/`: Renderings vom 26.10.2026, ohne die Webfonts des Canvas erstellt (daher breitere Ersatzschrift und vereinzelt
-Umbrüche). Nach Änderungen bei Bedarf neu erzeugen, z. B. mit Chrome im Headless-Modus (nicht getestet):
+Umbrüche); `Main.png` und `Edit-DRUMS.png` neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
 
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --window-size=480,480 \
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --hide-scrollbars \
+        --user-data-dir=/tmp/chrome-mockups --window-size=480,480 \
         --screenshot=docs/design/png/Main.png "file://$PWD/docs/design/Main.dc.html"
 
 Werte, Soundnamen und Glyphen in den Mockups sind Beispiele; maßgeblich für die Glyphe ist `glyph_draw` in

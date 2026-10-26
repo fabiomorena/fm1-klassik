@@ -1,15 +1,16 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0.2: the rack and its edit pages. Four engines, FM6 (msfa's six operators) and three of Felucca-Engines
- * (ANALOG, PHASE, WHEEL), play from the keys and from MIDI; K1 picks the engine (in the rack's order), PRESET its
- * sound, OCT- / OCT+ the octave. EDIT opens the engine's two
+/* KLASSIK v0.3 (DRUMS; ACID to come): the rack and its edit pages. Five engines, FM6 (msfa's six operators), three
+ * of Felucca-Engines (ANALOG, PHASE, WHEEL) and DRUMS (four kits on Plaits' drum models), play from the keys and
+ * from MIDI; K1 picks the engine (in the rack's order), PRESET its sound, OCT- / OCT+ the octave. EDIT opens the
+ * engine's two
  * pages of four parameters on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once
  * (FM6's MOD, DTUN, ATK, DEC, SUS and REL from the next note).
  * SAVE keeps the engine, the sounds and the octave across a power cycle, an edited sound as its engine's USER sound.
  * The screen: the header (the engine, the sound's glyph and name, the octave, the battery), then the six engine
- * tiles (four playing, two to come) or an edit page (its tabs, the sound's glyph large, its spokes named), and a
- * row of what the knobs hold.
+ * tiles (five playing, one to come) or an edit page (its tabs, the sound's glyph large, its spokes named; DRUMS:
+ * the octave's keys as pads, each with its instrument), and a row of what the knobs hold.
  * A sound's glyph: its eight parameters as eight spokes, each as long as its value in its range, in the engine's
  * colour. Part of the unity build (base/device/unity.c, base/host/plat_host.c), after the platform: gfx.c and
  * announce.c are in scope. */
@@ -37,10 +38,10 @@ static const tile_t TILES[6] = {
     {"VA", "ANALOG", KL_ANALOG, RGB(255, 180, 84)},
     {"PD", "PHASE DIST", KL_PHASE, RGB(255, 122, 182)},
     {"ORGAN", "DRAWBAR", KL_WHEEL, RGB(126, 224, 138)},
-    {"STRINGS", "ENSEMBLE", -1, RGB(185, 162, 255)},
+    {"DRUMS", "DRUM KITS", KL_DRUMS, RGB(185, 162, 255)},
     {"ACID", "MONO BASS", -1, RGB(227, 244, 94)},
 };
-static const uint8_t TILE_OF[KL_NENG] = {1, 2, 3, 0};   /* engine -> its tile */
+static const uint8_t TILE_OF[KL_NENG] = {1, 2, 3, 0, 4};   /* engine -> its tile */
 
 static int engine_pos(int e)                         /* its place among the playing tiles, as the rack shows them */
 {
@@ -60,7 +61,8 @@ static int engine_at(int pos)                        /* the engine at that place
 }
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5333u                        /* "KLS3": another magic (v0.1's KLS2, v0's KLS1) loads defaults */
+#define SET_MAGIC 0x4B4C5334u                        /* "KLS4": another magic (v0.2's KLS3, v0.1's KLS2, v0's KLS1)
+                                                     * loads defaults */
 typedef struct {
     int8_t v[8];                                     /* the eight parameters */
     uint8_t base;                                    /* the preset it was made from: its envelopes and MONO */
@@ -205,7 +207,9 @@ static struct {
     uint32_t keys, btn;
     int8_t knote[NKEYS];                             /* the note each held key started (the octave may change) */
     uint8_t edit, page;                              /* an edit page is open, which (0: EDIT 1, 1: EDIT 2) */
-    uint8_t redraw;
+    uint8_t redraw, redraw_pads;                     /* the whole screen; DRUMS' pads only (a hit lit or gone) */
+    uint32_t hits, hit_until;                        /* the DSP's note count as last seen; the hit pad lit until */
+    int8_t hit_pc;                                   /* the last note's semitone (C = 0) */
 } ui;
 
 static void text_cat(char *d, const char *s)
@@ -746,8 +750,37 @@ static void ring_draw(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* a circ
     }
 }
 
+/* DRUMS: one octave as the keys lie, each key with its instrument; those the page's knobs change are outlined in the
+ * engine's colour, the one just played is filled (the same on every octave) */
+static const char *const KEY_NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+static void draw_pad(int32_t x, int32_t y, int32_t w, int32_t h, int pc, uint16_t col, int lit)
+{
+    const char *name = kl_drum_name(pc);
+    int page = (kl_drum_pages(pc) >> ui.page) & 1;
+    cv_rect(x, y, w, h, lit ? col : K_SURF2);
+    if (!lit)
+        box_edge(x, y, w, h, page ? 2 : 1, page ? col : K_LINE);
+    cv_text(x + (w - text_w(&FONT_B, name)) / 2, y + 7, &FONT_B, name, lit ? K_GROUND : page ? col : K_TEXT);
+    cv_text(x + (w - text_w(&FONT_T, KEY_NAME[pc])) / 2, y + h - 15, &FONT_T, KEY_NAME[pc], lit ? K_GROUND : K_MUTED);
+}
+
+static void draw_pads(int32_t y0, uint16_t col)
+{
+    static const uint8_t WHITE[7] = {0, 2, 4, 5, 7, 9, 11}, BLACK[5][2] = {{0, 1}, {1, 3}, {3, 6}, {4, 8}, {5, 10}};
+    int lit = ui.hit_until ? ui.hit_pc : -1;
+    int32_t i;
+    cv_rect(8, 44 - y0, 224, 162, K_SURF);
+    cv_text(14, 47 - y0, &FONT_T, "KEYS", K_MUTED);
+    cv_text(226 - text_w(&FONT_T, "EVERY OCTAVE"), 47 - y0, &FONT_T, "EVERY OCTAVE", K_MUTED);
+    for (i = 0; i < 5; i++)                          /* the black keys: on the line after their white one */
+        draw_pad(13 + (BLACK[i][0] + 1) * 31 - 14, 61 - y0, 24, 57, BLACK[i][1], col, lit == BLACK[i][1]);
+    for (i = 0; i < 7; i++)
+        draw_pad(13 + i * 31, 123 - y0, 28, 79, WHITE[i], col, lit == WHITE[i]);
+}
+
 /* the page's rows y0 .. y0 + 92 of the screen (it is drawn in two strips): the tabs (the two pages' titles, this
- * one lit), and the sound's glyph large in its ring, each spoke named, the four on the knobs in the engine's colour */
+ * one lit), and the sound's glyph large in its ring, each spoke named, the four on the knobs in the engine's colour
+ * (DRUMS: its pads instead) */
 static void draw_edit(int32_t y0)
 {
     const tile_t *tl = &TILES[TILE_OF[set.engine]];
@@ -770,6 +803,11 @@ static void draw_edit(int32_t y0)
     t[3] = 0;
     cv_text(232 - text_w(&FONT_XS, t), 23 - y0, &FONT_XS, t, K_MUTED);
     cv_rect(0, 40 - y0, 240, 1, K_LINE);
+    if (e == KL_DRUMS) {
+        draw_pads(y0, tl->col);
+        cv_blit(0, (uint32_t)y0);
+        return;
+    }
     cv_text(8, 46 - y0, &FONT_T, "LIVE", K_MUTED);
     kl_shape(e, work[e], sh);
     ring_draw(EDIT_CX, cy, 60, K_LINE);
@@ -816,8 +854,19 @@ void app_frame(void)
 {
     static uint32_t last_pct;
     uint32_t now = plat_ms(), pct = plat_master() * 100u / 4096u;
+    int note;
+    uint32_t hits;
     input();
     speak();
+    if ((hits = kl_hits(&note)) != ui.hits) {        /* a note played: DRUMS lights its pad a moment */
+        ui.hits = hits;
+        ui.hit_pc = (int8_t)(note % 12);
+        ui.hit_until = now + 250u;
+        ui.redraw_pads = ui.edit && set.engine == KL_DRUMS;
+    } else if (ui.hit_until && now >= ui.hit_until) {
+        ui.hit_until = 0;
+        ui.redraw_pads = ui.edit && set.engine == KL_DRUMS;
+    }
     if (pct != last_pct || (ui.msg_until && now >= ui.msg_until)) {
         last_pct = pct;
         if (now >= ui.msg_until)
@@ -825,8 +874,12 @@ void app_frame(void)
         ui.redraw = 1;
     }
     if (ui.redraw) {
-        ui.redraw = 0;
+        ui.redraw = ui.redraw_pads = 0;
         draw();
+    } else if (ui.redraw_pads) {                     /* the pads alone: a hit costs two strips, not the screen */
+        ui.redraw_pads = 0;
+        draw_edit(22);
+        draw_edit(115);
     }
 }
 
@@ -867,6 +920,8 @@ int app_expect(const char *what, int *got)
         *got = edited[set.engine];
     else if (!strcmp(what, "user"))
         *got = set.user[set.engine].saved;
+    else if (!strcmp(what, "pad"))                   /* DRUMS: the lit pad's semitone, -1 none */
+        *got = ui.hit_until ? ui.hit_pc : -1;
     else if ((k = expect_k(what, "v")) >= 0)
         *got = work[set.engine][k];
     else if ((k = expect_k(what, "dsp")) >= 0)

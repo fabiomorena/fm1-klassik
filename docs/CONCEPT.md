@@ -28,7 +28,7 @@ gerade halten).
 | v0.1 | Edit-Seiten je Engine (zwei Seiten à vier Regler), Live-Glyphe, USER-Sound je Engine (SAVE) | erledigt (Simulator) |
 | mit Gerät | eigene Hüllkurve verfeinern, Pegel auf Hardware einmessen, Beschleunigung der Regler | offen |
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
-| v0.3 | ACID (Open303, MIT), STRINGS (ANALOG + Ensemble-Chorus) | offen |
+| v0.3 | DRUMS (Kits im Stil von 606, 707, 808, 909; Plaits, MIT, und eigener Code; ersetzt STRINGS), ACID (Open303, MIT) | offen |
 | v0.4 | Preset-Liste und Glyphen-Browser | offen |
 | v0.5 | Sequencer, Mixer, Effekte | offen |
 | v0.6 | Klang-Atlas, Klang-Stammbaum | offen |
