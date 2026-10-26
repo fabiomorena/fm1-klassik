@@ -4,7 +4,9 @@
  * Copyright (C) 2026 fabiomorena */
 /* KLASSIK's engine host: three of Felucca-Engines' MIT engines (ANALOG, PHASE, WHEEL) on one part of six voices.
  * Built as one translation unit with the engines, as felucca_engine.h asks. A first version: its envelope is a
- * plain ADSR of its own (not Felucca's voice.c), and there is no LFO, glide, unison or effect yet. */
+ * plain ADSR of its own (not Felucca's voice.c), and there is no LFO, glide, unison or effect yet. The eight
+ * parameters come from the app with each sound asked for (an edit plays from the next block: the engines read
+ * them every block); the preset gives the rest. */
 #include <stdint.h>
 #include <string.h>
 #include "klassik_dsp.h"
@@ -37,33 +39,74 @@ const char *kl_preset_name(int e, int p)
     return eng_ok(e) && p >= 0 && p < ENG[e]->npresets ? ENG[e]->presets[p].name : "";
 }
 
-void kl_shape(int e, int p, uint8_t out[8])
+void kl_preset_values(int e, int p, int8_t v[8])
+{
+    uint32_t k;
+    for (k = 0; k < 8u; k++)
+        v[k] = eng_ok(e) && p >= 0 && p < ENG[e]->npresets ? ENG[e]->presets[p].e[k] : 0;
+}
+
+const char *kl_page_title(int e, int page) { return eng_ok(e) ? ENG[e]->page_title[page & 1] : ""; }
+
+static track_t ask_t;                               /* a sound's values, for an engine's desc hook (it reads p[]) */
+
+void kl_param(int e, int k, const int8_t v[8], kl_param_t *d)
+{
+    const param_desc_t *pd;
+    uint32_t i;
+    if (!eng_ok(e) || k < 0 || k > 7) {
+        memset(d, 0, sizeof *d);
+        d->label = "";
+        return;
+    }
+    pd = &ENG[e]->edit[k];
+    if (ENG[e]->desc) {                             /* another name in some modes: the same range */
+        const param_desc_t *alt;
+        for (i = 0; i < 8u; i++)
+            ask_t.p[P_E0 + i] = v[i];
+        if ((alt = ENG[e]->desc(&ask_t, (uint32_t)k)) != 0)
+            pd = alt;
+    }
+    d->label = pd->label;
+    d->unit = pd->unit;
+    d->names = pd->names;
+    d->min = pd->min;
+    d->max = pd->max;
+    d->fmt = pd->fmt == F_ENUM && pd->names ? KL_ENUM : pd->fmt == F_PCT || pd->fmt == F_CUTOFF ? KL_PCT : KL_INT;
+}
+
+void kl_shape(int e, const int8_t v[8], uint8_t out[8])
 {
     uint32_t k;
     for (k = 0; k < 8u; k++) {
-        int32_t v, lo, hi;
+        int32_t lo, hi;
         out[k] = 128;
-        if (!eng_ok(e) || p < 0 || p >= ENG[e]->npresets)
+        if (!eng_ok(e))
             continue;
         lo = ENG[e]->edit[k].min;
         hi = ENG[e]->edit[k].max;
-        v = ENG[e]->presets[p].e[k];
         if (hi > lo)
-            out[k] = (uint8_t)clamp((v - lo) * 255 / (hi - lo), 0, 255);
+            out[k] = (uint8_t)clamp((v[k] - lo) * 255 / (hi - lo), 0, 255);
     }
 }
 
 /* ------------------------------------------------- the main loop asks, the render plays --- */
 static volatile int sel_e = KL_ANALOG, sel_p = 0;   /* asked for */
+static volatile int8_t sel_v[8];
+static volatile uint32_t sel_n;                     /* asks so far: the render takes the values when it moves */
 static volatile int hush;
 #define QN 64u
 static volatile uint32_t q_w, q_r;                  /* main loop writes q_w, the render q_r */
 static uint8_t q_on[QN], q_note[QN], q_vel[QN];
 
-void kl_select(int e, int p)
+void kl_select(int e, int p, const int8_t v[8])
 {
+    uint32_t k;
+    for (k = 0; k < 8u; k++)
+        sel_v[k] = v[k];
     sel_e = eng_ok(e) ? e : KL_ANALOG;
     sel_p = p;
+    sel_n = sel_n + 1u;                             /* last: the render may come between, and takes them next */
 }
 
 void kl_key(int on, int note, int vel)
@@ -81,6 +124,7 @@ void kl_silence(void) { hush = 1; }
 
 /* -------------------------------------------------------------- the voices --- */
 static int cur_e = -1, cur_p = -1;                  /* playing */
+static uint32_t cur_n;                              /* the ask whose values play */
 static uint8_t env_set[4];                          /* the preset's ATK DEC SUS REL, 0..127 */
 static int32_t env_fenv;                            /* its ENV -> FILTER, -64..63 */
 static uint8_t mono_mode;
@@ -92,8 +136,7 @@ static void load(int e, int p)
     const engine_t *en = ENG[e];
     const preset_t *pr;
     track_t *t = &trk[0];
-    uint32_t k;
-    if (p < 0 || p >= en->npresets)                 /* the engine and the preset asked for at different times */
+    if (p < 0 || p >= en->npresets)                /* the engine and the preset asked for at different times */
         p = 0;
     pr = &en->presets[p];
     if (e != cur_e) {                               /* another engine: from silence, WHEEL's own state cleared */
@@ -102,8 +145,6 @@ static void load(int e, int p)
         memset(drw_v, 0, sizeof drw_v);
         memset(last_amp, 0, sizeof last_amp);
     }
-    for (k = 0; k < 8u; k++)
-        t->p[P_E0 + k] = pr->e[k];
     t->p[P_ATK] = pr->env[0];
     t->p[P_REL] = pr->env[3];
     t->p[P_FTYPE] = 0;
@@ -114,11 +155,19 @@ static void load(int e, int p)
     cur_p = p;
 }
 
+/* the sound asked for: the preset at a change, then the values, each kept to its range (for a block they may be
+ * another engine's, asked for at a different time: none must index past an engine's table) */
 static void ensure_loaded(void)
 {
+    uint32_t n = sel_n, k;
     int e = sel_e, p = sel_p;
+    if (e == cur_e && p == cur_p && n == cur_n)
+        return;
     if (e != cur_e || p != cur_p)
         load(e, p);
+    for (k = 0; k < 8u; k++)
+        trk[0].p[P_E0 + k] = (int16_t)clamp(sel_v[k], ENG[cur_e]->edit[k].min, ENG[cur_e]->edit[k].max);
+    cur_n = n;
 }
 
 static void voice_start(int note, int vel)
@@ -280,3 +329,5 @@ int kl_voices(void)
         n += trk[0].v[k].active ? 1 : 0;
     return n;
 }
+
+int kl_value_now(int k) { return k >= 0 && k < 8 ? trk[0].p[P_E0 + k] : 0; }

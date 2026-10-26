@@ -1,10 +1,13 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0: the rack. Three engines of Felucca-Engines (ANALOG, PHASE, WHEEL) play from the keys and from MIDI;
- * K1 picks the engine, PRESET its sound, OCT- / OCT+ the octave, SAVE keeps them across a power cycle.
- * The screen: the header (the engine, the sound's glyph and name, the octave, the battery), six engine tiles
- * (three playing, three to come) and a row of what the knobs hold.
+/* KLASSIK v0.1: the rack and its edit pages. Three engines of Felucca-Engines (ANALOG, PHASE, WHEEL) play from the
+ * keys and from MIDI; K1 picks the engine, PRESET its sound, OCT- / OCT+ the octave. EDIT opens the engine's two
+ * pages of four parameters on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once.
+ * SAVE keeps the engine, the sounds and the octave across a power cycle, an edited sound as its engine's USER sound.
+ * The screen: the header (the engine, the sound's glyph and name, the octave, the battery), then the six engine
+ * tiles (three playing, three to come) or an edit page (its tabs, the sound's glyph large, its spokes named), and a
+ * row of what the knobs hold.
  * A sound's glyph: its eight parameters as eight spokes, each as long as its value in its range, in the engine's
  * colour. Part of the unity build (base/device/unity.c, base/host/plat_host.c), after the platform: gfx.c and
  * announce.c are in scope. */
@@ -38,27 +41,48 @@ static const tile_t TILES[6] = {
 static const uint8_t TILE_OF[KL_NENG] = {1, 2, 3};   /* engine -> its tile */
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5331u                        /* "KLS1": another magic loads defaults */
+#define SET_MAGIC 0x4B4C5332u                        /* "KLS2": another magic (v0's KLS1 too) loads defaults */
+typedef struct {
+    int8_t v[8];                                     /* the eight parameters */
+    uint8_t base;                                    /* the preset it was made from: its envelopes and MONO */
+    uint8_t saved;                                   /* 1 = there is one */
+} user_t;
 typedef struct {
     uint32_t magic;
     uint8_t engine;                                  /* KL_* */
-    uint8_t preset[KL_NENG];                         /* each engine's last sound */
+    uint8_t preset[KL_NENG];                         /* each engine's last sound; kl_presets(e) is its USER sound */
     int8_t octave;                                   /* -2 .. +2 */
     uint8_t rsv[3];
+    user_t user[KL_NENG];                            /* each engine's own sound (SAVE after an edit) */
 } settings_t;
+_Static_assert(sizeof(settings_t) <= PLAT_STORE_MAX, "the settings are one store object");
 static settings_t set;
 static uint8_t set_dirty;
+
+/* each engine's sound as it plays: its preset's values or its USER sound's, and what EDIT changed (not saved) */
+static int8_t work[KL_NENG][8];
+static uint8_t edited[KL_NENG];
 
 static void settings_defaults(void)
 {
     uint32_t i;
+    uint8_t *b = (uint8_t *)&set;
+    for (i = 0; i < sizeof set; i++)                 /* no USER sounds, every engine at its first preset */
+        b[i] = 0;
     set.magic = SET_MAGIC;
     set.engine = KL_ANALOG;
-    for (i = 0; i < KL_NENG; i++)
-        set.preset[i] = 0;
-    set.octave = 0;
-    for (i = 0; i < sizeof set.rsv; i++)
-        set.rsv[i] = 0;
+}
+
+static int values_ok(int e, const int8_t v[8])
+{
+    kl_param_t d;
+    int k;
+    for (k = 0; k < 8; k++) {
+        kl_param(e, k, v, &d);
+        if (v[k] < d.min || v[k] > d.max)
+            return 0;
+    }
+    return 1;
 }
 
 static int settings_ok(void)
@@ -66,13 +90,33 @@ static int settings_ok(void)
     uint32_t i;
     if (set.magic != SET_MAGIC || set.engine >= KL_NENG || set.octave < -2 || set.octave > 2)
         return 0;
-    for (i = 0; i < KL_NENG; i++)
-        if (set.preset[i] >= kl_presets((int)i))
+    for (i = 0; i < KL_NENG; i++) {
+        const user_t *u = &set.user[i];
+        if (u->saved > 1 || set.preset[i] >= kl_presets((int)i) + u->saved)
             return 0;
+        if (u->saved && (u->base >= kl_presets((int)i) || !values_ok((int)i, u->v)))
+            return 0;
+    }
     return 1;
 }
 
-static void sound_select(void) { kl_select(set.engine, set.preset[set.engine]); }
+static int is_user(int e) { return set.preset[e] >= kl_presets(e); }
+static int sound_base(int e) { return is_user(e) ? set.user[e].base : set.preset[e]; }   /* its preset */
+static int sound_count(int e) { return kl_presets(e) + set.user[e].saved; }   /* PRESET's choices */
+static const char *sound_name(int e) { return is_user(e) ? "USER" : kl_preset_name(e, set.preset[e]); }
+
+static void sound_load(int e)                        /* the engine's sound as chosen: an edit is forgotten */
+{
+    uint32_t k;
+    if (is_user(e))
+        for (k = 0; k < 8u; k++)
+            work[e][k] = set.user[e].v[k];
+    else
+        kl_preset_values(e, set.preset[e], work[e]);
+    edited[e] = 0;
+}
+
+static void sound_select(void) { kl_select(set.engine, sound_base(set.engine), work[set.engine]); }
 
 /* ------------------------------------------------------------------ audio --- */
 static int32_t mono[APP_BLOCK];
@@ -121,8 +165,11 @@ void app_panic(void) { kl_silence(); }
 
 void app_init(void)
 {
+    int e;
     if (plat_store_load(OBJ_SETTINGS, &set, sizeof set) != (int)sizeof set || !settings_ok())
         settings_defaults();
+    for (e = 0; e < KL_NENG; e++)
+        sound_load(e);
     sound_select();
 }
 
@@ -134,6 +181,7 @@ static struct {
     uint32_t msg_until;
     uint32_t keys, btn;
     int8_t knote[NKEYS];                             /* the note each held key started (the octave may change) */
+    uint8_t edit, page;                              /* an edit page is open, which (0: EDIT 1, 1: EDIT 2) */
     uint8_t redraw;
 } ui;
 
@@ -175,6 +223,46 @@ static void octave_text(char *t)
     t[2] = 0;
 }
 
+static void sound_title(int e, char *t)              /* its name, with "*" while an edit is not saved */
+{
+    t[0] = 0;
+    text_cat(t, sound_name(e));
+    if (edited[e])
+        text_cat(t, "*");
+}
+
+/* a parameter's value as the screen shows it: "SAW", "50%", "+2", "10ct" */
+static void value_text(const kl_param_t *d, int32_t v, char *b)
+{
+    int32_t span = d->max - d->min;
+    char t[12];
+    b[0] = 0;
+    if (d->fmt == KL_ENUM) {
+        text_cat(b, d->names[clamp(v, d->min, d->max) - d->min]);
+    } else if (d->fmt == KL_PCT) {
+        int_text(span > 0 ? ((v - d->min) * 100 + span / 2) / span : 0, b);
+        text_cat(b, "%");
+    } else {
+        if (d->min < 0 && v > 0)
+            text_cat(b, "+");
+        int_text(v, t);
+        text_cat(b, t);
+        if (d->unit)
+            text_cat(b, d->unit);
+    }
+}
+
+static void param_cat(char *t, int32_t k)            /* "CUT 50%" onto t: parameter k of the sound playing */
+{
+    kl_param_t d;
+    char v[12];
+    kl_param(set.engine, k, work[set.engine], &d);
+    value_text(&d, work[set.engine][k], v);
+    text_cat(t, d.label);
+    text_cat(t, " ");
+    text_cat(t, v);
+}
+
 static void announce(const char *t)                  /* to a screen reader only (the screen shows it already) */
 {
     if (ann_on())
@@ -205,16 +293,27 @@ void app_say(const char *a, const char *b)
 /* a screen reader that has just started listening (or asks) hears the whole screen */
 static void speak(void)
 {
-    char t[96], o[4];
+    char t[192], o[4];
+    int32_t k;
     if (ann_on() && ann_where()) {
         octave_text(o);
         t[0] = 0;
         text_cat(t, APP_NAME ". ENGINE ");
         text_cat(t, TILES[TILE_OF[set.engine]].name);
         text_cat(t, ". SOUND ");
-        text_cat(t, kl_preset_name(set.engine, set.preset[set.engine]));
+        text_cat(t, sound_name(set.engine));
+        if (edited[set.engine])
+            text_cat(t, ", EDITED");
         text_cat(t, ". OCTAVE ");
         text_cat(t, o);
+        if (ui.edit) {                               /* the page and what its knobs hold */
+            text_cat(t, ". EDIT ");
+            text_cat(t, kl_page_title(set.engine, ui.page));
+            for (k = 0; k < 4; k++) {
+                text_cat(t, ". ");
+                param_cat(t, ui.page * 4 + k);
+            }
+        }
         ann_say(t, 0, ANN_NOW);
     }
     ann_tick(plat_ms());
@@ -234,20 +333,82 @@ static void engine_step(int32_t d)
     text_cat(t, "ENGINE ");
     text_cat(t, TILES[TILE_OF[e]].name);
     text_cat(t, ". ");
-    text_cat(t, kl_preset_name(e, set.preset[e]));
+    text_cat(t, sound_name(e));
     announce(t);
 }
 
 static void preset_step(int32_t d)
 {
-    int32_t n = kl_presets(set.engine), p = ((int32_t)set.preset[set.engine] + d) % n;
+    int e = set.engine;
+    int32_t n = sound_count(e), p = ((int32_t)set.preset[e] + d) % n;
     if (p < 0)
         p += n;
-    set.preset[set.engine] = (uint8_t)p;
+    set.preset[e] = (uint8_t)p;
+    sound_load(e);
     set_dirty = 1;
     sound_select();
     ui.redraw = 1;
-    announce(kl_preset_name(set.engine, p));
+    announce(sound_name(e));
+}
+
+static void page_show(uint32_t page)                 /* EDIT 1 (0) or EDIT 2 (1) of the engine playing */
+{
+    char t[24] = "EDIT ";
+    ui.edit = 1;
+    ui.page = (uint8_t)page;
+    ui.redraw = 1;
+    text_cat(t, kl_page_title(set.engine, (int)page));
+    announce(t);
+}
+
+static void edit_close(void)
+{
+    ui.edit = 0;
+    ui.redraw = 1;
+    announce("RACK");
+}
+
+static void param_step(int32_t k, int32_t d)         /* K1..K4 on an edit page: it plays from the next block */
+{
+    int e = set.engine;
+    kl_param_t p;
+    int32_t v;
+    char t[32];
+    kl_param(e, k, work[e], &p);
+    v = clamp(work[e][k] + d, p.min, p.max);
+    if (v == work[e][k])
+        return;
+    work[e][k] = (int8_t)v;
+    edited[e] = 1;
+    set_dirty = 1;
+    sound_select();
+    ui.redraw = 1;
+    t[0] = 0;
+    param_cat(t, k);
+    announce(t);
+}
+
+static void save(void)                               /* each edited sound becomes its engine's USER sound */
+{
+    uint32_t e, k, users = 0;
+    for (e = 0; e < KL_NENG; e++) {
+        user_t *u = &set.user[e];
+        if (!edited[e])
+            continue;
+        for (k = 0; k < 8u; k++)
+            u->v[k] = work[e][k];
+        u->base = (uint8_t)sound_base((int)e);
+        u->saved = 1;
+        set.preset[e] = (uint8_t)kl_presets((int)e);
+        edited[e] = 0;
+        users++;
+    }
+    if (plat_store_save(OBJ_SETTINGS, &set, sizeof set) == 0) {
+        set_dirty = 0;
+        app_say("SAVED", users ? "USER" : "");
+    } else {
+        app_say("SAVE", "FAILED");                   /* SAVE stays lit: the next one tries again */
+    }
 }
 
 static void octave_step(int32_t d)
@@ -288,28 +449,29 @@ static void input(void)
         uint32_t bit = 1u << k;
         if (!(btn & bit) || (ui.btn & bit))
             continue;
-        if (k == B_OCTDN)
+        if (k == B_OCTDN && ui.edit)
+            edit_close();                            /* back, as on Felucca's pages */
+        else if (k == B_OCTDN)
             octave_step(-1);
+        else if (k == B_EDIT || (k == B_OCTUP && ui.edit))
+            page_show(ui.edit ? ui.page ^ 1u : 0u);  /* the edit pages, then the other one */
         else if (k == B_OCTUP)
             octave_step(1);
-        else if (k == B_SAVE) {
-            if (plat_store_save(OBJ_SETTINGS, &set, sizeof set) == 0) {
-                set_dirty = 0;
-                app_say("SAVED", "");
-            } else {
-                app_say("SAVE", "FAILED");
-            }
-        } else {
+        else if (k == B_SAVE)
+            save();
+        else
             app_say(BTN_NAME[k], "SOON");            /* the pages behind the other buttons come later */
-        }
     }
-    if ((e = plat_enc(EN_K1)) != 0)
-        engine_step(e);
-    if ((e = plat_enc(EN_PRESET)) != 0)
-        preset_step(e);
-    for (k = 0; k < NE; k++)                         /* the others: read, so they do not pile up */
-        if (k != EN_K1 && k != EN_PRESET)
-            (void)plat_enc((int)k);
+    for (k = 0; k < NE; k++) {                       /* every one read, so none piles up */
+        if ((e = plat_enc((int)k)) == 0)
+            continue;
+        if (k == EN_PRESET)
+            preset_step(e);
+        else if (ui.edit && k >= EN_K1)
+            param_step(ui.page * 4 + (int32_t)(k - EN_K1), e);
+        else if (k == EN_K1)
+            engine_step(e);
+    }
     if (keys != ui.keys || btn != ui.btn)
         ui.redraw = 1;
     ui.keys = keys;
@@ -416,12 +578,14 @@ static void draw_header(void)
         cv_text(x + 6, 3, &FONT_B, ui.msg[1], tl->col);
     } else {
         uint8_t sh[8];
+        char name[24];
         int32_t w = text_w(&FONT_XS, tl->name) + 8;
         cv_rect(6, 4, w, 15, tl->col);
         cv_text(10, 4, &FONT_XS, tl->name, K_GROUND);
-        kl_shape(set.engine, set.preset[set.engine], sh);
+        kl_shape(set.engine, work[set.engine], sh);  /* the sound as it plays: an edit shows at once */
         glyph_draw(6 + w + 11, 11, 8, sh, tl->col, K_HEAD);
-        text_fit(6 + w + 23, 3, 150 - w, &FONT_B, kl_preset_name(set.engine, set.preset[set.engine]), K_TEXT);
+        sound_title(set.engine, name);
+        text_fit(6 + w + 23, 3, 150 - w, &FONT_B, name, K_TEXT);
     }
     octave_text(t);
     text_cat(o, t);
@@ -444,12 +608,13 @@ static void draw_row(int32_t row)                    /* three tiles, 93 rows hig
             box_edge(x, y, w, h, 2, tl->col);
         if (tl->eng >= 0) {
             uint8_t sh[8];
-            int32_t p = set.preset[tl->eng];
-            kl_shape(tl->eng, p, sh);
+            char name[24];
+            kl_shape(tl->eng, work[tl->eng], sh);
             glyph_draw(x + 23, y + 21, 18, sh, tl->col, bg);
             cv_text(x + 6, y + 40, &FONT_B, tl->name, sel ? tl->col : K_TEXT);
             cv_text(x + 6, y + 57, &FONT_T, tl->sub, K_MUTED);
-            text_fit(x + 6, y + 71, w - 10, &FONT_T, kl_preset_name(tl->eng, p), K_TEXT);
+            sound_title(tl->eng, name);
+            text_fit(x + 6, y + 71, w - 10, &FONT_T, name, K_TEXT);
         } else {
             cv_rect(x + 6, y + 20, 30, 3, mix565(tl->col, bg, 110));
             cv_text(x + 6, y + 40, &FONT_B, tl->name, K_MUTED);
@@ -460,46 +625,159 @@ static void draw_row(int32_t row)                    /* three tiles, 93 rows hig
     cv_blit(0, 22 + row * 93);
 }
 
-static void draw_footer(void)                        /* what the controls hold, each with a bar of where it is */
+static void footer_rack(char lab[4][16], char v[4][12], int32_t frac[4])
 {
-    const tile_t *tl = &TILES[TILE_OF[set.engine]];
-    char v[4][12], t[8];
-    int32_t frac[4], i;
-    int32_t n = kl_presets(set.engine), p = set.preset[set.engine];
+    char t[8];
+    int e = set.engine;
+    int32_t n = sound_count(e), p = set.preset[e];
     uint32_t pct = plat_master() * 100u / 4096u;
     static const char *const LAB[4] = {"K1 ENGINE", "PRESET", "OCTAVE", "MASTER"};
-    v[0][0] = 0;
-    text_cat(v[0], tl->name);
-    frac[0] = set.engine * 256 / (KL_NENG - 1);
-    two_digits(p + 1, v[1]);
-    text_cat(v[1], "/");
-    two_digits(n, t);
-    text_cat(v[1], t);
+    int32_t i;
+    for (i = 0; i < 4; i++) {
+        lab[i][0] = v[i][0] = 0;
+        text_cat(lab[i], LAB[i]);
+    }
+    text_cat(v[0], TILES[TILE_OF[e]].name);
+    frac[0] = e * 256 / (KL_NENG - 1);
+    if (is_user(e)) {
+        text_cat(v[1], "USER");
+    } else {
+        two_digits(p + 1, v[1]);
+        text_cat(v[1], "/");
+        two_digits(kl_presets(e), t);
+        text_cat(v[1], t);
+    }
     frac[1] = n > 1 ? p * 256 / (n - 1) : 256;
     octave_text(v[2]);
     frac[2] = (set.octave + 2) * 64;
     int_text((int32_t)pct, v[3]);
     text_cat(v[3], "%");
     frac[3] = (int32_t)pct * 256 / 100;
+}
+
+static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4])   /* K1..K4: the page's parameters */
+{
+    int e = set.engine;
+    int32_t i;
+    for (i = 0; i < 4; i++) {
+        int32_t k = ui.page * 4 + i, x = work[e][k];
+        kl_param_t d;
+        kl_param(e, k, work[e], &d);
+        lab[i][0] = 'K';
+        lab[i][1] = (char)('1' + i);
+        lab[i][2] = ' ';
+        lab[i][3] = 0;
+        text_cat(lab[i], d.label);
+        value_text(&d, x, v[i]);
+        frac[i] = d.max > d.min ? (x - d.min) * 256 / (d.max - d.min) : 0;
+    }
+}
+
+static void draw_footer(void)                        /* what the controls hold, each with a bar of where it is */
+{
+    const tile_t *tl = &TILES[TILE_OF[set.engine]];
+    char lab[4][16], v[4][12];
+    int32_t frac[4], i;
+    if (ui.edit)
+        footer_edit(lab, v, frac);
+    else
+        footer_rack(lab, v, frac);
     cv_begin(240, 32, K_HEAD);
     cv_rect(0, 0, 240, 1, K_LINE);
     for (i = 0; i < 4; i++) {
         int32_t x = i * 60;
         if (i)
             cv_rect(x, 1, 1, 31, K_LINE);
-        cv_text(x + 6, 3, &FONT_T, LAB[i], K_MUTED);
-        cv_text(x + 6, 13, &FONT_XS, v[i], K_TEXT);
+        text_fit(x + 6, 3, 52, &FONT_T, lab[i], K_MUTED);
+        text_fit(x + 6, 13, 52, &FONT_XS, v[i], K_TEXT);
         cv_rect(x + 6, 28, 48, 2, K_LINE);
         cv_rect(x + 6, 28, 48 * clamp(frac[i], 0, 256) / 256, 2, tl->col);
     }
     cv_blit(0, 208);
 }
 
+/* ------------------------------------------------------------ edit pages --- */
+#define EDIT_CX 120                                  /* the live glyph's centre on the screen */
+#define EDIT_CY 124
+
+static void ring(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* a circle, one pixel wide */
+{
+    int32_t x = r, y = 0, err = 1 - r;
+    while (x >= y) {
+        cv_pset(cx + x, cy + y, c);
+        cv_pset(cx - x, cy + y, c);
+        cv_pset(cx + x, cy - y, c);
+        cv_pset(cx - x, cy - y, c);
+        cv_pset(cx + y, cy + x, c);
+        cv_pset(cx - y, cy + x, c);
+        cv_pset(cx + y, cy - x, c);
+        cv_pset(cx - y, cy - x, c);
+        y++;
+        if (err < 0) {
+            err += 2 * y + 1;
+        } else {
+            x--;
+            err += 2 * (y - x) + 1;
+        }
+    }
+}
+
+/* the page's rows y0 .. y0 + 92 of the screen (it is drawn in two strips): the tabs (the two pages' titles, this
+ * one lit), and the sound's glyph large in its ring, each spoke named, the four on the knobs in the engine's colour */
+static void draw_edit(int32_t y0)
+{
+    const tile_t *tl = &TILES[TILE_OF[set.engine]];
+    int e = set.engine;
+    int32_t i, x = 8, cy = EDIT_CY - y0;
+    uint8_t sh[8];
+    char t[4];
+    cv_begin(240, 93, K_GROUND);
+    for (i = 0; i < 2; i++) {
+        const char *s = kl_page_title(e, (int)i);
+        int32_t w = text_w(&FONT_XS, s);
+        cv_text(x, 23 - y0, &FONT_XS, s, i == ui.page ? tl->col : K_MUTED);
+        if (i == ui.page)
+            cv_rect(x, 38 - y0, w, 2, tl->col);
+        x += w + 14;
+    }
+    t[0] = (char)('1' + ui.page);
+    t[1] = '/';
+    t[2] = '2';
+    t[3] = 0;
+    cv_text(232 - text_w(&FONT_XS, t), 23 - y0, &FONT_XS, t, K_MUTED);
+    cv_rect(0, 40 - y0, 240, 1, K_LINE);
+    cv_text(8, 46 - y0, &FONT_T, "LIVE", K_MUTED);
+    kl_shape(e, work[e], sh);
+    ring(EDIT_CX, cy, 60, K_LINE);
+    glyph_draw(EDIT_CX, cy, 56, sh, tl->col, K_GROUND);
+    for (i = 0; i < 8; i++) {                        /* a name beyond each spoke's end, away from the centre */
+        kl_param_t d;
+        int32_t lx = EDIT_CX + GDIR[i][0] * 66 / 256, ly = cy + GDIR[i][1] * 66 / 256, w;
+        kl_param(e, (int)i, work[e], &d);
+        w = text_w(&FONT_XS, d.label);
+        if (GDIR[i][0] < 0)
+            lx -= w;
+        else if (GDIR[i][0] == 0)
+            lx -= w / 2;
+        if (GDIR[i][1] < 0)
+            ly -= FONT_XS.h;
+        else if (GDIR[i][1] == 0)
+            ly -= FONT_XS.h / 2;
+        cv_text(lx, ly, &FONT_XS, d.label, i / 4 == ui.page ? tl->col : K_MUTED);
+    }
+    cv_blit(0, (uint32_t)y0);
+}
+
 static void draw(void)
 {
     draw_header();
-    draw_row(0);
-    draw_row(1);
+    if (ui.edit) {
+        draw_edit(22);
+        draw_edit(115);
+    } else {
+        draw_row(0);
+        draw_row(1);
+    }
     draw_footer();
 }
 
@@ -529,8 +807,24 @@ void app_frame(void)
 }
 
 #ifdef PLAT_HOST
+void app_host_reboot(void)
+{
+    uint32_t i;
+    uint8_t *b = (uint8_t *)&ui;
+    for (i = 0; i < sizeof ui; i++)
+        b[i] = 0;
+    set_dirty = 0;
+}
+
+static int expect_k(const char *what, const char *name)   /* "v4" for name "v": 4; else -1 */
+{
+    size_t n = strlen(name);
+    return !strncmp(what, name, n) && what[n] >= '0' && what[n] <= '7' && !what[n + 1] ? what[n] - '0' : -1;
+}
+
 int app_expect(const char *what, int *got)
 {
+    int k;
     if (!strcmp(what, "engine"))
         *got = set.engine;
     else if (!strcmp(what, "preset"))
@@ -541,7 +835,23 @@ int app_expect(const char *what, int *got)
         *got = kl_voices();
     else if (!strcmp(what, "dirty"))
         *got = set_dirty;
-    else
+    else if (!strcmp(what, "edit"))
+        *got = ui.edit;
+    else if (!strcmp(what, "page"))
+        *got = ui.page + 1;
+    else if (!strcmp(what, "edited"))
+        *got = edited[set.engine];
+    else if (!strcmp(what, "user"))
+        *got = set.user[set.engine].saved;
+    else if ((k = expect_k(what, "v")) >= 0)
+        *got = work[set.engine][k];
+    else if ((k = expect_k(what, "dsp")) >= 0)
+        *got = kl_value_now(k);
+    else if ((k = expect_k(what, "glyph")) >= 0) {
+        uint8_t sh[8];
+        kl_shape(set.engine, work[set.engine], sh);
+        *got = sh[k];
+    } else
         return 0;
     return 1;
 }

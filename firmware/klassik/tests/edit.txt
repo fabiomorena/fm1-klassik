@@ -1,0 +1,190 @@
+# KLASSIK's edit pages in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/edit.txt firmware/klassik/build/host
+wait 600
+expect engine 0
+expect edit 0
+# EDIT opens VA's first page: OSC, WAVE DTN MIX NOIS on K1..K4
+tap EDIT
+wait 30
+expect edit 1
+expect page 1
+shot edit-va-1.png
+# K2 turns DTN (SAW LEAD: 12): the value, the sound and the glyph at once, not saved yet
+listen
+spin K2 20
+wait 30
+expect v1 32
+expect dsp1 32
+expect glyph1 64
+said DTN 32ct
+expect edited 1
+expect dirty 1
+# EDIT again: the second page, FLT, CUT on K1; OCT+ flips the pages too, and leaves the octave
+tap EDIT
+wait 30
+expect page 2
+tap OCT+
+wait 30
+expect page 1
+tap OCT+
+wait 30
+expect page 2
+expect octave 0
+# CUT closed is heard at once: the level falls (SAW LEAD measured -32.0 dBFS at CUT 90, -56.5 at CUT 0)
+key 7 down
+wait 200
+peakreset
+wait 400
+expect peak_db_min -40
+wav edit-cut.wav
+wait 200
+turn K1 -90 10
+wait 200
+wavstop
+expect v4 0
+expect dsp4 0
+expect glyph4 0
+peakreset
+wait 400
+expect peak_db_max -50
+spin K1 64
+wait 30
+expect v4 64
+expect dsp4 64
+said CUT 50%
+key 7 up
+shot edit-va-2.png
+# ANALOG's WAVE renames a parameter: on SYNC, DTN's knob is SYNC
+tap EDIT
+wait 30
+spin K1 5
+wait 30
+said WAVE SYNC
+spin K2 1
+wait 30
+said SYNC 33
+spin K1 -5
+wait 30
+expect v0 0
+# OCT- goes back to the rack, the octave as it was; the edit shows there too (SAW LEAD*)
+tap OCT-
+wait 30
+expect edit 0
+expect octave 0
+shot edited.png
+# an edit is kept while another engine plays
+spin K1 1
+wait 30
+expect engine 1
+expect edited 0
+spin K1 -1
+wait 30
+expect engine 0
+expect edited 1
+expect v1 33
+expect dsp1 33
+# SAVE: the edited sound becomes VA's USER sound (after its 12 presets), kept across a power cycle
+tap SAVE
+wait 30
+expect dirty 0
+expect edited 0
+expect user 1
+expect preset 12
+said SAVED USER
+shot user.png
+reboot
+wait 600
+expect engine 0
+expect preset 12
+expect user 1
+expect v1 33
+expect v4 64
+expect dsp1 33
+expect dsp4 64
+# PRESET goes on to the factory sounds and back to USER
+spin PRESET 1
+wait 30
+expect preset 0
+expect v1 12
+expect dsp1 12
+spin PRESET -1
+wait 30
+expect preset 12
+expect v1 33
+expect dsp1 33
+# PRESET forgets an edit not saved
+tap EDIT
+wait 30
+spin K3 10
+wait 30
+expect v2 74
+expect edited 1
+spin PRESET 1
+wait 30
+spin PRESET -1
+wait 30
+expect edited 0
+expect v2 64
+tap OCT-
+wait 30
+# PD's first page: one edit, kept while ORGAN is edited
+spin K1 1
+wait 30
+expect engine 1
+tap EDIT
+wait 30
+spin K3 10
+wait 30
+expect v2 40
+expect edited 1
+shot edit-pd-1.png
+tap OCT-
+wait 30
+# ORGAN's first page: signed values, each kept to its range (SUB -8 .. 8)
+spin K1 1
+wait 30
+expect engine 2
+tap EDIT
+wait 30
+spin K2 -20
+wait 30
+expect v1 -8
+expect dsp1 -8
+spin K3 2
+wait 30
+expect v2 2
+said BODY +2
+shot edit-organ-1.png
+tap EDIT
+wait 30
+shot edit-organ-2.png
+# SAVE keeps both edited sounds, each its engine's USER sound
+tap SAVE
+wait 30
+expect user 1
+expect preset 5
+tap OCT-
+wait 30
+spin K1 -1
+wait 30
+expect engine 1
+expect user 1
+expect preset 6
+expect v2 40
+# a power cycle with a page open starts at the rack
+tap EDIT
+wait 30
+expect edit 1
+reboot
+wait 600
+expect edit 0
+expect dirty 0
+expect engine 2
+expect preset 5
+expect v1 -8
+spin K1 -1
+wait 30
+expect preset 6
+expect v2 40
+expect dsp2 40

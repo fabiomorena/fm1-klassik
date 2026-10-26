@@ -7,3 +7,41 @@ PD	P D, phase distortion
 FM6	F M 6
 K1 ENGINE	knob 1, engine
 SOON	coming later
+OSC	oscillator
+FLT	filter
+DTN	detune
+NOIS	noise
+CUT	cutoff
+DRV	drive
+KTR	key tracking
+PHS	phase
+DCW	D C W
+WAVE2	wave 2
+SQR	square
+TRI	triangle
+SIN	sine
+PLS	pulse
+DSIN	double sine
+SPLS	saw pulse
+RSAW	resonant saw
+RTRI	resonant triangle
+RTRP	resonant trapezoid
+BARS	drawbars
+REG	registration
+PERC	percussion
+ROTR	rotor
+MELLO	mellow
+HOLLW	hollow
+SMOOT	smooth
+3BAR	three bars
+GOSPL	gospel
+CLARI	clarinet
+STRNG	strings
+CHAPL	chapel
+BRITE	bright
+3RD	third
+2SOFT	second, soft
+3SOFT	third, soft
+2SLOW	second, slow
+3SLOW	third, slow
+ct	cents

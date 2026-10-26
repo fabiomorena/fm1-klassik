@@ -1,4 +1,4 @@
-# Every push: the host simulator built and KLASSIK's tests run; the screenshots kept as an artifact.
+# Every push: the host simulator built and every one of KLASSIK's tests run; the screenshots kept as an artifact.
 name: host
 on: [push, pull_request]
 jobs:
@@ -10,7 +10,11 @@ jobs:
           submodules: recursive
       - run: pip install pillow
       - run: python3 base/tools/build.py firmware/klassik --host
-      - run: firmware/klassik/build/host/klassik_host firmware/klassik/tests/basic.txt firmware/klassik/build/host
+      - run: |
+          for t in firmware/klassik/tests/*.txt; do
+            echo "== $t"
+            firmware/klassik/build/host/klassik_host "$t" firmware/klassik/build/host || exit 1
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: screens
