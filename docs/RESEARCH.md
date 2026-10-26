@@ -1,0 +1,84 @@
+# Recherche (Stand 26.10.2026)
+
+Zusammenfassung der Recherche aus dem Planungs-Chat (claude.ai, 25.–26.10.2026). Die FM-1-Szene ändert sich fast
+täglich: Zahlen und Versionen vor Entscheidungen neu prüfen. Jede Aussage hat ihre Quelle; „unsicher“ heißt: nicht
+bestätigt.
+
+## Hardware
+
+| Punkt | Stand | Quelle |
+| --- | --- | --- |
+| SoC | JieLi AC791N (WL82), zwei pi32v2-Kerne | altstrument.org/devices/m-vave-fm-1 |
+| Display | 240×240 Farbe (erste Annahme 320×240 war falsch) | github.com/joakimeriksson/fm1-emu, github.com/seanohollaren/fm1-doom, `base/host/plat_host.c` |
+| Bedienung | 27 Tasten, 14 Taster mit LEDs, 7 Encoder (SELECT, ALGO, PRESET, K1–K4), MASTER, TRS-MIDI-In | joakimeriksson.github.io/fm1-emu, `base/include/plat.h` |
+| Speicher | 1 MB Flash; für die App: 581 KB Slot, 96 KB RAM (.data/.bss), 336 KB Pool, kein externer RAM | fm1-emu, `base/README.md` |
+| Tasten | Anschlagdynamik und Druck auslesbar (`APP_TOUCH`) | `base/README.md` |
+
+## Offizielle Firmware
+
+- **Stock V16 (21.10.2026):** acht Parts multitimbral, 20 Stimmen geteilt, Sequencer bis 64 Steps, RGB-Farbeinstellung
+  der Oberfläche. Quellen: pianoandsynth.com (Artikel zu V16), forum.m-vave.com/topic/23.
+- Die Community-Werkzeuge und Rückwege sind noch auf **V15** ausgelegt; Faustregel: vor dem Wechsel zwischen
+  Custom-Firmwares zurück auf V15. Quellen: altstrument.org, wero1414.github.io/atlas-fm-1.
+- **FM1 Open:** offizielles Open-Source-Projekt von M-VAVE; App-Code GPL-3.0, die Sound-Engine nur als
+  Binär-Bibliothek, Build unter Windows. Quellen: github.com/m-vave/fm1_open, synthtopia.com (20.10.2026).
+
+## Community-Firmwares mit klassischen Klängen (Auswahl)
+
+| Firmware | Inhalt | Lizenz | Quelle |
+| --- | --- | --- | --- |
+| Felucca | Basis vieler Forks, 13 Engines, Web-Editor, FM6 auf Dexed/msfa | GPL-3.0 (5–6 Engines MIT) | github.com/hugelton/Felucca |
+| Melodee | Prophet-5, CZ-1, FM6 mit DX7-Bänken | GPL-3.0 | github.com/keremimo/melodee |
+| FM-106 | Juno-106 (Port von KR-106), 6 Stimmen auf beiden Kernen | – | altstrument.org |
+| Clipper | 23 Engines, 407 Sounds, UNDO/COMPARE/MORPH | GPL-3.0 | github.com/isod89/clipper-fm1 |
+| Skiff | 6-Track-Groovebox, 8 Undo-Stufen, Sound-Typen | GPL-3.0 | github.com/illuminus5/skiff |
+| DUELL | bitimbral, MORPH zwischen zwei Versionen eines Sounds | GPL-3.0 | github.com/oscillr/DUELL |
+
+Verzeichnisse: altstrument.org (rund 227 Firmwares, Stand 26.10.), github.com/aroum/fm1-custom-fw,
+fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.github.io/atlas-fm-1.
+
+## Basis-Vergleich (Entscheidung: fm1-base, siehe DECISIONS.md)
+
+- **Felucca-Fork:** schnellster Weg zu vielen Sounds, fertiges Bedienkonzept; dafür GPL-3.0 und ein dichtes
+  bestehendes UI-Konzept.
+- **fm1-base:** Plattformschicht, Host-Simulator, Browser-Emulator, Build-Werkzeuge; MPL-2.0, die App darf jede
+  Lizenz haben; Beta (Schnittstellen können sich vor 1.0 ändern). Quelle: github.com/charlesvestal/fm1-base.
+- **fm1-dock:** Synths als Module im Flash, Auswahl am Gerät; GPL-3.0 (auf Dinghy); jedes Modul mit eigener UI.
+  Quelle: github.com/joakimeriksson/fm1-dock.
+
+## Engine-Quellen und Lizenzen
+
+| Klang | Quelle | Lizenz | Quelle der Angabe |
+| --- | --- | --- | --- |
+| VA, PD, ORGAN (+ LOFI, TRIO, NOISE) | Felucca-Engines | MIT (PHASE im Code geprüft) | github.com/hugelton/Felucca-Engines |
+| FM6 | msfa (Kern von Dexed) | Apache-2.0; Dexed selbst GPL-3.0 | github.com/asb2m10/dexed |
+| ACID | Open303 (Robin Schmidt), schon auf den FM-1 portiert (X0X) | MIT | github.com/mediaworkbench/Felucca (Lizenzhinweis) |
+| Juno | KR-106 | GPL-3.0, CPU-hungrig | kayrock.org/kr106, altstrument.org (FM-106) |
+| Strings | kein MIT-Kandidat gefunden; Plan: ANALOG + Ensemble-Chorus | – | – |
+
+## Neuheits-Check der Signatur-Ideen
+
+Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).
+Verwandtes gibt es: UNDO/COMPARE/MORPH (Clipper), MORPH (DUELL), Undo-Stufen (Skiff), Kategorien/Favoriten (Melodee,
+Skiff). Jede einzelne Firmware wurde nicht geprüft: Neuheit **unsicher**.
+
+## Entwicklungsumgebung (Mac M3)
+
+- JieLi-Toolchain ist nur Linux x86-64: Geräte-Build in einem linux/amd64-Docker-Container (Rosetta).
+  Quellen: github.com/charlesvestal/fm1-loom/blob/main/BUILDING.md, github.com/isod89/sloop-fm1/blob/main/BUILDING.md.
+- Host-Simulator baut nativ mit `cc` (bei uns getestet), Browser-Emulator braucht Emscripten.
+- Fonts: Pillow braucht libraqm; die Pillow-Wheels laden libfribidi zur Laufzeit, auf Apple Silicon unter
+  `/opt/homebrew/lib` nur mit `DYLD_FALLBACK_LIBRARY_PATH`. Quellen: pillow.readthedocs.io (Building from source),
+  Pillow-Quellcode 11.3.0 `src/thirdparty/fribidi-shim/fribidi.c`, fm1-loom BUILDING.md.
+- PyCharm hat keine C/C++-Unterstützung, CLion schon (frei für nicht-kommerzielle Nutzung).
+  Quelle: intellij-support.jetbrains.com (Thread „PyCharm from CLion“).
+- Claude Code: Plugin für JetBrains-IDEs, lädt `CLAUDE.md` zu Beginn jeder Sitzung.
+  Quellen: code.claude.com/docs/en/jetbrains, code.claude.com/docs/en/memory.
+- Zum Prüfen auf echter Hardware später: **Mocky** zeigt Bilder per USB auf dem 240×240-Display; **fm1-emu** führt
+  `.fwsc`-Pakete im Browser und nativ auf Apple Silicon aus.
+
+## Sicherheit beim Flashen (für später)
+
+- Single-Bank-Flash, kein etablierter Rückweg bei abgebrochenem Schreiben (altstrument.org).
+- Jede Firmware muss in den Update-Modus zurückfinden, sonst ist das Gerät für Updates gesperrt
+  (github.com/aroum/fm1-custom-fw). fm1-base bringt diesen Weg mit; nie entfernen.
