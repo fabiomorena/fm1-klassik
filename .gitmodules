@@ -1,0 +1,6 @@
+[submodule "base"]
+	path = base
+	url = https://github.com/charlesvestal/fm1-base
+[submodule "engines"]
+	path = engines
+	url = https://github.com/hugelton/Felucca-Engines

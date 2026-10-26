@@ -1,0 +1,6 @@
+firmware/*/build/
+firmware/*/web/words/
+__pycache__/
+.DS_Store
+.idea/
+.venv/

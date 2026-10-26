@@ -1,0 +1,19 @@
+# Every push: the host simulator built and KLASSIK's tests run; the screenshots kept as an artifact.
+name: host
+on: [push, pull_request]
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: pip install pillow
+      - run: python3 base/tools/build.py firmware/klassik --host
+      - run: firmware/klassik/build/host/klassik_host firmware/klassik/tests/basic.txt firmware/klassik/build/host
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screens
+          path: |
+            firmware/klassik/build/host/*.png
+            firmware/klassik/build/host/*.wav

@@ -1,0 +1,66 @@
+# KLASSIK in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/basic.txt firmware/klassik/build/host
+wait 600
+shot boot.png
+expect engine 0
+expect octave 0
+# a key plays a voice of ANALOG, and it ends after the key is let go
+key 7 down
+wait 60
+expect voices 1
+expect midi_out 1
+wav va.wav
+wait 400
+wavstop
+expect peak_db_min -40
+key 7 up
+wait 2000
+expect voices 0
+# K1 picks the engine, PRESET the sound
+spin K1 1
+wait 50
+expect engine 1
+spin PRESET 2
+wait 50
+expect preset 2
+key 7 down
+wait 300
+expect voices 1
+shot phase.png
+key 7 up
+spin K1 1
+wait 50
+expect engine 2
+key 7 down
+key 11 down
+key 14 down
+wait 300
+expect voices 3
+shot organ.png
+key 7 up
+key 11 up
+key 14 up
+# the octave, SAVE, and both kept across a power cycle
+tap OCT+
+wait 30
+expect octave 1
+expect dirty 1
+tap SAVE
+wait 30
+expect dirty 0
+reboot
+wait 600
+expect engine 2
+expect octave 1
+expect preset 0
+# MIDI in plays too
+midi 90 3C 64
+wait 60
+expect voices 1
+midi 80 3C 00
+wait 30
+# a screen reader hears the screen
+listen
+wait 100
+said KLASSIK. ENGINE ORGAN
