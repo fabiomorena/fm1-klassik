@@ -162,7 +162,10 @@ Ansonsten erst einmal alles in Ordnung
 
 Nachtest (nach dem Commit der Korrekturen):
 
-- [ ] N1 G# spielt je Kit RD, TB, CL, RD; das Pad zeigt den Namen.
-- [ ] N2 Die Toms klingen nach Toms (setzen höher ein und fallen), nicht nach Bassdrum.
-- [ ] N3 OH und Becken nicht mehr blechern; HAT TONE macht die Hats hörbar dunkler / heller.
-- [ ] N4 SD TUNE und TOM TUNE über Kopfhörer: hörbar tiefer / höher (auch `drums-tune.wav`).
+- [x] N1 G# spielt je Kit RD, TB, CL, RD; das Pad zeigt den Namen.
+- [x] N2 Die Toms klingen nach Toms (setzen höher ein und fallen), nicht nach Bassdrum.
+- [x] N3 OH und Becken nicht mehr blechern; HAT TONE macht die Hats hörbar dunkler / heller.
+- [x] N4 SD TUNE und TOM TUNE über Kopfhörer: hörbar tiefer / höher (auch `drums-tune.wav`).
+
+Nachtest: von Fabio im Chat abgehakt (27.10.2026). Die offene Frage zu E3 (HAT DEC) entfällt; Klang nach
+Gehör gehört zum Feinschliff am Ende.

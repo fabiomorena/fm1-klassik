@@ -133,16 +133,17 @@ zu können, wenn man mal alles verstellt hat und zurück möchte.
 
 Nachtest (optional):
 
-- [ ] N1 D3: ACCENT auf 0, ENV fest: akzentuierte Noten klingen fast wie normale; auf 99 deutlich lauter und
+- [x] N1 D3: ACCENT auf 0, ENV fest: akzentuierte Noten klingen fast wie normale; auf 99 deutlich lauter und
   heller (ab der nächsten Note).
 
 Nachtest Regler zurücksetzen (deine Idee, auf jeder Engine; HOME im Emulator: `Esc`, festhalten per Shift-Klick):
 
-- [ ] N2 Auf einer Edit-Seite HOME drücken: Die Kopfzeile zeigt kurz `RESET TURN K1-K4`.
-- [ ] N3 CUTOFF und RESO verstellen: Unter beiden erscheint im Balken eine helle Marke (der Wert des Presets), der
+- [x] N2 Auf einer Edit-Seite HOME drücken: Die Kopfzeile zeigt kurz `RESET TURN K1-K4`.
+- [x] N3 CUTOFF und RESO verstellen: Unter beiden erscheint im Balken eine helle Marke (der Wert des Presets), der
   Name bekommt ein `*`, SAVE leuchtet.
-- [ ] N4 HOME halten und CUTOFF eine Raste drehen: CUTOFF springt zurück, seine Marke verschwindet, der Klang folgt.
-- [ ] N5 Auch RESO zurück: `*` und Marken sind weg; SAVE leuchtet nicht mehr (wenn sonst nichts ungespeichert ist).
-- [ ] N6 Mit einem USER-Sound: HOME + Regler springt auf den gespeicherten Wert, nicht auf den des Presets.
-- [ ] N7 Ohne HOME dreht der Regler wie vorher; im Rack zeigt HOME weiter „SOON“.
+- [x] N4 HOME halten und CUTOFF eine Raste drehen: CUTOFF springt zurück, seine Marke verschwindet, der Klang folgt.
+- [x] N5 Auch RESO zurück: `*` und Marken sind weg; SAVE leuchtet nicht mehr (wenn sonst nichts ungespeichert ist).
+- [x] N6 Mit einem USER-Sound: HOME + Regler springt auf den gespeicherten Wert, nicht auf den des Presets.
+- [x] N7 Ohne HOME dreht der Regler wie vorher; im Rack zeigt HOME weiter „SOON“.
 
+Nachtest: von Fabio im Chat bestätigt (27.10.2026): „funktioniert wie erwartet“.

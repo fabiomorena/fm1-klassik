@@ -30,6 +30,7 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `firmware/klassik/dsp/drums/` | Plaits-Drums nach C portiert (o2-Einheit, MIT, `float`): 808-BD/SD/Hi-Hat, 909-artige BD/SD; Änderungen im Dateikopf von `drums.c` |
 | `firmware/klassik/dsp/eng_acid.c` | ACID als `engine_t` (MPL-2.0): acht Makros in den Einheiten von Open303, acht Presets, Accent ab Velocity 100 |
 | `firmware/klassik/dsp/acid/` | Open303 nach C portiert (o2-Einheit, MIT, `float`, TB_303-Filter); Änderungen im Dateikopf von `acid.c` |
+| `firmware/klassik/tools/device_check.py` | Geräte-Build bis zu den Prüfungen von fm1-base (Größe, RAM, Pool, kein double), ohne Paket (MPL-2.0) |
 | `firmware/klassik/tools/gen_acid_tables.py` | rechnet Open303s Wellenform-Tabellen (int16), das elliptische Filter als Biquads und feste Koeffizienten beim Build (`acid_tables.h`, MIT) |
 | `firmware/klassik/dsp/klassik_dsp.h` | Schnittstelle App ↔ DSP |
 | `firmware/klassik/fm1.toml` | Build-Einstellungen (o2: `engines.c`, `msfa.c`, `drums.c`, `acid.c`; include; gen für `fe_tables.h`, `fm6_tables.h` und `acid_tables.h`) |
@@ -52,7 +53,11 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - Die CI macht dasselbe bei jedem Push (`.github/workflows/host.yml`) und baut den Browser-Emulator
   (`.github/workflows/web.yml`, Emscripten 6.0.13 aus emsdk). Lokal: `base/tools/build.py firmware/klassik --web`
   (Emscripten per Homebrew), ansehen mit `python3 -m http.server 8000 -d firmware/klassik/build/emu`.
-- Geräte-Build (`base/tools/build.py firmware/klassik`) braucht Docker und die JieLi-Toolchain: noch nicht eingerichtet.
+- Geräte-Prüfung ohne Paket (Docker läuft, Toolchain in `~/.jieli/toolchain`):
+  `JIELI_TOOLCHAIN=~/.jieli/toolchain .venv/bin/python firmware/klassik/tools/device_check.py`; alle Zeilen „ok“,
+  Exit-Code 0. Zeigt App-Größe, RAM und Pool (Stand: RESEARCH.md „Geräte-Build“). Das Paket
+  (`base/tools/build.py firmware/klassik`) braucht das AC79-SDK: noch nicht geladen (DECISIONS.md).
+- Der FM-1 hat keine libc: in DSP-Einheiten nur `memset`, `memcpy`, `memcmp` (selbst deklarieren, wie `engines.c`).
 
 ## Plattform-Regeln (fm1-base)
 - Vor Plattform-Arbeit lesen: `base/README.md`, `base/DESIGN.md`, `base/include/plat.h`, `base/template/app.c`.
@@ -115,6 +120,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.1 | Edit-Seiten (EDIT → 2 Seiten × 4 Parameter auf K1–K4), Live-Glyphe, eigener Sound pro Engine (SAVE), README-Hinweis fribidi/.venv, Tests mit Screenshots | erledigt (Simulator) |
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
-| v0.4 | Preset-Liste, Glyphen-Browser | offen |
-| v0.5 | Sequencer, Mixer, Effekte | offen |
-| v0.6 | Klang-Atlas, Klang-Stammbaum | offen |
+| v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | als Nächstes |
+| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte | offen |
+| v0.7 | Preset-Liste, Glyphen-Browser (früher v0.4) | offen |
+| v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |
+| am Ende | Feinschliff: Klang nach Gehör, Design-Fragen | offen |

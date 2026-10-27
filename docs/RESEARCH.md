@@ -260,6 +260,33 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   −15,2, −9,1, −6,6 dBFS. Bei vollem MASTER sind das 12 dB mehr (0,25 → 1). Damit übersteuern die Oktaven +1 und +2
   um bis zu 5,6 dB, der Bassbereich nicht. Höher klingt lauter, weil die Resonanzspitze dort die Obertöne trifft.
 
+## Geräte-Build (Stand 27.10.2026, ohne Paket)
+
+- **Toolchain:** JieLis Linux-Toolchain (clang 4.0.1 für pi32v2, Version `jieli-linux-toolchains-20260730.1`), mit
+  `base/tools/get_toolchain.sh` nach `~/.jieli/toolchain` geladen (24,8 MB, entpackt 135 MB). Sie läuft im
+  Docker-Container `debian:bookworm-slim` (linux/amd64) auf dem Mac (Docker 29.6.2, arm64).
+- **SDK:** Das Paket (`.fwsc`) braucht drei Dateien aus JieLis AC79-SDK (`uboot.boot`, `cfg_tool.bin`,
+  `eq_cfg_hw.bin`). Laut `base/bsp/tools/get_sdk.sh` kommt das SDK aus github.com/Jieli-Tech/fw-AC79_AIoT_SDK; das
+  Repo gibt am 27.10.2026 „Repository not found“ (GitHub-API: 404).
+  - Kopien mit genau dem getesteten Commit `d179b448` („AC79NN_SDK_V1.2.1_2023-12-13“): amitv87, msr002, HQWYFHJQ,
+    sqtech-ai (je `/fw-AC79_AIoT_SDK`). Nicht geladen: Das ist Fabios Entscheidung (offener Punkt in DECISIONS.md).
+    `get_sdk.sh` prüft die benutzten Dateien per SHA-256.
+- **Ohne SDK prüfbar:** `firmware/klassik/tools/device_check.py` führt die Schritte von `base/tools/build.py` bis
+  zu dessen Prüfungen aus und schreibt kein Paket. Ergebnis für KLASSIK v0.3 mit Regler-Reset:
+
+  | Was | belegt | Budget | frei |
+  | --- | --- | --- | --- |
+  | App (Flash) | 204 164 B | 581 564 B | 377 400 B (65 %) |
+  | RAM `.data` + `.bss` | 35 052 B | 98 304 B | 63 252 B (64 %) |
+  | Pool | 69 384 B | 344 064 B | 274 680 B, davon 8 192 B Reserve (`check`): 266 488 B nutzbar |
+
+  Bestanden: kein `double` (keine Soft-Double-Routinen), keine 64-Bit-Multiplikation neben einem Ladebefehl,
+  RAM-Code ohne Aufrufe, Registerzugriffe nur in felucca-bsp.
+- **Gefunden und behoben:** `dsp/engines.c` hatte `#include <string.h>` und `memmove`. Der FM-1 hat keine libc: Es
+  gibt nur `memset`, `memcpy` und `memcmp` (`base/bsp/chip/libc.c`, freestanding). Das fiel bisher nicht auf, weil
+  nur Host und Web gebaut wurden.
+- **Audio-Looper, nachgerechnet:** 266 488 B Pool / (44 100 × 2 B/s) = 3,0 s mono mit 16 Bit.
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

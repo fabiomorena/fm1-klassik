@@ -11,7 +11,13 @@
  * another is held goes back to that one (legato 2). The eight parameters come from the app with each sound asked
  * for (an edit plays from the next block: the engines read them every block); the preset gives the rest. */
 #include <stdint.h>
+#ifdef PLAT_HOST
 #include <string.h>
+#else                                               /* the FM-1 has no libc: felucca-bsp's chip/libc.c has these */
+void *memset(void *d, int c, unsigned n);
+void *memcpy(void *d, const void *s, unsigned n);
+int memcmp(const void *a, const void *b, unsigned n);
+#endif
 #include "klassik_dsp.h"
 
 #define NVOICE 6
@@ -162,9 +168,11 @@ static void held_drop(int note)
 
 static void held_push(int note)
 {
+    uint32_t i;
     held_drop(note);
     if (nheld == NHELD) {                           /* full: the oldest goes */
-        memmove(held, held + 1, NHELD - 1u);
+        for (i = 1; i < NHELD; i++)
+            held[i - 1u] = held[i];
         nheld--;
     }
     held[nheld++] = (uint8_t)note;

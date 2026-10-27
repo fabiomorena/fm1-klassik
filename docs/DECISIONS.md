@@ -12,7 +12,7 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 | 26.10. | **Glyphe** als durchgehendes Erkennungszeichen jedes Sounds; Raster Kopfzeile / Inhalt / Reglerzeile | Signatur der UI | fest |
 | 26.10. | Signatur-Ideen Klang-Atlas, Glyphen-Browser, Klang-Stammbaum | in Verzeichnissen nicht gefunden (Neuheit unsicher) | geplant (v0.4–v0.6) |
 | 26.10. | v0: VA (ANALOG), PD (PHASE), ORGAN (WHEEL); 1 Part, 6 Stimmen | schnell spielbar, MIT | umgesetzt, im Simulator getestet |
-| 26.10. | Sequencer und Mixer mit 4 Parts | Annahme für die Mockups (Stock V16 hat 8) | offen |
+| 26.10. | Sequencer und Mixer mit 4 Parts | Annahme für die Mockups (Stock V16 hat 8) | fest seit 27.10. (v0.5) |
 | 26.10. | Repo `fabiomorena/fm1-klassik`, CI mit Host-Tests | Sicherung und automatische Prüfung | umgesetzt, CI grün |
 | 26.10. | Arbeit nur noch in PyCharm mit Claude Code; `docs/design/` ersetzt das Canvas | Fabios Wunsch | fest |
 | 26.10. | v0.1: EDIT mit zwei Seiten à vier Parametern auf K1–K4, Live-Glyphe, ein USER-Sound je Engine (SAVE); Hüllkurve, Pegel und Regler-Beschleunigung erst mit Gerät | acht Parameter je Engine (`engine_t.edit[8]`, `page_title[2]`) passen auf K1–K4; Feinabstimmung braucht Hardware | umgesetzt, im Simulator getestet (Commit `aa1433c`) |
@@ -46,17 +46,21 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 | 27.10. | ACID: TUNE wirkt sofort, ein gehaltener Ton gleitet dorthin (Open303 stimmt erst die nächste Note) | ein Stimm-Regler, der erst bei der nächsten Note wirkt, fühlt sich kaputt an | Claudes Entscheidung, im Protokoll C5 zu prüfen |
 | 27.10. | ACID-Pegel `AC_LEVEL` = 2 × VOICE_FS: normale Noten −27 … −33, Accents −16 … −25 dBFS bei MASTER 50 % (F3); hohe Lagen mit viel Resonanz und Accent übersteuern bei vollem MASTER (bis +5,6 dB) | so laut wie die anderen Engines; ein Limiter wäre eine Abweichung von Open303, sechs VA-Stimmen übersteuern dort auch | Claudes Vorschlag; Feinabstimmung mit Gerät, Fabio prüft F2 im Protokoll |
 | 27.10. | Regler zurücksetzen auf jeder Edit-Seite: HOME halten und K1–K4 drehen, der Regler springt auf den Wert seines Sounds (Preset oder USER); HOME zeigt `RESET TURN K1-K4`; eine helle Marke im Balken zeigt den Wert des Sounds, solange der Regler woanders steht; `*` und SAVE nur noch, solange etwas vom Gespeicherten abweicht | Fabios Idee aus dem ACID-Test; die Encoder haben keinen Druckknopf (`base/include/plat.h`: nur `plat_enc`) | Fabios Wahl (Claudes Empfehlung), Mockup `Edit-Reset` angenommen; umgesetzt, im Simulator getestet (`tests/edit.txt`) |
+| 27.10. | Arbeitsweise: erst alle Features möglichst stabil bauen, Feinschliff (Klang nach Gehör, Design-Fragen) zum Schluss | Fabios Wunsch | fest |
+| 27.10. | Geräte-Build eingerichtet: JieLi-Toolchain in `~/.jieli/toolchain`, Docker; `tools/device_check.py` baut und prüft ohne Paket (App 204 164 B von 581 564 B, RAM 35 052 von 98 304 B, RAM-Pool 69 384 von 344 064 B) | Grenzen messen statt schätzen, bevor v0.5 mehrere Parts bringt | umgesetzt; das Paket wartet auf das SDK |
+| 27.10. | Fahrplan neu: v0.5 Parts (4, Stimmen-Obergrenze), Mixer (mit Limiter am Master), Noten-Looper; v0.6 Step-Sequencer und Effekte; Preset-Liste und Glyphen-Browser (früher v0.4) als v0.7; Klang-Atlas und Stammbaum als v0.8 | Fabio will einen Looper; er braucht mehrere Parts; erst Features, Feinschliff am Ende; ein Audio-Looper hätte nur ~3 s im RAM (RESEARCH.md) | Fabios Entscheidung (Claudes Plan) |
 
 ## Offene Punkte
 
 - `id_prefix = "FM-1_77"` vor dem ersten Release auf Kollisionen prüfen.
 - Ausgangspegel (×32) auf Hardware einmessen.
-- Geräte-Build (Docker, JieLi-Toolchain) einrichten und im fm1-emu testen.
+- AC79-SDK für das Geräte-Paket: JieLis Repo ist weg (404); vier Kopien haben den getesteten Commit `d179b448`
+  (RESEARCH.md). Laden aus einer Kopie: Fabios Entscheidung. Danach das Paket im fm1-emu testen.
 - Beim Kauf des Geräts: ausgelieferte Firmware-Version prüfen (Werkzeuge sind auf V15 ausgelegt).
 - Lizenz MPL-2.0 bestätigen oder ändern.
 - Kit-Namen „606“, „707“, „808“, „909“ vor dem ersten Release markenrechtlich prüfen (DPMA, USPTO; Roland hat 2019
   Designs von TR-808 und TB-303 angemeldet, RESEARCH.md).
-- DRUMS nach Gehör prüfen (Protokoll `docs/tests/DRUMS.md`, `drums-*.wav`) und die Kits nachstimmen.
+- Feinschliff am Ende: Klang nach Gehör (DRUMS-Kits nachstimmen, ACID-Presets), Design-Fragen.
 - DRUMS-Rechenlast auf dem Gerät messen (Schätzung: 10–22 % von 360 MHz bei sechs Snare-Stimmen, unsicher).
 - FM6-Rechenlast auf dem Gerät messen (Schätzung: 7–13 % von 360 MHz bei sechs Stimmen, unsicher).
 - ACID-Rechenlast auf dem Gerät messen (Schätzung: 12–18 % von 360 MHz für die eine Stimme, unsicher).
