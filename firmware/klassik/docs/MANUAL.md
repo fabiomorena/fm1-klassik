@@ -68,10 +68,11 @@ Jede Taste spielt ein Instrument, in jeder Oktave gleich:
 
 | Taste | C | C# | D | D# | E | F | F# | G | G# | A | A# | B |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Instrument | BD | RS | SD | CP | CB | LT | CH | MT | CH | HT | OH | CY |
+| Instrument | BD | RS | SD | CP | CB | LT | CH | MT | je Kit | HT | OH | CY |
 
 BD Bassdrum, RS Rimshot, SD Snare, CP Clap, CB Cowbell, LT / MT / HT tiefe, mittlere, hohe Tom, CH geschlossene,
-OH offene Hi-Hat, CY Becken. BD, RS, SD, CP, CH und OH liegen dort, wo General MIDI sie hat: Ein Drum-Sequencer per
+OH offene Hi-Hat, CY Becken. G# hat jedes Kit für sich: 606 und 909 RD (Ride-Becken), 707 TB (Tamburin), 808 CL
+(Claves). BD, RS, SD, CP, CH und OH liegen dort, wo General MIDI sie hat: Ein Drum-Sequencer per
 MIDI trifft sie.
 
 - Der Anschlag ist der Accent: härter gespielt klingt lauter und kräftiger.
@@ -79,6 +80,8 @@ MIDI trifft sie.
   gerade ist.
 - Die geschlossene Hi-Hat beendet eine klingende offene.
 - Das Loslassen einer Taste ändert nichts: Jeder Schlag klingt von selbst aus.
+
+Die Oktave (OCT− / OCT+) ändert bei DRUMS nichts am Klang: Jede Oktave spielt dieselben Instrumente.
 
 Die Edit-Seite zeigt die Tasten einer Oktave als Pads, jede mit ihrem Instrument. Lila umrandet sind die, die die
 Regler der Seite ändern; das zuletzt gespielte leuchtet kurz.
@@ -91,8 +94,9 @@ Regler der Seite ändern; das zuletzt gespielte leuchtet kurz.
 | DRUM | SNAPPY 0–99 | Anteil des Snareteppichs (Rauschen): 0 nur der Kessel, 99 fast nur der Teppich |
 | KIT | TOM TUNE −12 … +12 | Stimmung aller drei Toms in Halbtönen |
 | KIT | HAT DEC 0–99 | Ausklang der Hi-Hats (geschlossen kurz, offen länger) |
-| KIT | HAT TONE 0–99 | Klangfarbe der Hi-Hats: 0 dunkel, 99 hell |
+| KIT | HAT TONE 0–99 | Klangfarbe der Hi-Hats: 0 dunkler, metallischer, 99 hell und dünn |
 | KIT | DRIVE 0–99 | Sättigung aller Instrumente: 0 sauber, höher kräftiger und rauer |
 
-Die anderen Instrumente (Rimshot, Clap, Cowbell, Becken) behalten die Einstellungen ihres Kits. Im Browser-Emulator
+Die anderen Instrumente (Rimshot, Clap, Cowbell, Becken, das Instrument auf G#) behalten die Einstellungen ihres
+Kits. Die Toms setzen etwas höher ein und fallen dann auf ihren Ton, wie bei 808 und 909. Im Browser-Emulator
 kommt jede Taste mit gleicher Stärke an, der Accent lässt sich dort nicht spielen.

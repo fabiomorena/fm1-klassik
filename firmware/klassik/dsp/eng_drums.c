@@ -1,18 +1,20 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena */
-/* DRUMS: four kits in the style of Roland's TR-606, TR-707, TR-808 and TR-909, eleven instruments each, all
+/* DRUMS: four kits in the style of Roland's TR-606, TR-707, TR-808 and TR-909, twelve instruments each, all
  * synthetic (no samples from the machines; the 707 and the 909's cymbals were samples, so theirs are likenesses).
- * The bass drums, snares and hats are Plaits' models (dsp/drums/drums.c, MIT); the clap, rim shot and cowbell are
- * this file's. Included by engines.c after the other engines.
+ * The bass drums, snares and hats are Plaits' models (dsp/drums/drums.c, MIT); the toms, clap, rim shot and cowbell
+ * are this file's. Included by engines.c after the other engines.
  *
- * One instrument a semitone, the same in every octave: C BD, C# RS, D SD, D# CP, E CB, F LT, F# CH, G MT, G# CH,
- * A HT, A# OH, B CY (BD, RS, SD, CP, CH and OH where General MIDI has them). An instrument plays on one voice, as on
- * the machines: hit again, it rings on from where it is (engines.c same_note); CH ends a sounding OH; velocity is
- * the accent; letting a key go does nothing. Its own envelopes (ownenv): a voice ends after a few quiet blocks.
+ * One instrument a semitone, the same in every octave: C BD, C# RS, D SD, D# CP, E CB, F LT, F# CH, G MT, G# the
+ * kit's own (606 and 909 RD ride, 707 TB tambourine, 808 CL claves), A HT, A# OH, B CY (BD, RS, SD, CP, CH and OH
+ * where General MIDI has them). An instrument plays on one voice, as on the machines: hit again, it rings on from
+ * where it is (engines.c same_note); CH ends a sounding OH; velocity is the accent; letting a key go does nothing.
+ * Its own envelopes (ownenv): a voice ends after a few quiet blocks.
  *
  * The eight values (EDIT 1 DRUM: BD TUNE, BD DEC, SD TUNE, SNAPPY; EDIT 2 KIT: TOM TUNE, HAT DEC, HAT TONE, DRIVE)
  * set what they name; a kit's own are its defaults. TUNE is in semitones; HAT DEC and HAT TONE set CH and OH (the
- * cymbal keeps the kit's); DRIVE saturates every voice. */
+ * cymbal keeps the kit's; HAT TONE spans the bright part of the hats' filter, 1.9 to 9.6 kHz); DRIVE saturates
+ * every voice. */
 #include "drums/drums.h"
 
 #define PCT (1.0f / 99.0f)                         /* a value 0..99 as 0..1 */
@@ -21,48 +23,54 @@
 #error "eng_drums.c: the drum models run at FS (dsp/drums/drums.h PD_FS)"
 #endif
 
-enum { DR_BD, DR_RS, DR_SD, DR_CP, DR_CB, DR_LT, DR_CH, DR_MT, DR_HT, DR_OH, DR_CY, DR_N };
-static const uint8_t DR_OF_PC[12] = {DR_BD, DR_RS, DR_SD, DR_CP, DR_CB, DR_LT, DR_CH, DR_MT, DR_CH, DR_HT, DR_OH,
+enum { DR_BD, DR_RS, DR_SD, DR_CP, DR_CB, DR_LT, DR_CH, DR_MT, DR_X, DR_HT, DR_OH, DR_CY, DR_N };   /* DR_X: G# */
+static const uint8_t DR_OF_PC[12] = {DR_BD, DR_RS, DR_SD, DR_CP, DR_CB, DR_LT, DR_CH, DR_MT, DR_X, DR_HT, DR_OH,
                                      DR_CY};
-static const char *const DR_NAME[DR_N] = {"BD", "RS", "SD", "CP", "CB", "LT", "CH", "MT", "HT", "OH", "CY"};
-enum { DM_BD808, DM_BD909, DM_SD808, DM_SD909, DM_HAT, DM_CLAP, DM_RIM, DM_COW };
+static const char *const DR_NAME[DR_N] = {"BD", "RS", "SD", "CP", "CB", "LT", "CH", "MT", "", "HT", "OH", "CY"};
+enum { DM_BD808, DM_BD909, DM_SD808, DM_SD909, DM_HAT, DM_CLAP, DM_RIM, DM_COW, DM_TOM, DM_N };
 enum { DE_BD_TUNE, DE_BD_DEC, DE_SD_TUNE, DE_SNAPPY, DE_TOM_TUNE, DE_HAT_DEC, DE_HAT_TONE, DE_DRIVE };
 
 typedef struct {                                    /* an instrument of a kit */
     uint8_t model;                                  /* DM_* */
     uint16_t hz;                                    /* its pitch (hats: the lowest of the six oscillators) */
     uint8_t tone, decay, x;                         /* 0..99; x: the bass drums' FM, the snares' snappiness, the
-                                                     * hats' noisiness (the macros set some of these) */
+                                                     * hats' noisiness, the toms' fall in pitch (the macros set some
+                                                     * of these) */
     uint8_t level;                                  /* 0..99 */
     uint8_t bits;                                   /* hats: a sampled machine's steps, 0 = none */
 } drum_inst_t;
 
+typedef struct {
+    const char *x;                                  /* the name of its instrument on G# */
+    drum_inst_t inst[DR_N];
+} drum_kit_t;
+
 #define DI(m, hz, tone, dec, x, lev, bits) {m, hz, tone, dec, x, lev, bits}
-static const drum_inst_t DRUM_KIT[][DR_N] = {
-    {   /* 606: a small analog machine, high and short; it had no clap, rim shot or cowbell: these are added */
+static const drum_kit_t DRUM_KIT[] = {
+    {"RD", {    /* 606: a small analog machine, high and short; no clap, rim shot, cowbell or ride: added */
         DI(DM_BD808, 66, 40, 0, 10, 99, 0), DI(DM_RIM, 520, 50, 15, 0, 60, 0), DI(DM_SD808, 240, 30, 30, 0, 80, 0),
-        DI(DM_CLAP, 1300, 45, 30, 0, 70, 0), DI(DM_COW, 600, 55, 30, 0, 55, 0), DI(DM_BD808, 120, 50, 40, 15, 76, 0),
-        DI(DM_HAT, 245, 0, 0, 5, 75, 0), DI(DM_BD808, 150, 50, 40, 15, 76, 0), DI(DM_BD808, 185, 50, 40, 15, 76, 0),
-        DI(DM_HAT, 245, 0, 0, 5, 70, 0), DI(DM_HAT, 230, 55, 80, 10, 60, 0),
-    },
-    {   /* 707: samples (8 bits, the cymbals 6) in the original: 909-like voices, stepped hats */
+        DI(DM_CLAP, 1300, 45, 30, 0, 70, 0), DI(DM_COW, 600, 55, 30, 0, 55, 0), DI(DM_TOM, 120, 30, 35, 20, 80, 0),
+        DI(DM_HAT, 245, 0, 0, 5, 75, 0), DI(DM_TOM, 150, 30, 35, 20, 80, 0), DI(DM_HAT, 245, 90, 88, 15, 80, 0),
+        DI(DM_TOM, 185, 30, 35, 20, 80, 0), DI(DM_HAT, 245, 0, 0, 5, 82, 0), DI(DM_HAT, 230, 80, 80, 35, 72, 0),
+    }},
+    {"TB", {    /* 707: samples (8 bits, the cymbals 6) in the original: 909-like voices, stepped hats */
         DI(DM_BD909, 58, 30, 0, 40, 99, 0), DI(DM_RIM, 480, 55, 12, 0, 60, 0), DI(DM_SD909, 210, 30, 40, 0, 85, 0),
-        DI(DM_CLAP, 1150, 45, 40, 0, 75, 0), DI(DM_COW, 580, 50, 35, 0, 55, 0), DI(DM_BD909, 110, 45, 45, 35, 70, 0),
-        DI(DM_HAT, 470, 0, 0, 55, 70, 8), DI(DM_BD909, 150, 45, 45, 35, 70, 0), DI(DM_BD909, 200, 45, 45, 35, 70, 0),
-        DI(DM_HAT, 470, 0, 0, 55, 65, 8), DI(DM_HAT, 440, 60, 85, 65, 55, 6),
-    },
-    {   /* 808: analog, the long booming bass drum */
+        DI(DM_CLAP, 1150, 45, 40, 0, 75, 0), DI(DM_COW, 580, 50, 35, 0, 55, 0), DI(DM_TOM, 110, 40, 45, 45, 80, 0),
+        DI(DM_HAT, 470, 0, 0, 55, 88, 8), DI(DM_TOM, 150, 40, 45, 45, 80, 0), DI(DM_HAT, 600, 97, 55, 75, 99, 8),
+        DI(DM_TOM, 200, 40, 45, 45, 80, 0), DI(DM_HAT, 470, 0, 0, 55, 85, 8), DI(DM_HAT, 440, 85, 85, 65, 70, 6),
+    }},
+    {"CL", {    /* 808: analog, the long booming bass drum, toms that fall in pitch, claves */
         DI(DM_BD808, 52, 30, 0, 20, 99, 0), DI(DM_RIM, 455, 50, 20, 0, 60, 0), DI(DM_SD808, 180, 40, 35, 0, 85, 0),
-        DI(DM_CLAP, 1050, 40, 45, 0, 75, 0), DI(DM_COW, 540, 50, 40, 0, 55, 0), DI(DM_BD808, 95, 45, 50, 10, 90, 0),
-        DI(DM_HAT, 414, 0, 0, 15, 70, 0), DI(DM_BD808, 135, 45, 50, 10, 90, 0), DI(DM_BD808, 190, 45, 50, 10, 90, 0),
-        DI(DM_HAT, 414, 0, 0, 15, 65, 0), DI(DM_HAT, 380, 35, 85, 30, 55, 0),
-    },
-    {   /* 909: analog drums with a pitch sweep; its hats and cymbals were 6-bit samples */
+        DI(DM_CLAP, 1050, 40, 45, 0, 75, 0), DI(DM_COW, 540, 50, 40, 0, 55, 0), DI(DM_TOM, 95, 35, 50, 35, 85, 0),
+        DI(DM_HAT, 414, 0, 0, 15, 70, 0), DI(DM_TOM, 135, 35, 50, 35, 85, 0), DI(DM_RIM, 2500, 0, 25, 0, 60, 0),
+        DI(DM_TOM, 190, 35, 50, 35, 85, 0), DI(DM_HAT, 414, 0, 0, 15, 78, 0), DI(DM_HAT, 380, 78, 85, 45, 70, 0),
+    }},
+    {"RD", {    /* 909: analog drums with a pitch sweep; its hats and cymbals were 6-bit samples */
         DI(DM_BD909, 52, 35, 0, 55, 99, 0), DI(DM_RIM, 500, 60, 15, 0, 60, 0), DI(DM_SD909, 190, 40, 40, 0, 85, 0),
-        DI(DM_CLAP, 1200, 45, 45, 0, 75, 0), DI(DM_COW, 560, 50, 35, 0, 55, 0), DI(DM_BD909, 100, 50, 45, 50, 70, 0),
-        DI(DM_HAT, 500, 0, 0, 50, 70, 6), DI(DM_BD909, 140, 50, 45, 50, 70, 0), DI(DM_BD909, 190, 50, 45, 50, 70, 0),
-        DI(DM_HAT, 500, 0, 0, 50, 65, 6), DI(DM_HAT, 460, 60, 85, 60, 55, 6),
-    },
+        DI(DM_CLAP, 1200, 45, 45, 0, 75, 0), DI(DM_COW, 560, 50, 35, 0, 55, 0), DI(DM_TOM, 100, 45, 45, 60, 80, 0),
+        DI(DM_HAT, 500, 0, 0, 50, 90, 6), DI(DM_TOM, 140, 45, 45, 60, 80, 0), DI(DM_HAT, 520, 92, 92, 25, 70, 6),
+        DI(DM_TOM, 190, 45, 45, 60, 80, 0), DI(DM_HAT, 500, 0, 0, 50, 85, 6), DI(DM_HAT, 460, 85, 85, 60, 75, 6),
+    }},
 };
 #undef DI
 
@@ -73,7 +81,12 @@ static const preset_t DRUM_PRESETS[] = {
     {.name = "909", .e = {0, 50, 0, 65, 0, 35, 65, 10}, .env = {0, 0, 127, 0}},
 };
 
-/* ----------------------------------------------- the clap, rim shot, cowbell --- */
+static const char *drum_name(int kit, int inst)
+{
+    return inst == DR_X ? DRUM_KIT[clamp(kit, 0, (int32_t)NELEM(DRUM_KIT) - 1)].x : DR_NAME[inst];
+}
+
+/* ----------------------------------------- the toms, clap, rim shot, cowbell --- */
 typedef struct {                                    /* noise through a band-pass: three quick bursts, then a tail */
     pd_svf_t bp;
     float burst, tail;
@@ -90,6 +103,11 @@ typedef struct {                                    /* two square waves a fifth 
     pd_svf_t bp;
     float env1, env2;
 } cow_t;
+
+typedef struct {                                    /* a sine that falls in pitch after the stick, and the stick */
+    pd_svf_t bp;
+    float phase, sweep, amp, stick;
+} tom_t;
 
 #define CLAP_GAP ((int32_t)(0.010f * FS))           /* 10 ms between the bursts */
 static void clap(clap_t *s, int trigger, float accent, float f, float tone, float decay, float *out, int n)
@@ -149,6 +167,29 @@ static void cowbell(cow_t *s, int trigger, float accent, float f, float tone, fl
     }
 }
 
+/* the 808's and 909's toms start high and fall to their pitch: sweep 0..1 starts up to 80 % above it and falls in
+ * ~40 ms; the stick is band-passed noise a few ms long, tone its level */
+static void tom(tom_t *s, int trigger, float accent, float f, float tone, float decay, float sweep, float *out, int n)
+{
+    const float sweep_decay = 1.0f - 1.0f / (0.04f * FS), stick_decay = 1.0f - 1.0f / (0.004f * FS);
+    const float amp_decay = 1.0f - 1.0f / ((0.03f + 0.2f * decay) * FS);
+    pd_svf_set(&s->bp, pd_tan_fast(f * 12.0f < 0.45f ? f * 12.0f : 0.45f), 1.5f);
+    if (trigger) {
+        s->sweep = 1.0f;
+        s->amp = s->stick = 0.3f + 0.7f * accent;
+    }
+    while (n--) {
+        s->phase += f * (1.0f + 0.8f * sweep * s->sweep);
+        if (s->phase >= 1.0f)
+            s->phase -= 1.0f;
+        s->sweep *= sweep_decay;
+        s->amp *= amp_decay;
+        s->stick *= stick_decay;
+        *out++ = pd_soft_clip(1.5f * pd_sine(s->phase)) * s->amp +
+                 pd_svf(&s->bp, 2.0f * pd_random() - 1.0f, 0, 0) * s->stick * tone;
+    }
+}
+
 /* ----------------------------------------------------------------- voices --- */
 typedef struct {
     uint8_t inst, model, trig, choke;
@@ -163,18 +204,19 @@ typedef struct {
         clap_t clap;
         rim_t rim;
         cow_t cow;
+        tom_t tom;
     } m;
 } drum_voice_t;
 static drum_voice_t drum_v[NPART][NVOICE];
 
 /* the level each model's 0..99 is a share of, measured in the simulator (velocity 100, MASTER 50 %): the bass drums
  * peak near -24 dBFS, the snares -26, the hats -29 (docs/RESEARCH.md) */
-static const float DM_NORM[8] = {6.3f, 3.55f, 2.5f, 2.8f, 3.35f, 5.0f, 1.7f, 1.55f};
+static const float DM_NORM[DM_N] = {6.3f, 3.55f, 2.5f, 2.8f, 3.35f, 5.0f, 1.7f, 1.55f, 3.0f};
 
 static drum_voice_t *drum_voice(struct track *t, voice_t *v) { return &drum_v[t - trk][v - t->v]; }
 static const drum_inst_t *drum_inst(const struct track *t, int inst)
 {
-    return &DRUM_KIT[clamp(t->p[P_PRESET], 0, (int32_t)NELEM(DRUM_KIT) - 1)][inst];
+    return &DRUM_KIT[clamp(t->p[P_PRESET], 0, (int32_t)NELEM(DRUM_KIT) - 1)].inst[inst];
 }
 
 static void drums_note_on(struct track *t, voice_t *v)
@@ -228,11 +270,11 @@ static void drums_render(struct track *t, voice_t *v, int32_t *out, uint32_t n, 
         break;
     case DR_CH:
         decay = 0.10f + 0.30f * (t->p[P_E0 + DE_HAT_DEC] * PCT);
-        tone = t->p[P_E0 + DE_HAT_TONE] * PCT;
+        tone = 0.6f + 0.4f * (t->p[P_E0 + DE_HAT_TONE] * PCT);   /* the filter 150 Hz * 2^(6 tone): 1.9..9.6 kHz */
         break;
     case DR_OH:
         decay = 0.45f + 0.45f * (t->p[P_E0 + DE_HAT_DEC] * PCT);
-        tone = t->p[P_E0 + DE_HAT_TONE] * PCT;
+        tone = 0.6f + 0.4f * (t->p[P_E0 + DE_HAT_TONE] * PCT);
         break;
     default:
         break;
@@ -260,6 +302,9 @@ static void drums_render(struct track *t, voice_t *v, int32_t *out, uint32_t n, 
         break;
     case DM_RIM:
         rim(&d->m.rim, trig, d->accent, f, tone, decay, buf, (int)n);
+        break;
+    case DM_TOM:
+        tom(&d->m.tom, trig, d->accent, f, tone, decay, x, buf, (int)n);
         break;
     default:
         cowbell(&d->m.cow, trig, d->accent, f, tone, decay, buf, (int)n);

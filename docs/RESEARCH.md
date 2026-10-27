@@ -142,12 +142,25 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   Zufallswert auf 24 Bit kürzt statt rundet. Der erste Vergleich zeigte bei der 909-Bassdrum nur 10 dB: stmlibs
   `ParameterInterpolator` übernimmt am Blockende den erreichten Wert, nicht das Ziel, und zählt während des
   FM-Pulses nicht weiter; nachgebaut.
-- **Pegel** (je Instrument ein Schlag, Velocity 100, MASTER 50 %, `DM_NORM` in `eng_drums.c`): Bassdrums −22,7 bis
-  −26,1 dBFS, Snares −25,1 bis −27,2, Toms −24,7 bis −26,9, Clap −25,9 bis −28,3, Rimshot und Cowbell −28,6 bis
-  −29,7, Hi-Hats −27,4 bis −30,1, Becken −27,6 bis −30,6. Zum Vergleich: eine FM6-Stimme −29,3, eine VA-Stimme −31,5.
+- **Pegel** (je Instrument ein Schlag, Velocity 100, MASTER 50 %, `DM_NORM` in `eng_drums.c`; Stand 27.10.):
+  Bassdrums −22,7 bis −26,1 dBFS, Snares −25,1 bis −27,2, Toms −25,2 bis −26,6, Clap −25,9 bis −28,3, Rimshot und
+  Cowbell −28,6 bis −29,7, Hi-Hats −29,2 bis −31,2, Becken −30,7 bis −31,9, G# (Ride, Tamburin, Claves) −30,1 bis
+  −31,3. Zum Vergleich: eine FM6-Stimme −29,3, eine VA-Stimme −31,5.
 - **Accent:** 808-Bassdrum bei Velocity 127 −21,5 dBFS, bei 30 −26,7 dBFS (`tests/drums.txt`).
 - **Ausklang** (bis 40 dB unter der Spitze): CH 65–84 ms, OH 430–623 ms, Snares 160–274 ms, Becken 1,07–1,11 s,
-  808-Bassdrum 1,17 s (BD DEC 70), 909-Bassdrum 242 ms (BD DEC 50).
+  808-Bassdrum 1,17 s (BD DEC 70), 909-Bassdrum 242 ms (BD DEC 50); Toms (eigenes Modell) 435–578 ms.
+- **Nach Fabios Test (27.10., `docs/tests/DRUMS.md`):**
+  - Toms „klingen nach Bassdrum“: Sie nutzten das 808-Bassdrum-Modell. Jetzt ein eigenes Modell: Sinus, leicht
+    gesättigt, der nach dem Anschlag 20–35 % höher einsetzt und in ~40 ms auf seinen Ton fällt, dazu ein kurzes
+    Stockgeräusch. Gemessen z. B. 808-MT 162 → 135 Hz, 909-LT 135 → 100 Hz (Nulldurchgänge, 3–25 ms und
+    150–250 ms nach dem Schlag).
+  - OH und Becken „blechern“: Das Farbfilter der Hats liegt bei 150 Hz · 2^(6 · tone); HAT TONE 50 ergab 1,2 kHz,
+    das Becken 0,6 kHz (schmales Band, hoch gütig: ein Blechklang). HAT TONE deckt jetzt 1,9–9,6 kHz ab, die Becken
+    sitzen bei 3,9–5,2 kHz. Spektraler Schwerpunkt der ersten 46 ms bei den Kit-Werten: CH 9,7–11,2 kHz,
+    OH 8,8–11,2 kHz, CY 9,4–11,5 kHz (vorher OH bei HAT TONE 50: 5,3 kHz).
+  - SD TUNE und TOM TUNE „ändern nichts“: Im Simulator verschieben beide um genau eine Oktave (Snare 90 / 180 /
+    360 Hz, Tief-Tom 48 / 94 / 190 Hz bei −12 / 0 / +12; `drums-tune.wav`). Vermutung, nicht geprüft: Laptop-
+    Lautsprecher geben die Grundtöne unter ~200 Hz kaum wieder.
 - **Tonhöhe** (Autokorrelation, 60–260 ms nach dem Schlag): Bassdrums und Toms von 606, 707 und 808 innerhalb von
   1–2 % des Kit-Werts (z. B. 808-BD 52,2 Hz, Soll 52); die 909-artigen Toms 2–3 % höher (Rest des Pitch-Sweeps).
 - **Speicher:** Zustand je Stimme höchstens 140 B (808-Snare: sechs Filter) plus ~20 B, sechs Stimmen also rund

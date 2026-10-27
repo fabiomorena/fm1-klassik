@@ -6,7 +6,7 @@
  *   - classes as structs and functions; Plaits' sustain mode (free-running oscillators) left out: every hit decays
  *   - 44.1 kHz: the times Plaits gives in seconds follow the rate as they do there; the decays Plaits gives a
  *     sample (the 808 snare's noise, the hi-hat's envelope) are scaled by 48000 / 44100 to keep their times
- *   - no tables and no libm: SemitonesToRatio, Sine and Sqrt are approximations of their own (pd_exp2, pd_sin2pi,
+ *   - no tables and no libm: SemitonesToRatio, Sine and Sqrt are approximations of their own (pd_exp2, pd_sine,
  *     pd_sqrt); the tan approximations' constants written out as floats
  *   - integer conversions kept signed (the random word, the square oscillators' increments)
  *   - the hi-hat: SquareNoise, SwingVCA, the resonant colour filter and the one-stage envelope (Plaits' first HiHat);
@@ -52,7 +52,7 @@ static float pd_exp2(float x)                   /* 2^x, |x| < 100: 2^frac by its
 
 float pd_semitones(float st) { return pd_exp2(st * (1.0f / 12.0f)); }
 
-static float pd_sin2pi(float phase)             /* sin(2 pi phase), a parabola refined: under 0.1 % of full off */
+float pd_sine(float phase)                      /* sin(2 pi phase), a parabola refined: under 0.1 % of full off */
 {
     float t = phase - pd_floor(phase) - 0.5f, s = 8.0f * t - 16.0f * t * pd_abs(t);
     s = 0.225f * (s * pd_abs(s) - s) + s;
@@ -153,7 +153,7 @@ static float distorted_sine(float phase, float phase_noise, float dirtiness)
     frac = phase - (float)(int32_t)phase;
     triangle = (frac < 0.5f ? frac : 1.0f - frac) * 4.0f - 1.0f;
     sine = 2.0f * triangle / (1.0f + pd_abs(triangle));
-    return sine + (1.0f - dirtiness) * (pd_sin2pi(frac + 0.75f) - sine);
+    return sine + (1.0f - dirtiness) * (pd_sine(frac + 0.75f) - sine);
 }
 
 static float transistor_vca(float s, float gain)

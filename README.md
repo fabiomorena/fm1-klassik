@@ -18,9 +18,9 @@ Browser-Emulator, noch nicht auf einem FM-1.
     Presets (keine DX7-Werksklänge).
   - Drei aus [Felucca-Engines](https://github.com/hugelton/Felucca-Engines) (MIT): **VA** (ANALOG),
     **PD** (PHASE, Phase Distortion), **ORGAN** (WHEEL, Zugriegel-Orgel).
-  - **DRUMS**: vier Kits im Stil von TR-606, TR-707, TR-808 und TR-909, elf Instrumente je Kit, eins je Taste
+  - **DRUMS**: vier Kits im Stil von TR-606, TR-707, TR-808 und TR-909, zwölf Instrumente je Kit, eins je Taste
     einer Oktave; berechnet auf den Drum-Modellen von [Plaits](https://github.com/pichenettes/eurorack) (MIT, nach
-    C portiert) und eigenen (Clap, Rimshot, Cowbell), keine Samples aus den Geräten.
+    C portiert) und eigenen (Toms, Clap, Rimshot, Cowbell), keine Samples aus den Geräten.
 - Rack-Bildschirm mit Glyphen, Kopfzeile, Reglerzeile; ACID als Kachel „SOON“.
 - Edit-Seiten: EDIT öffnet je Engine zwei Seiten mit je vier Parametern auf K1–K4. Die Glyphe in der Kopfzeile
   und eine große Live-Glyphe verformen sich beim Drehen, der Klang ändert sich sofort.
@@ -42,7 +42,7 @@ Bedienung: [firmware/klassik/docs/MANUAL.md](firmware/klassik/docs/MANUAL.md). K
 | `firmware/klassik/dsp/eng_fm6.c` | FM6: die acht Parameter und die Presets |
 | `firmware/klassik/dsp/fm6/` | msfa, nach C portiert (Apache-2.0, Lizenztext in `LICENSE`) |
 | `firmware/klassik/tools/gen_fm6_tables.py` | rechnet msfas Tabellen beim Build (Apache-2.0) |
-| `firmware/klassik/dsp/eng_drums.c` | DRUMS: die Kits, die Tastenbelegung, Clap, Rimshot und Cowbell |
+| `firmware/klassik/dsp/eng_drums.c` | DRUMS: die Kits, die Tastenbelegung, Toms, Clap, Rimshot und Cowbell |
 | `firmware/klassik/dsp/drums/` | die Drum-Modelle von Plaits, nach C portiert (MIT) |
 | `firmware/klassik/fm1.toml` | Build-Einstellungen |
 | `firmware/klassik/tests/*.txt` | Tests für den Host-Simulator (mit Screenshots und WAV) |

@@ -26,7 +26,7 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `firmware/klassik/dsp/eng_fm6.c` | FM6 als `engine_t` (MPL-2.0): acht Makros, eigene Presets (DX7-Stimmen) |
 | `firmware/klassik/dsp/fm6/` | msfa nach C portiert (o2-Einheit, Apache-2.0, `LICENSE`); Änderungen im Dateikopf von `msfa.c` |
 | `firmware/klassik/tools/gen_fm6_tables.py` | rechnet msfas Tabellen beim Build (`gen` → `fm6_tables.h`, Apache-2.0) |
-| `firmware/klassik/dsp/eng_drums.c` | DRUMS als `engine_t` (MPL-2.0): vier Kits, Tastenbelegung je Halbton, Clap/Rimshot/Cowbell, Choke, Accent |
+| `firmware/klassik/dsp/eng_drums.c` | DRUMS als `engine_t` (MPL-2.0): vier Kits, Tastenbelegung je Halbton (G# je Kit), Toms/Clap/Rimshot/Cowbell, Choke, Accent |
 | `firmware/klassik/dsp/drums/` | Plaits-Drums nach C portiert (o2-Einheit, MIT, `float`): 808-BD/SD/Hi-Hat, 909-artige BD/SD; Änderungen im Dateikopf von `drums.c` |
 | `firmware/klassik/dsp/klassik_dsp.h` | Schnittstelle App ↔ DSP |
 | `firmware/klassik/fm1.toml` | Build-Einstellungen (o2: `engines.c`, `msfa.c`, `drums.c`; include; gen für `fe_tables.h` und `fm6_tables.h`) |
@@ -69,8 +69,9 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - FM6: Presets sind ganze DX7-Stimmen plus acht beschreibende Werte; die Makros verschieben die Stimme relativ zum
   Preset (Regel im Kopf von `eng_fm6.c`). ALGO/FEEDBK live, die anderen ab der nächsten Note. Der Port ist gegen
   das Original-msfa (portabler Pfad, nicht NEON) geprüft, siehe `docs/RESEARCH.md`.
-- DRUMS: Kits „606“, „707“, „808“, „909“ (Presets); Taste je Halbton → Instrument (`DR_OF_PC`); die acht Makros setzen,
-  was sie nennen (BD/SD/TOM TUNE in Halbtönen, HAT DEC/TONE für CH und OH). Pegel je Modell über `DM_NORM` eingemessen
+- DRUMS: Kits „606“, „707“, „808“, „909“ (Presets); Taste je Halbton → Instrument (`DR_OF_PC`; G# `DR_X` je Kit:
+  RD, TB, CL, RD); die Oktave ändert nichts; die acht Makros setzen, was sie nennen (BD/SD/TOM TUNE in Halbtönen,
+  HAT DEC/TONE für CH und OH, HAT TONE 1,9–9,6 kHz). Pegel je Modell über `DM_NORM` eingemessen
   (BD ~−24, SD ~−26, Hats ~−29 dBFS bei MASTER 50 %). Port gegen Plaits geprüft (RESEARCH.md). Edit-Seite: Pads statt
   Glyphe (`draw_pads`).
 - Pegel: ×32 bei vollem MASTER; eine Stimme misst im Simulator −31,5 dBFS bei MASTER 50 % (Gain quadratisch:

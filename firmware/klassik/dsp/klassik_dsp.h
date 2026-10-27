@@ -26,7 +26,8 @@ const char *kl_page_title(int e, int page);  /* EDIT 1 (page 0) and EDIT 2 (page
 void kl_param(int e, int k, const int8_t v[8], kl_param_t *d);   /* parameter k of a sound with the values v (its
                                                                    * name may depend on another: ANALOG's WAVE) */
 void kl_shape(int e, const int8_t v[8], uint8_t out[8]);   /* each value as 0..255 of its range (the glyph) */
-const char *kl_drum_name(int pc);           /* DRUMS: the instrument on a key (pc: its note's semitone, C = 0): "BD" */
+const char *kl_drum_name(int kit, int pc);  /* DRUMS: the instrument on a key in a kit (pc: its note's semitone,
+                                             * C = 0): "BD"; G# is the kit's own */
 int kl_drum_pages(int pc);                  /* the edit pages whose knobs change it: bit 0 EDIT 1, bit 1 EDIT 2 */
 
 void kl_select(int e, int p, const int8_t v[8]);   /* main loop: the sound to play, from the next block */

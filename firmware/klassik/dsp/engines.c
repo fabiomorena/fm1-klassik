@@ -52,7 +52,7 @@ void kl_preset_values(int e, int p, int8_t v[8])
 
 const char *kl_page_title(int e, int page) { return eng_ok(e) ? ENG[e]->page_title[page & 1] : ""; }
 
-const char *kl_drum_name(int pc) { return DR_NAME[DR_OF_PC[pc % 12]]; }
+const char *kl_drum_name(int kit, int pc) { return drum_name(kit, DR_OF_PC[pc % 12]); }
 int kl_drum_pages(int pc)
 {
     int i = DR_OF_PC[pc % 12];

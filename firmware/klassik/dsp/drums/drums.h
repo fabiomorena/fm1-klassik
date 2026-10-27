@@ -77,6 +77,7 @@ void pd_hat(pd_hat_t *s, int trigger, float accent, float f0, float tone, float 
 
 float pd_semitones(float st);           /* stmlib's SemitonesToRatio: 2^(st / 12) */
 float pd_random(void);                  /* stmlib's Random::GetFloat: 0 .. 1 */
+float pd_sine(float phase);             /* added: sin(2 pi phase), any phase (Plaits' Sine without its table) */
 
 /* stmlib's tan approximations (Svf::set_f_q, OnePole::set_f), their constants as floats */
 static inline float pd_tan_dirty(float f) { return f * (3.14159265f + 11.5839450f * f * f); }

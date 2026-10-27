@@ -27,9 +27,9 @@ expect pad 7
 key 26 up
 wait 1500
 expect voices 0
-# MIDI plays them too; an instrument plays on one voice: CH on F# and G# share one, so do BD on C2 and C3
+# MIDI plays them too; an instrument plays on one voice: CH on F#2 and F#3 share one, so do BD on C2 and C3
 midi 90 2A 64
-midi 90 2C 64
+midi 90 36 64
 wait 20
 expect voices 1
 midi 90 24 64
@@ -119,7 +119,7 @@ expect preset 4
 expect user 1
 expect v7 50
 expect dsp7 50
-# each kit: a bar of a groove and its first beat again (drums-606.wav .. drums-909.wav, to listen to)
+# each kit: a bar of a groove and its first beat again, G# (the kit's own) too (drums-606.wav .. drums-909.wav)
 spin PRESET 1
 wait 50
 expect preset 0
@@ -131,6 +131,7 @@ wait 125
 wait 125
 midi 90 2A 64
 wait 125
+midi 90 2C 64
 wait 125
 midi 90 26 64
 midi 90 2A 64
@@ -148,6 +149,7 @@ wait 125
 midi 90 2A 64
 midi 90 25 64
 wait 125
+midi 90 2C 64
 wait 125
 midi 90 26 64
 midi 90 27 64
@@ -176,6 +178,7 @@ wait 125
 wait 125
 midi 90 2A 64
 wait 125
+midi 90 2C 64
 wait 125
 midi 90 26 64
 midi 90 2A 64
@@ -193,6 +196,7 @@ wait 125
 midi 90 2A 64
 midi 90 25 64
 wait 125
+midi 90 2C 64
 wait 125
 midi 90 26 64
 midi 90 27 64
@@ -221,6 +225,7 @@ wait 125
 wait 125
 midi 90 2A 64
 wait 125
+midi 90 2C 64
 wait 125
 midi 90 26 64
 midi 90 2A 64
@@ -238,6 +243,7 @@ wait 125
 midi 90 2A 64
 midi 90 25 64
 wait 125
+midi 90 2C 64
 wait 125
 midi 90 26 64
 midi 90 27 64
@@ -266,6 +272,7 @@ wait 125
 wait 125
 midi 90 2A 64
 wait 125
+midi 90 2C 64
 wait 125
 midi 90 26 64
 midi 90 2A 64
@@ -283,6 +290,7 @@ wait 125
 midi 90 2A 64
 midi 90 25 64
 wait 125
+midi 90 2C 64
 wait 125
 midi 90 26 64
 midi 90 27 64
@@ -301,4 +309,43 @@ wait 125
 wait 1500
 wavstop
 wait 6000
+expect voices 0
+# SD TUNE and TOM TUNE at -12, 0 and +12 on the 808 (drums-tune.wav: the snare three times, then the low tom)
+spin PRESET -1
+wait 50
+expect preset 2
+tap EDIT
+wait 30
+expect page 1
+wav drums-tune.wav
+spin K3 -12
+wait 30
+midi 90 26 64
+wait 600
+spin K3 12
+wait 30
+midi 90 26 64
+wait 600
+spin K3 12
+wait 30
+expect v2 12
+midi 90 26 64
+wait 600
+tap EDIT
+wait 30
+expect page 2
+spin K1 -12
+wait 30
+midi 90 29 64
+wait 800
+spin K1 12
+wait 30
+midi 90 29 64
+wait 800
+spin K1 12
+wait 30
+expect v4 12
+midi 90 29 64
+wait 1500
+wavstop
 expect voices 0

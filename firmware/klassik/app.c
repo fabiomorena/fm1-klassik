@@ -755,7 +755,7 @@ static void ring_draw(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* a circ
 static const char *const KEY_NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 static void draw_pad(int32_t x, int32_t y, int32_t w, int32_t h, int pc, uint16_t col, int lit)
 {
-    const char *name = kl_drum_name(pc);
+    const char *name = kl_drum_name(sound_base(KL_DRUMS), pc);
     int page = (kl_drum_pages(pc) >> ui.page) & 1;
     cv_rect(x, y, w, h, lit ? col : K_SURF2);
     if (!lit)
