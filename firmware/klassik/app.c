@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0.5 (parts): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
+/* KLASSIK v0.5 (parts, mixer, looper): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
  * Felucca-Engines (ANALOG, PHASE, WHEEL), DRUMS (four kits on Plaits' drum models) and ACID (Open303's TB-303), on
  * four parts that play at once, each its own sound and octave: SEL, or SELECT turned, goes to the next part (SELECT
  * to the left: the one before), and the keys, K1 (the engine, in the rack's order), PRESET (its sound), OCT- / OCT+
@@ -15,6 +15,10 @@
  * as its engine's USER sound (every part's).
  * GLO opens the mixer: a strip a part (LEVEL, PAN, MUTE, SOLO on K1..K4 for the chosen part) and the master's
  * meters; the output is stereo, through a limiter.
+ * The looper records notes (not sound) on one loop for all four parts: PLAY starts and stops it, REC records the
+ * chosen part on top of what it has (stopped: after a bar's count-in), the first take sets the length; HOME + REC
+ * takes the last take back, HOME + PLAY empties a part. SEQ opens its page: a lane a part, TEMPO, LENGTH, QUANT and
+ * CLICK on K1..K4; the header shows it on every page.
  * The screen: the header (the part and its engine, the sound's glyph and name, the octave, the battery), then the
  * six engine tiles (each with the parts that play it) or an edit page (its tabs, the sound's glyph large, its
  * spokes named; DRUMS: the octave's keys as pads, each with its instrument), and a row of what the knobs hold.
@@ -33,6 +37,7 @@
 #define K_TEXT RGB(232, 234, 237)
 #define K_MUTED RGB(154, 163, 178)
 #define K_GREEN RGB(126, 224, 138)
+#define K_REC RGB(255, 92, 92)                       /* the looper recording */
 
 /* the rack: six tiles, the engines that play now and those to come (eng -1) */
 typedef struct {
@@ -218,6 +223,479 @@ static void mix_update(void)
     }
 }
 
+/* ------------------------------------------------------------- the looper --- */
+/* v0.5's note looper: what the keys and MIDI play into the part recording, as notes (a tick, a note, a velocity), on
+ * one loop all four parts share. The render keeps it (app_render, a step of 32 frames at a time, so a note lands
+ * within 0.73 ms): it plays the notes, records, counts in and clicks. The main loop asks through a queue (lp_ask) and
+ * reads what it shows; the loops live in RAM only (gone at power-off). */
+#define LP_PPQN 192                                  /* ticks a quarter note */
+#define LP_BAR (4 * LP_PPQN)                         /* 4/4 */
+#define LP_MAXBARS 16                                /* 12288 ticks: a tick fits 16 bits */
+#define LP_EV 2048                                   /* a part's notes on and off: 1024 notes */
+#define LP_STEP16(bpm) ((uint32_t)(bpm) * 152174u / 1000u)   /* ticks a step, Q16: bpm / 60 * 192 * 32 / 44100 *
+                                                             * 65536 = bpm * 152.174 */
+enum { LP_STOP, LP_COUNT, LP_PLAY };                 /* stopped, counting in (a bar), playing */
+enum { LC_PLAY, LC_STOP, LC_REC, LC_UNREC, LC_PART, LC_UNDO, LC_CLEAR, LC_BARS };   /* the main loop's asks */
+static const uint8_t QUANT_TICKS[5] = {0, 24, 48, 96, 192};   /* QUANT OFF, 1/32, 1/16, 1/8, 1/4 */
+typedef struct {
+    uint16_t tick;
+    uint8_t note;
+    uint8_t vel;                                     /* 1..127 on, 0 off; bit 7: recorded ahead of the play line (it
+                                                     * sounded live), passed over once */
+} lp_ev_t;
+static lp_ev_t lp_ev[KL_NPART][LP_EV] PLAT_POOL;     /* each part's, in tick order */
+static lp_ev_t lp_undo[LP_EV] PLAT_POOL;             /* the last take's part as it was before (after, once undone) */
+static struct {
+    volatile uint16_t n[KL_NPART];                   /* each part's events */
+    uint16_t cur[KL_NPART];                          /* each one's next to play */
+    volatile uint8_t state, rec, rpart, first;       /* LP_*; recording, into which part; the first take runs (LENGTH
+                                                     * AUTO: its end sets the length) */
+    volatile uint8_t bars, first_bars;               /* the length (0: AUTO, none yet), and the first take's (HOME +
+                                                     * K2 goes back to it) */
+    volatile uint8_t tempo, quant, click;            /* the main loop's: 40..240 BPM, QUANT_TICKS' index, CLICK OFF,
+                                                     * REC (counting in and recording), ON */
+    volatile uint32_t pos16, count16;                /* where it plays, and the count-in so far: ticks, Q16 */
+    uint32_t on[KL_NPART][4];                        /* the notes it has sounding, a bit a note */
+    uint32_t held[4];                                /* the notes recorded on and not off yet */
+    uint16_t nheld;
+    int16_t shift[128];                              /* how far QUANT moved each one's start (its end moves alike) */
+    volatile int8_t undo_part;                       /* the last take's part (-1: none) */
+    volatile uint8_t undone;                         /* 1: it is taken back (lp_undo holds the take) */
+    uint16_t undo_n;
+    uint8_t undo_first, undo_bars, undo_first_bars;  /* it was the first take: the length goes with it */
+    uint8_t click_now;                               /* a click due at the next step (the loop starts) */
+    volatile uint8_t full;                           /* notes left out, the part full: a count (the main loop says so) */
+} lp;
+#define LC_N 16u
+static volatile uint32_t lc_w, lc_r;                 /* main loop writes lc_w, the render lc_r */
+static uint8_t lc_cmd[LC_N], lc_arg[LC_N];
+#define LK_N 64u
+static volatile uint32_t lk_w, lk_r;                 /* the keys played, for the recording */
+static uint8_t lk_part[LK_N], lk_on[LK_N], lk_note[LK_N], lk_vel[LK_N];
+static int32_t ck_buf[APP_BLOCK];                    /* the click, as the render mixes it */
+static int32_t ck_s, ck_c, ck_e, ck_env;             /* its sine (Q15 steps of ck_e), its envelope (Q15) */
+
+static void loop_init(void)
+{
+    uint32_t p;
+    uint8_t *b = (uint8_t *)&lp;
+    for (p = 0; p < sizeof lp; p++)
+        b[p] = 0;
+    lp.tempo = 120;
+    lp.quant = 2;                                    /* 1/16 */
+    lp.click = 1;                                    /* REC */
+    lp.undo_part = -1;
+    lc_r = lc_w;
+    lk_r = lk_w;
+}
+
+static void lp_ask(int cmd, int arg)                 /* main loop: an ask for the render, in order */
+{
+    uint32_t w = lc_w;
+    if (w - lc_r >= LC_N)
+        return;
+    lc_cmd[w % LC_N] = (uint8_t)cmd;
+    lc_arg[w % LC_N] = (uint8_t)arg;
+    lc_w = w + 1u;
+}
+
+static void lp_key(int part, int on, int note, int vel)   /* main loop: a key played, for the recording */
+{
+    uint32_t w = lk_w;
+    if (w - lk_r >= LK_N)
+        return;
+    lk_part[w % LK_N] = (uint8_t)part;
+    lk_on[w % LK_N] = (uint8_t)(on != 0);
+    lk_note[w % LK_N] = (uint8_t)note;
+    lk_vel[w % LK_N] = (uint8_t)vel;
+    lk_w = w + 1u;
+}
+
+static int lp_empty(void)                            /* no notes anywhere, no take running */
+{
+    int p;
+    for (p = 0; p < KL_NPART; p++)
+        if (lp.n[p])
+            return 0;
+    return !lp.rec && !lp.first;
+}
+
+static uint32_t lp_len(void) { return (lp.bars ? lp.bars : LP_MAXBARS) * (uint32_t)LP_BAR; }   /* ticks */
+
+static uint32_t lp_lower(int p, uint32_t at16)       /* a part's first event at at16 (ticks Q16) or after */
+{
+    uint32_t i = 0, n = lp.n[p];
+    while (i < n && ((uint32_t)lp_ev[p][i].tick << 16) < at16)
+        i++;
+    return i;
+}
+
+static void lp_notes_off(int p)                      /* the part's notes the looper has sounding, off */
+{
+    uint32_t w, b;
+    for (w = 0; w < 4u; w++)
+        for (b = 0; lp.on[p][w] && b < 32u; b++)
+            if (lp.on[p][w] & 1u << b) {
+                kl_key_now(p, 0, (int)(w * 32u + b), 0);
+                lp.on[p][w] &= ~(1u << b);
+            }
+}
+
+/* an event into its place in a part: after those at its tick; ahead of the play line it is passed over once (it has
+ * sounded live), behind it the next to play stays the same */
+static void lp_insert(int p, uint32_t tick, int note, int vel)
+{
+    lp_ev_t *e = lp_ev[p];
+    uint32_t n = lp.n[p], i = n;
+    while (i && e[i - 1u].tick > tick) {
+        e[i] = e[i - 1u];
+        i--;
+    }
+    e[i].tick = (uint16_t)tick;
+    e[i].note = (uint8_t)note;
+    e[i].vel = (uint8_t)vel;
+    if (lp.state == LP_COUNT || (lp.state == LP_PLAY && (tick << 16) >= lp.pos16))
+        e[i].vel |= 0x80u;
+    else if (i <= lp.cur[p])
+        lp.cur[p]++;
+    lp.n[p] = (uint16_t)(n + 1u);
+}
+
+/* a note into the part recording: its start moved to QUANT's grid, its end as far; counting in, a note just before
+ * the loop starts lands on its first tick */
+static void lp_record(int p, int on, int note, int vel)
+{
+    int32_t len = (int32_t)lp_len(), t, q = QUANT_TICKS[lp.quant], sh = 0;
+    uint32_t w = (uint32_t)note >> 5, bit = 1u << (note & 31);
+    if (!lp.rec || p != lp.rpart || note < 0 || note > 127)
+        return;
+    if (lp.state == LP_COUNT) {
+        int32_t left = (int32_t)(LP_BAR - (lp.count16 >> 16));
+        if (on && left > (q ? q / 2 : 24))
+            return;
+        t = 0;
+    } else if (lp.state == LP_PLAY) {
+        t = (int32_t)((lp.pos16 + 0x8000u) >> 16);
+    } else {
+        return;
+    }
+    if (on) {
+        if (lp.held[w] & bit)
+            return;
+        if (lp.n[p] + 2u + lp.nheld > LP_EV) {      /* room kept for every held note's end */
+            lp.full++;
+            return;
+        }
+        if (q && lp.state == LP_PLAY) {
+            sh = (t + q / 2) / q * q - t;
+            t += sh;
+        }
+        lp.held[w] |= bit;
+        lp.nheld++;
+        lp.shift[note] = (int16_t)sh;
+    } else {
+        if (!(lp.held[w] & bit))
+            return;
+        t += lp.shift[note];
+        lp.held[w] &= ~bit;
+        lp.nheld--;
+    }
+    t = (t % len + len) % len;
+    lp_insert(p, (uint32_t)t, note, on ? clamp(vel, 1, 127) : 0);
+}
+
+/* the first take ends (LENGTH AUTO): the length in whole bars, the nearest; what is past its end moves to its start */
+static void lp_first_end(void)
+{
+    uint32_t at = lp.pos16 >> 16, bars = (uint32_t)clamp((int32_t)((at + LP_BAR / 2) / LP_BAR), 1, LP_MAXBARS);
+    uint32_t len = bars * LP_BAR, p = lp.rpart, n = lp.n[p], k = 0, i, j;
+    lp_ev_t *e = lp_ev[p];
+    while (k < n && e[n - 1u - k].tick >= len)
+        k++;
+    for (i = 0; i < k; i++)
+        e[n - k + i].tick = (uint16_t)(e[n - k + i].tick - len);
+    for (i = 0, j = n - 1u; k && i < j; i++, j--) {  /* the tail before the rest: three reversals */
+        lp_ev_t x = e[i];
+        e[i] = e[j];
+        e[j] = x;
+    }
+    for (i = 0, j = k - 1u; k && i < j; i++, j--) {
+        lp_ev_t x = e[i];
+        e[i] = e[j];
+        e[j] = x;
+    }
+    for (i = k, j = n - 1u; k && i < j; i++, j--) {
+        lp_ev_t x = e[i];
+        e[i] = e[j];
+        e[j] = x;
+    }
+    if (lp.pos16 >= len << 16)
+        lp.pos16 -= len << 16;
+    lp.bars = lp.first_bars = (uint8_t)bars;
+    lp.first = 0;
+    lp.cur[p] = (uint16_t)lp_lower((int)p, lp.pos16);
+}
+
+static void lp_take_end(void)                        /* the recording stops: each held note ends where it is now */
+{
+    uint32_t w, b;
+    if (!lp.rec)
+        return;
+    for (w = 0; w < 4u; w++)
+        for (b = 0; lp.held[w] && b < 32u; b++)
+            if (lp.held[w] & 1u << b)
+                lp_record(lp.rpart, 0, (int)(w * 32u + b), 0);
+    lp.nheld = 0;
+    if (lp.first && lp.state == LP_COUNT) {          /* the first take given up while counting in: nothing kept */
+        lp.n[lp.rpart] = 0;
+        lp.first = 0;
+    } else if (lp.first) {
+        lp_first_end();
+    }
+    lp.rec = 0;
+}
+
+static void lp_keep(int p)                           /* a part as it is now, for HOME + REC */
+{
+    uint32_t i;
+    for (i = 0; i < lp.n[p]; i++)
+        lp_undo[i] = lp_ev[p][i];
+    lp.undo_n = lp.n[p];
+    lp.undo_part = (int8_t)p;
+    lp.undo_first = lp_empty();
+    lp.undo_bars = lp.bars;
+    lp.undo_first_bars = lp.first_bars;
+    lp.undone = 0;
+}
+
+static void lp_take_start(int p)                     /* the recording starts on a part (a take) */
+{
+    uint32_t w;
+    if (lp.rec)
+        return;
+    lp_keep(p);
+    if (lp_empty()) {                                /* the first take: AUTO sets the length at its end */
+        lp.first = lp.bars == 0;
+        lp.first_bars = lp.bars;
+    }
+    for (w = 0; w < 4u; w++)
+        lp.held[w] = 0;
+    lp.nheld = 0;
+    lp.rpart = (uint8_t)p;
+    lp.rec = 1;
+}
+
+static void lp_restart(void)                         /* from the loop's start */
+{
+    int p;
+    lp.pos16 = 0;
+    for (p = 0; p < KL_NPART; p++)
+        lp.cur[p] = 0;
+    lp.click_now = 1;
+    lp.state = LP_PLAY;
+}
+
+static void lp_stop(void)
+{
+    int p;
+    lp_take_end();
+    for (p = 0; p < KL_NPART; p++)
+        lp_notes_off(p);
+    lp.state = LP_STOP;
+    lp.pos16 = lp.count16 = 0;
+}
+
+static void lp_swap(void)                            /* HOME + REC: the last take out, or back in */
+{
+    uint32_t i, m;
+    int p = lp.undo_part;
+    if (p < 0)
+        return;
+    lp_take_end();
+    lp_notes_off(p);
+    m = lp.n[p] > lp.undo_n ? lp.n[p] : lp.undo_n;
+    for (i = 0; i < m; i++) {
+        lp_ev_t x = lp_ev[p][i];
+        lp_ev[p][i] = lp_undo[i];
+        lp_undo[i] = x;
+    }
+    i = lp.n[p];
+    lp.n[p] = lp.undo_n;
+    lp.undo_n = (uint16_t)i;
+    if (lp.undo_first) {                             /* the first take: its length goes with it */
+        uint8_t b = lp.bars, f = lp.first_bars;
+        lp.bars = lp.undo_bars;
+        lp.first_bars = lp.undo_first_bars;
+        lp.undo_bars = b;
+        lp.undo_first_bars = f;
+    }
+    lp.undone ^= 1u;
+    if (lp.bars == 0)
+        lp_stop();
+    lp.cur[p] = (uint16_t)lp_lower(p, lp.pos16);
+}
+
+static void lp_set_bars(uint32_t bars)               /* K2: shorter hides the bars after, longer adds empty ones */
+{
+    int p;
+    if (lp.first || (bars == 0 && !lp_empty()) || bars > LP_MAXBARS)
+        return;
+    lp.bars = (uint8_t)bars;
+    for (p = 0; p < KL_NPART; p++)
+        lp_notes_off(p);
+    if (bars == 0)
+        lp_stop();
+    else if (lp.pos16 >= lp_len() << 16)
+        lp.pos16 %= lp_len() << 16;
+    for (p = 0; p < KL_NPART; p++)
+        lp.cur[p] = (uint16_t)lp_lower(p, lp.pos16);
+}
+
+static void lp_asks(void)                            /* render: the main loop's asks, then the keys it played */
+{
+    while (lc_r != lc_w) {
+        uint32_t j = lc_r % LC_N;
+        int a = lc_arg[j];
+        switch (lc_cmd[j]) {
+        case LC_PLAY:
+            if (lp.state == LP_STOP && lp.bars)
+                lp_restart();
+            break;
+        case LC_STOP:
+            lp_stop();
+            break;
+        case LC_REC:                                 /* stopped: a bar's count-in first (CLICK OFF: none) */
+            if (lp.state == LP_STOP && lp.click) {
+                lp.state = LP_COUNT;
+                lp.count16 = 0;
+                lp.click_now = 1;
+            } else if (lp.state == LP_STOP) {
+                lp_restart();
+            }
+            lp_take_start(a);
+            break;
+        case LC_UNREC:                               /* counting in: given up */
+            if (lp.state == LP_COUNT)
+                lp_stop();
+            else
+                lp_take_end();
+            break;
+        case LC_PART:                                /* SEL while recording: the recording goes along */
+            if (lp.rec && lp.rpart != a) {
+                lp_take_end();
+                lp_take_start(a);
+            }
+            break;
+        case LC_UNDO:
+            lp_swap();
+            break;
+        case LC_CLEAR:
+            if (lp.rec && lp.rpart == a)
+                lp_take_end();
+            lp_keep(a);
+            lp_notes_off(a);
+            lp.n[a] = lp.cur[a] = 0;
+            break;
+        case LC_BARS:
+            lp_set_bars((uint32_t)a);
+            break;
+        default:
+            break;
+        }
+        lc_r = lc_r + 1u;
+    }
+    while (lk_r != lk_w) {
+        uint32_t j = lk_r % LK_N;
+        lp_record(lk_part[j], lk_on[j], lk_note[j], lk_vel[j]);
+        lk_r = lk_r + 1u;
+    }
+}
+
+static void lp_fire(int p, uint32_t to16, uint32_t len)   /* a part's notes before to16 (ticks Q16) and len */
+{
+    lp_ev_t *e = lp_ev[p];
+    uint32_t i = lp.cur[p], n = lp.n[p];
+    while (i < n && e[i].tick < len && ((uint32_t)e[i].tick << 16) < to16) {
+        uint32_t w = (uint32_t)e[i].note >> 5, bit = 1u << (e[i].note & 31u);
+        if (e[i].vel & 0x80u) {                      /* it sounded live as it was recorded */
+            e[i].vel &= 0x7Fu;
+        } else if (e[i].vel) {
+            kl_key_now(p, 1, e[i].note, e[i].vel);
+            lp.on[p][w] |= bit;
+        } else if (lp.on[p][w] & bit) {              /* only a note it began (the engine ends every voice of it) */
+            kl_key_now(p, 0, e[i].note, 0);
+            lp.on[p][w] &= ~bit;
+        }
+        i++;
+    }
+    lp.cur[p] = (uint16_t)i;
+}
+
+/* the click: a sine that dies away in ~40 ms, 1.5 kHz on a bar's first beat, 1 kHz on the others (ck_e is
+ * 2 sin(pi f / 44100), Q15) */
+static void click_start(int accent)
+{
+    ck_e = accent ? 6990 : 4665;
+    ck_s = 0;
+    ck_c = accent ? 20000 : 12000;                   /* about a voice's level (RESEARCH.md: Looper) */
+    ck_env = 32767;
+}
+
+static void lp_step(int32_t *ck)                     /* render: one step of 32 frames; the click into ck */
+{
+    uint32_t inc = LP_STEP16(lp.tempo), beat16 = (uint32_t)LP_PPQN << 16, i;
+    int p, clicks = lp.click == 2 || (lp.click == 1 && (lp.rec || lp.state == LP_COUNT));
+    if (lp.state == LP_COUNT) {
+        uint32_t a = lp.count16, b = a + inc;
+        if (lp.click_now || a / beat16 != b / beat16) {
+            if (clicks)
+                click_start(lp.click_now || b / beat16 == 4u);
+            lp.click_now = 0;
+        }
+        lp.count16 = b;
+        if (b >= (uint32_t)LP_BAR << 16) {           /* the loop starts */
+            lp.pos16 = b - ((uint32_t)LP_BAR << 16);
+            for (p = 0; p < KL_NPART; p++)
+                lp.cur[p] = 0;
+            lp.state = LP_PLAY;
+        }
+    } else if (lp.state == LP_PLAY) {
+        uint32_t len = lp_len(), a = lp.pos16, b = a + inc;
+        if (lp.click_now || a / beat16 != b / beat16) {
+            if (clicks)
+                click_start(lp.click_now || (b / beat16) % 4u == 0);
+            lp.click_now = 0;
+        }
+        if (lp.first && b >= len << 16) {            /* the first take reached 16 bars: that is its length */
+            lp.bars = lp.first_bars = LP_MAXBARS;
+            lp.first = 0;
+        }
+        if (b >= len << 16) {                        /* the loop's end: the rest, then from its start */
+            for (p = 0; p < KL_NPART; p++) {
+                lp_fire(p, len << 16, len);
+                lp.cur[p] = 0;
+                if (lp.n[p] && lp_ev[p][lp.n[p] - 1u].tick >= len)   /* bars hidden by a shorter LENGTH: what
+                                                                      * they would end, ends */
+                    lp_notes_off(p);
+            }
+            b -= len << 16;
+        }
+        for (p = 0; p < KL_NPART; p++)
+            lp_fire(p, b, len);
+        lp.pos16 = b;
+    }
+    for (i = 0; i < 32u; i++) {
+        if (ck_env > 30) {
+            ck_s += ck_e * ck_c >> 15;
+            ck_c -= ck_e * ck_s >> 15;
+            ck_env -= ck_env >> 9;                   /* 11.6 ms a step of 1/e */
+            ck[i] = ck_s * ck_env >> 15;
+        } else {
+            ck[i] = 0;
+        }
+    }
+}
+
 /* ------------------------------------------------------------------ audio --- */
 static int32_t part_buf[KL_NPART][APP_BLOCK];
 static int32_t gain_q8;                              /* MASTER's gain, gliding: no step at a block's edge */
@@ -239,35 +717,43 @@ static __attribute__((noinline)) int32_t mul_q16(int32_t a, int32_t g) { return 
 static int32_t clamp30(int64_t v) { return v > (1 << 30) ? 1 << 30 : v < -(1 << 30) ? -(1 << 30) : (int32_t)v; }
 
 static void midi_in(void)                            /* audio interrupt: the packets that came in, channel 1..4 to part
-                                                     * 1..4, the others to the part chosen */
+                                                     * 1..4, the others to the part chosen (and to the looper) */
 {
     uint32_t pkt;
     int port;
     while (plat_midi_in(&pkt, &port)) {
         uint32_t st = (pkt >> 8) & 0xFFu, d1 = (pkt >> 16) & 0x7Fu, d2 = (pkt >> 24) & 0x7Fu;
         int part = (st & 0x0Fu) < KL_NPART ? (int)(st & 0x0Fu) : set.part;
-        if ((st & 0xF0u) == 0x90u && d2)
+        if ((st & 0xF0u) == 0x90u && d2) {
             kl_key_now(part, 1, (int)d1, (int)d2);
-        else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u)
+            lp_record(part, 1, (int)d1, (int)d2);
+        } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u) {
             kl_key_now(part, 0, (int)d1, 0);
+            lp_record(part, 0, (int)d1, 0);
+        }
         if (st != 0xF8u && st != 0xFEu)
             midi_seen++;
     }
 }
 
 _Static_assert(KL_NPART == 4, "app_render's out[] has a buffer for each part");
+_Static_assert(APP_BLOCK % 32u == 0, "the render goes in steps of 32 frames (the looper's)");
 void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
 {
-    static int32_t *const out[KL_NPART] = {part_buf[0], part_buf[1], part_buf[2], part_buf[3]};
-    uint32_t i, p;
+    uint32_t i, p, b;
     int32_t target = (int32_t)master_q12 << 8;
     if (n > APP_BLOCK)
         n = APP_BLOCK;
     midi_in();
+    lp_asks();
     for (p = 0; p < KL_NPART; p++)
         for (i = 0; i < n; i++)
             part_buf[p][i] = 0;
-    kl_render(out, n);
+    for (b = 0; b + 32u <= n; b += 32u) {           /* a step at a time: the looper's notes land in theirs */
+        int32_t *const out[KL_NPART] = {part_buf[0] + b, part_buf[1] + b, part_buf[2] + b, part_buf[3] + b};
+        lp_step(ck_buf + b);
+        kl_render(out, 32u);
+    }
     for (i = 0; i < n; i++) {
         int32_t c, sum[2] = {0, 0}, y[2], pk, lim;
         for (p = 0; p < KL_NPART; p++) {             /* each part at its gains: L and R */
@@ -277,6 +763,8 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
                 sum[c] += x * (mix_q19[p][c] >> 8) >> 11;
             }
         }
+        sum[0] += ck_buf[i];                         /* the looper's click, in the middle */
+        sum[1] += ck_buf[i];
         gain_q8 += (target - gain_q8) >> 8;          /* ~6 ms */
         for (c = 0; c < 2; c++)
             y[c] = clamp30(mul_shr7(sum[c], gain_q8 >> 8));   /* x32 at full MASTER, toward 24-bit */
@@ -325,6 +813,7 @@ void app_init(void)
         sound_select(p);
     }
     mix_update();
+    loop_init();
 }
 
 /* --------------------------------------------------------------------- UI --- */
@@ -338,12 +827,25 @@ static struct {
     uint8_t kpart[NKEYS];                            /* and on which part (SEL may change it meanwhile) */
     uint8_t edit, page;                              /* an edit page is open, which (0: EDIT 1, 1: EDIT 2) */
     uint8_t mix, redraw_mix;                         /* the mixer is open; its strips again (the meters moved) */
+    uint8_t loop, redraw_loop, redraw_head;          /* the looper's page is open; its lanes again (the play line
+                                                     * moved); the header alone (its bar and beat) */
+    uint8_t ask, ask_part;                           /* HOME + PLAY asks before a part is emptied (OCT+ yes) */
+    uint32_t loop_at, lp_sig;                        /* the lanes last drawn; what the looper did, as last seen */
+    uint8_t full_seen;                               /* lp.full as last said */
+    char ind[8];                                     /* the header's bar and beat, as last drawn */
     uint32_t meter_at, lim_until;                    /* the meters last read; LIM lit until */
     int32_t meter[2];                                /* the output's meters, L and R, in pixels */
     uint8_t redraw, redraw_pads;                     /* the whole screen; DRUMS' pads only (a hit lit or gone) */
     uint32_t hits, hit_until;                        /* the DSP's note count as last seen; the hit pad lit until */
     int8_t hit_pc;                                   /* the last note's semitone (C = 0) */
 } ui;
+
+static int text_eq(const char *a, const char *b)
+{
+    while (*a && *a == *b)
+        a++, b++;
+    return *a == *b;
+}
 
 static void text_cat(char *d, const char *s)
 {
@@ -485,6 +987,57 @@ static void mix_text(const part_set_t *ps, int32_t k, char *b, int short_form)
 
 static const char *const MIX_LABEL[4] = {"LEVEL", "PAN", "MUTE", "SOLO"};
 
+static const char *const LOOP_LABEL[4] = {"TEMPO", "LENGTH", "QUANT", "CLICK"};
+static const char *const QUANT_NAME[5] = {"OFF", "1/32", "1/16", "1/8", "1/4"};
+static const char *const CLICK_NAME[3] = {"OFF", "REC", "ON"};
+
+static void part_name(int p, char *t)                /* "2 DRUMS" onto t */
+{
+    char n[3] = {(char)('1' + p), ' ', 0};
+    text_cat(t, n);
+    text_cat(t, TILES[TILE_OF[set.parts[p].engine]].name);
+}
+
+static uint32_t loop_home_bars(void) { return lp_empty() ? 0u : lp.first_bars; }   /* where HOME + K2 takes LENGTH */
+
+static void bars_text(int32_t bars, char *b)         /* "4 BARS", "1 BAR", "AUTO" */
+{
+    b[0] = 0;
+    if (!bars) {
+        text_cat(b, "AUTO");
+        return;
+    }
+    int_text(bars, b);
+    text_cat(b, bars == 1 ? " BAR" : " BARS");
+}
+
+static void loop_text(int32_t k, char *b)            /* "98 BPM", LENGTH's, "1/16", "REC" */
+{
+    b[0] = 0;
+    if (k == 0) {
+        int_text(lp.tempo, b);
+        text_cat(b, " BPM");
+    } else if (k == 1) {
+        bars_text(lp.bars, b);
+    } else {
+        text_cat(b, k == 2 ? QUANT_NAME[lp.quant] : CLICK_NAME[lp.click]);
+    }
+}
+
+static void loop_state_text(char *t)                 /* what the looper does: "REC 2 DRUMS", "PLAY", "STOP" */
+{
+    t[0] = 0;
+    if (lp.state == LP_COUNT) {
+        text_cat(t, "COUNT-IN");
+    } else if (lp.rec) {
+        text_cat(t, "REC ");
+        part_name(lp.rpart, t);
+    } else {
+        text_cat(t, lp.state == LP_PLAY ? "PLAY" : lp_empty() ? "EMPTY" : "STOP");
+    }
+}
+
+
 /* a screen reader that has just started listening (or asks) hears the whole screen */
 static void speak(void)
 {
@@ -514,6 +1067,19 @@ static void speak(void)
                 text_cat(t, v);
             }
         }
+        if (ui.loop) {                               /* the looper: what it does, what its knobs hold */
+            char v[24];
+            loop_state_text(v);
+            text_cat(t, ". LOOP ");
+            text_cat(t, v);
+            for (k = 0; k < 4; k++) {
+                text_cat(t, ". ");
+                text_cat(t, LOOP_LABEL[k]);
+                text_cat(t, " ");
+                loop_text(k, v);
+                text_cat(t, v);
+            }
+        }
         if (ui.edit) {                               /* the page and what its knobs hold */
             text_cat(t, ". EDIT ");
             text_cat(t, kl_page_title(eng_cur(), ui.page));
@@ -534,6 +1100,8 @@ static void part_step(int32_t d)                     /* SEL, SELECT: the next pa
     int hit;
     set.part = (uint8_t)(((set.part + d) % KL_NPART + KL_NPART) % KL_NPART);
     dirty_update();
+    if (lp.rec)
+        lp_ask(LC_PART, set.part);                   /* the recording goes along */
     ui.edit = 0;
     ui.redraw = 1;
     ui.hits = kl_hits(set.part, &hit);               /* its own notes: no pad lit from the other part's */
@@ -583,7 +1151,7 @@ static void page_show(uint32_t page)                 /* EDIT 1 (0) or EDIT 2 (1)
 {
     char t[24] = "EDIT ";
     ui.edit = 1;
-    ui.mix = 0;
+    ui.mix = ui.loop = 0;
     ui.page = (uint8_t)page;
     ui.redraw = 1;
     text_cat(t, kl_page_title(eng_cur(), (int)page));
@@ -648,7 +1216,7 @@ static void mix_said(int32_t k)                      /* a screen reader hears th
 static void mix_show(int on)                         /* GLO: the mixer open (an edit page closes), or shut */
 {
     ui.mix = (uint8_t)(on != 0);
-    ui.edit = 0;
+    ui.edit = ui.loop = 0;
     ui.redraw = 1;
     announce(on ? "MIX" : "RACK");
 }
@@ -689,6 +1257,162 @@ static void mix_reset(int32_t k)                     /* HOME + K1..K4 on the mix
     else
         ps->solo = 0;
     mix_changed(k);
+}
+
+/* -------------------------------------------------------- the looper's page --- */
+static void loop_said(int32_t k)                     /* "TEMPO 98 BPM" */
+{
+    char t[32], v[12];
+    t[0] = 0;
+    text_cat(t, LOOP_LABEL[k]);
+    text_cat(t, " ");
+    loop_text(k, v);
+    text_cat(t, v);
+    announce(t);
+}
+
+static void loop_show(int on)                        /* SEQ: the looper's page open (another closes), or shut */
+{
+    ui.loop = (uint8_t)(on != 0);
+    ui.edit = ui.mix = 0;
+    ui.redraw = 1;
+    announce(on ? "LOOP" : "RACK");
+}
+
+/* K1..K4 on the looper's page: TEMPO a BPM a detent, LENGTH a bar (AUTO only while it is empty; not while the first
+ * take sets it), QUANT and CLICK a choice */
+static void loop_step(int32_t k, int32_t d)
+{
+    if (k == 0) {
+        lp.tempo = (uint8_t)clamp(lp.tempo + d, 40, 240);
+    } else if (k == 1) {                            /* the render sets it (the screen follows) */
+        int32_t b = clamp(lp.bars + d, lp_empty() ? 0 : 1, LP_MAXBARS);
+        char t[24] = "LENGTH ", v[12];
+        if (lp.first) {
+            app_say("LENGTH", "AFTER TAKE");
+            return;
+        }
+        if (b != lp.bars)
+            lp_ask(LC_BARS, b);
+        bars_text(b, v);
+        text_cat(t, v);
+        announce(t);
+        return;
+    } else if (k == 2) {
+        lp.quant = (uint8_t)clamp(lp.quant + d, 0, 4);
+    } else {
+        lp.click = (uint8_t)clamp(lp.click + d, 0, 2);
+    }
+    ui.redraw = 1;
+    loop_said(k);
+}
+
+static void loop_reset(int32_t k)                    /* HOME + K1..K4: 120 BPM, the first take's length, 1/16, REC */
+{
+    if (k == 0)
+        lp.tempo = 120;
+    else if (k == 1)
+        loop_step(1, (int32_t)loop_home_bars() - lp.bars);
+    else if (k == 2)
+        lp.quant = 2;
+    else
+        lp.click = 1;
+    ui.redraw = 1;
+    if (k != 1)
+        loop_said(k);
+}
+
+static void loop_play(void)                          /* PLAY: the loop from its start, or stopped */
+{
+    if (lp.state != LP_STOP) {
+        lp_ask(LC_STOP, 0);
+        announce("STOP");
+    } else if (!lp.bars) {
+        app_say("EMPTY", "REC FIRST");
+    } else {
+        lp_ask(LC_PLAY, 0);
+        announce("PLAY");
+    }
+}
+
+static void loop_rec(void)                           /* REC: the chosen part recording, or not */
+{
+    char t[24] = "REC ";
+    if (lp.rec) {
+        lp_ask(LC_UNREC, 0);
+        announce("REC OFF");
+        return;
+    }
+    lp_ask(LC_REC, set.part);
+    part_name(set.part, t);
+    announce(t);
+}
+
+static void loop_undo(void)                          /* HOME + REC: the last take out, or back in */
+{
+    char t[24] = "";
+    if (lp.undo_part < 0) {
+        app_say("UNDO", "NOTHING");
+        return;
+    }
+    part_name(lp.undo_part, t);
+    app_say(lp.undone ? "REDO" : "UNDO", t);
+    lp_ask(LC_UNDO, 0);
+}
+
+static void loop_clear_ask(void)                     /* HOME + PLAY: the chosen part emptied, once OCT+ says so */
+{
+    char t[24] = "";
+    part_name(set.part, t);
+    if (!lp.n[set.part] && !(lp.rec && lp.rpart == set.part)) {
+        app_say("EMPTY", t);
+        return;
+    }
+    text_cat(t, "? OCT+");
+    app_say("CLEAR", t);
+    ui.msg_until = plat_ms() + 5000u;                /* the question stands 5 s */
+    ui.ask = 1;
+    ui.ask_part = set.part;
+}
+
+static void loop_answer(int yes)                     /* OCT+ or OCT- while the question stands */
+{
+    char t[24] = "";
+    part_name(ui.ask_part, t);
+    ui.ask = 0;
+    if (yes)
+        lp_ask(LC_CLEAR, ui.ask_part);
+    app_say(yes ? "CLEARED" : "KEPT", t);
+}
+
+/* the header's looper: the bar and beat while it plays ("3.2"), the beats left while it counts in ("3"); 0 = none,
+ * 1 = playing, 2 = recording */
+static int loop_ind(char *t)
+{
+    uint32_t pos = lp.pos16 >> 16;
+    char b[4];
+    t[0] = 0;
+    if (lp.state == LP_COUNT) {
+        int_text((int32_t)(4u - (lp.count16 >> 16) / LP_PPQN), t);
+        return 2;
+    }
+    if (lp.state != LP_PLAY)
+        return 0;
+    int_text((int32_t)(pos / LP_BAR + 1u), t);
+    text_cat(t, ".");
+    int_text((int32_t)(pos % LP_BAR / LP_PPQN + 1u), b);
+    text_cat(t, b);
+    return lp.rec ? 2 : 1;
+}
+
+static uint32_t loop_sig(void)                       /* what the looper did, for the screen to follow */
+{
+    uint32_t h = lp.state | (uint32_t)lp.rec << 2 | (uint32_t)lp.rpart << 3 | (uint32_t)lp.bars << 5 |
+                 (uint32_t)lp.first << 10 | (uint32_t)lp.undone << 11;
+    int p;
+    for (p = 0; p < KL_NPART; p++)
+        h = h * 31u + lp.n[p];
+    return h;
 }
 
 /* each edited sound becomes its engine's USER sound (two parts with the same engine edited: the chosen part's, else
@@ -757,11 +1481,13 @@ static void input(void)
             ui.knote[k] = (int8_t)note;
             ui.kpart[k] = set.part;
             kl_key(set.part, 1, note, (int)v);
+            lp_key(set.part, 1, note, (int)v);
             plat_midi_send(0x09u | (0x90u | set.part) << 8 | (uint32_t)note << 16 | v << 24, TO_USB);   /* its
                                                                                                          * channel */
         } else if (!(keys & bit) && (ui.keys & bit)) {
             int32_t note = ui.knote[k];
             kl_key(ui.kpart[k], 0, note, 0);
+            lp_key(ui.kpart[k], 0, note, 0);
             plat_midi_send(0x08u | (0x80u | ui.kpart[k]) << 8 | (uint32_t)note << 16, TO_USB);
         }
     }
@@ -769,10 +1495,22 @@ static void input(void)
         uint32_t bit = 1u << k;
         if (!(btn & bit) || (ui.btn & bit))
             continue;
-        if (k == B_OCTDN && ui.edit)
+        if (ui.ask && (k == B_OCTUP || k == B_OCTDN))
+            loop_answer(k == B_OCTUP);               /* HOME + PLAY's question */
+        else if (k == B_OCTDN && ui.edit)
             edit_close();                            /* back, as on Felucca's pages */
+        else if ((k == B_OCTDN && ui.loop) || k == B_SEQ)
+            loop_show(!ui.loop);                     /* the looper's page, open and shut */
         else if ((k == B_OCTDN && ui.mix) || k == B_GLO)
             mix_show(!ui.mix);                       /* the mixer, open and shut */
+        else if (k == B_PLAY && (btn & 1u << B_HOME))
+            loop_clear_ask();
+        else if (k == B_PLAY)
+            loop_play();                             /* on every page */
+        else if (k == B_REC && (btn & 1u << B_HOME))
+            loop_undo();
+        else if (k == B_REC)
+            loop_rec();
         else if (k == B_OCTDN)
             octave_step(-1);
         else if (k == B_EDIT || (k == B_OCTUP && ui.edit))
@@ -785,8 +1523,10 @@ static void input(void)
             part_step(1);
         else if (k == B_ENV && eng_cur() == KL_ACID)
             announce("ACCENT");                      /* held: the keys pressed now are accented */
-        else if (k == B_HOME && (ui.edit || ui.mix))
+        else if (k == B_HOME && (ui.edit || ui.mix || ui.loop))
             app_say("RESET", "TURN K1-K4");          /* held: a knob turned goes back to its sound's value */
+        else if (k == B_HOME)
+            app_say("HOME", "+ REC UNDO");           /* held: REC takes the last take back, PLAY empties a part */
         else
             app_say(BTN_NAME[k], "SOON");            /* the pages behind the other buttons come later */
     }
@@ -797,6 +1537,10 @@ static void input(void)
             preset_step(e);
         else if (k == EN_SELECT)
             part_step(e);                            /* the part, as SEL: to the right the next */
+        else if (ui.loop && k >= EN_K1 && (btn & 1u << B_HOME))
+            loop_reset((int32_t)(k - EN_K1));
+        else if (ui.loop && k >= EN_K1)
+            loop_step((int32_t)(k - EN_K1), e);
         else if (ui.mix && k >= EN_K1 && (btn & 1u << B_HOME))
             mix_reset((int32_t)(k - EN_K1));
         else if (ui.mix && k >= EN_K1)
@@ -813,7 +1557,10 @@ static void input(void)
     ui.keys = keys;
     ui.btn = btn;
     plat_glow(1);                                    /* the unlit buttons glow, readable in the dark */
-    plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u) | (ui.mix ? 1u << B_GLO : 0u), keys);
+    plat_play_red(lp.rec);                           /* PLAY green while it plays, red while it records */
+    plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u) | (ui.mix ? 1u << B_GLO : 0u) | (ui.loop ? 1u << B_SEQ : 0u) |
+                  (lp.state != LP_STOP ? 1u << B_PLAY : 0u) | (lp.rec ? 1u << B_REC : 0u),
+              keys);
 }
 
 void app_input_only(void) { input(); }
@@ -905,20 +1652,48 @@ static void draw_battery(int32_t x, int32_t y)
 
 static int acc_on(void) { return eng_cur() == KL_ACID && (ui.btn & 1u << B_ENV); }
 
+static void disc(int32_t cx, int32_t cy, int32_t r, uint16_t c);
+
+static void draw_ind(int32_t right)                  /* the looper on the header's right, up to right: a red dot
+                                                     * recording (a green triangle playing), the bar and beat */
+{
+    char t[8];
+    int k = loop_ind(t), i;
+    int32_t x;
+    if (!k)
+        return;
+    x = right - text_w(&FONT_XS, t) - 9;
+    if (k == 2)
+        disc(x + 3, 11, 3, K_REC);
+    else
+        for (i = 0; i < 7; i++)
+            cv_rect(x + 1, 8 + i, i < 4 ? i + 1 : 7 - i, 1, K_GREEN);
+    cv_text(x + 9, 4, &FONT_XS, t, K_TEXT);
+}
+
 static void draw_header(void)
 {
     const tile_t *tl = &TILES[TILE_OF[eng_cur()]];
-    char o[8] = "OCT ", t[4], chip[12] = "";
+    char o[8] = "OCT ", t[4], chip[12] = "", it[8];
+    int msg = plat_ms() < ui.msg_until;
+    int32_t iw = !msg && loop_ind(it) ? text_w(&FONT_XS, it) + 13 : 0;   /* the looper's room on the right */
     cv_begin(240, 22, K_HEAD);
     cv_rect(0, 21, 240, 1, K_LINE);
-    if (plat_ms() < ui.msg_until) {
+    if (msg) {
         int32_t x = cv_text(8, 3, &FONT_B, ui.msg[0], K_TEXT);
         cv_text(x + 6, 3, &FONT_B, ui.msg[1], tl->col);
-    } else if (ui.mix) {                             /* the mixer: all four parts */
-        int32_t w = text_w(&FONT_XS, "MIX") + 8;
+    } else if (ui.mix || ui.loop) {                  /* the mixer, the looper: all four parts */
+        const char *c = ui.mix ? "MIX" : "LOOP";
+        char st[24] = "";
+        int32_t w = text_w(&FONT_XS, c) + 8;
+        if (ui.mix)
+            text_cat(st, "PARTS 1-4");
+        else
+            loop_state_text(st);
         cv_rect(6, 4, w, 15, K_TEXT);
-        cv_text(10, 4, &FONT_XS, "MIX", K_GROUND);
-        cv_text(6 + w + 8, 3, &FONT_B, "PARTS 1-4", K_TEXT);
+        cv_text(10, 4, &FONT_XS, c, K_GROUND);
+        text_fit(6 + w + 8, 3, 192 - w - iw, &FONT_B, st, K_TEXT);
+        draw_ind(210);
         draw_battery(214, 6);
         cv_blit(0, 0);
         return;
@@ -935,16 +1710,18 @@ static void draw_header(void)
         kl_shape(eng_cur(), work[set.part][eng_cur()], sh);   /* the sound as it plays: an edit shows at once */
         glyph_draw(6 + w + 11, 11, 8, sh, tl->col, K_HEAD);
         sound_title(set.part, eng_cur(), name);
-        text_fit(6 + w + 23, 3, (acc_on() ? 124 : 150) - w, &FONT_B, name, K_TEXT);
+        text_fit(6 + w + 23, 3, (acc_on() ? 124 : 150) - w - iw, &FONT_B, name, K_TEXT);
     }
     octave_text(t);
     text_cat(o, t);
-    cv_text(206 - text_w(&FONT_XS, o), 4, &FONT_XS, o, K_MUTED);
+    cv_text(206 - iw - text_w(&FONT_XS, o), 4, &FONT_XS, o, K_MUTED);
     if (acc_on()) {                                  /* ACID's accent held */
-        int32_t x = 202 - text_w(&FONT_XS, o) - text_w(&FONT_T, "ACC") - 6;
+        int32_t x = 202 - iw - text_w(&FONT_XS, o) - text_w(&FONT_T, "ACC") - 6;
         box_edge(x, 5, text_w(&FONT_T, "ACC") + 6, 13, 1, tl->col);
         cv_text(x + 3, 6, &FONT_T, "ACC", tl->col);
     }
+    if (iw)
+        draw_ind(210);
     draw_battery(214, 6);
     cv_blit(0, 0);
 }
@@ -1080,8 +1857,9 @@ static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
     }
 }
 
-static void footer_mix(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])   /* K1..K4: the
-                                                                                             * chosen part's strip */
+/* K1..K4: the chosen part's strip; LEVEL and PAN marked at 0 dB and the middle (where HOME takes them) while they are
+ * elsewhere, MUTE and SOLO not (OFF or ON says it) */
+static void footer_mix(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
 {
     const part_set_t *ps = part_cur();
     int32_t i;
@@ -1096,8 +1874,35 @@ static void footer_mix(char lab[4][16], char v[4][12], int32_t frac[4], int32_t 
     }
     frac[0] = (ps->level - LEVEL_OFF) * 256 / (6 - LEVEL_OFF);
     frac[1] = (ps->pan + 50) * 256 / 100;
+    if (ps->level)
+        mark[0] = -LEVEL_OFF * 256 / (6 - LEVEL_OFF);
+    if (ps->pan)
+        mark[1] = 128;
     frac[2] = ps->mute ? 256 : 0;
     frac[3] = ps->solo ? 256 : 0;
+}
+
+/* K1..K4: TEMPO, LENGTH, QUANT, CLICK, each marked where HOME takes it (120 BPM, the first take's length, 1/16,
+ * REC) while it is elsewhere */
+static void footer_loop(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
+{
+    int32_t i, home = (int32_t)loop_home_bars();
+    for (i = 0; i < 4; i++) {
+        lab[i][0] = 'K';
+        lab[i][1] = (char)('1' + i);
+        lab[i][2] = ' ';
+        lab[i][3] = 0;
+        text_cat(lab[i], LOOP_LABEL[i]);
+        loop_text(i, v[i]);
+    }
+    frac[0] = (lp.tempo - 40) * 256 / 200;
+    frac[1] = lp.bars * 256 / LP_MAXBARS;
+    frac[2] = lp.quant * 64;
+    frac[3] = lp.click * 128;
+    mark[0] = lp.tempo != 120 ? 80 * 256 / 200 : -1;
+    mark[1] = lp.bars != home ? home * 256 / LP_MAXBARS : -1;
+    mark[2] = lp.quant != 2 ? 128 : -1;
+    mark[3] = lp.click != 1 ? 128 : -1;
 }
 
 static void draw_footer(void)                        /* what the controls hold, each with a bar of where it is */
@@ -1107,6 +1912,8 @@ static void draw_footer(void)                        /* what the controls hold, 
     int32_t frac[4], mark[4], i;
     if (ui.mix)
         footer_mix(lab, v, frac, mark);
+    else if (ui.loop)
+        footer_loop(lab, v, frac, mark);
     else if (ui.edit)
         footer_edit(lab, v, frac, mark);
     else
@@ -1338,12 +2145,120 @@ static void draw_mix(int32_t y0)                     /* the mixer's strips, the 
     cv_blit(0, (uint32_t)y0);
 }
 
+/* ------------------------------------------------------- the looper's lanes --- */
+#define LT_X 50                                      /* the lanes' time line: from x, this wide */
+#define LT_W 186
+
+static uint32_t loop_view(void)                      /* the ticks the lanes show: the length, or as far as the first
+                                                     * take has come (a bar at least) */
+{
+    if (lp.bars)
+        return lp.bars * (uint32_t)LP_BAR;
+    if (lp.first && lp.state == LP_PLAY)
+        return ((lp.pos16 >> 16) / LP_BAR + 1u) * LP_BAR;
+    return LP_BAR;
+}
+
+/* a part's lane at row y of the strip: its glyph and name (REC while it records), the bar lines, its notes (higher up
+ * higher; a note over the loop's end goes on at its start); the chosen part's framed, a silent one's grey */
+static void draw_lane(int p, int32_t y, uint32_t len, int32_t bars)
+{
+    static int16_t on_x[128];
+    const part_set_t *ps = &set.parts[p];
+    const tile_t *tl = &TILES[TILE_OF[ps->engine]];
+    const lp_ev_t *e = lp_ev[p];
+    int sel = p == set.part, recp = lp.rec && lp.rpart == p, solo = 0, q;
+    uint16_t bg = sel ? K_SURF2 : K_SURF, col;
+    uint32_t n = lp.n[p], i;
+    int32_t b, lo = 127, hi = 0, top = y + 5, h = 32;
+    uint8_t sh[8];
+    char t[12] = "";
+    for (q = 0; q < KL_NPART; q++)
+        solo |= set.parts[q].solo;
+    col = ps->mute || (solo && !ps->solo) ? K_MUTED : tl->col;
+    cv_rect(1, y, 238, 42, bg);
+    if (sel)
+        box_edge(1, y, 238, 42, 2, tl->col);
+    kl_shape(ps->engine, work[p][ps->engine], sh);
+    glyph_draw(13, y + 13, 8, sh, tl->col, bg);
+    part_name(p, t);
+    text_fit(5, y + 27, 44, &FONT_T, t, sel ? tl->col : K_TEXT);
+    if (recp) {
+        cv_rect(26, y + 7, text_w(&FONT_T, "REC") + 6, 12, K_REC);
+        cv_text(29, y + 8, &FONT_T, "REC", K_GROUND);
+    }
+    if (LT_W / (bars * 4) >= 6)                      /* the beats, where there is room */
+        for (b = 1; b < bars * 4; b++)
+            cv_rect(LT_X + b * LT_W / (bars * 4), y + 3, 1, 36, mix565(K_LINE, bg, 110));
+    for (b = 1; b < bars; b++)
+        cv_rect(LT_X + b * LT_W / bars, y + 3, 1, 36, K_LINE);
+    for (i = 0; i < n && e[i].tick < len; i++) {
+        lo = e[i].note < lo ? e[i].note : lo;
+        hi = e[i].note > hi ? e[i].note : hi;
+    }
+    if (lo > hi) {
+        if (!recp)
+            cv_text(LT_X + (LT_W - text_w(&FONT_T, "EMPTY")) / 2, y + 16, &FONT_T, "EMPTY", K_MUTED);
+        return;
+    }
+#define NOTE_Y(nt) (hi == lo ? top + h / 2 - 1 : top + h - 3 - ((nt) - lo) * (h - 3) / (hi - lo))
+#define NOTE_RECT(x0, x1, nt) cv_rect((x0), NOTE_Y(nt), (x1) - (x0) > 2 ? (x1) - (x0) : 2, 3, col)
+    for (i = 0; i < 128u; i++)
+        on_x[i] = -1;
+    for (i = 0; i < n && e[i].tick < len; i++) {
+        int32_t x = LT_X + (int32_t)(e[i].tick * (uint32_t)LT_W / len), nt = e[i].note;
+        if (e[i].vel & 0x7Fu) {                      /* on: a note held on is drawn up to here */
+            if (on_x[nt] >= 0)
+                NOTE_RECT(on_x[nt], x, nt);
+            on_x[nt] = (int16_t)x;
+        } else if (on_x[nt] >= 0) {
+            NOTE_RECT(on_x[nt], x, nt);
+            on_x[nt] = -1;
+        } else {                                     /* begun before the loop's end, last time round */
+            NOTE_RECT(LT_X, x, nt);
+        }
+    }
+    for (i = 0; i < 128u; i++)
+        if (on_x[i] >= 0)
+            NOTE_RECT(on_x[i], LT_X + LT_W, (int32_t)i);
+#undef NOTE_RECT
+#undef NOTE_Y
+}
+
+/* the looper's page, the rows y0 .. y0 + 92 of the screen: the ruler (the bars' numbers, the one playing lit), a lane
+ * a part, the play line */
+static void draw_loop(int32_t y0)
+{
+    uint32_t len = loop_view(), pos = lp.pos16 >> 16;
+    int32_t bars = (int32_t)(len / LP_BAR), b, p, cur = lp.state == LP_PLAY ? (int32_t)(pos / LP_BAR) : -1;
+    cv_begin(240, 93, K_GROUND);
+    for (b = 0; b < bars; b++) {
+        int32_t x = LT_X + b * LT_W / bars;
+        char t[4];
+        int_text(b + 1, t);
+        if (b == cur) {
+            cv_rect(x + 1, 23 - y0, text_w(&FONT_T, t) + 4, 11, K_TEXT);
+            cv_text(x + 3, 23 - y0, &FONT_T, t, K_GROUND);
+        } else if (bars <= 8 || b % 4 == 0) {
+            cv_text(x + 3, 23 - y0, &FONT_T, t, K_MUTED);
+        }
+    }
+    for (p = 0; p < KL_NPART; p++)
+        draw_lane((int)p, 34 + p * 44 - y0, len, bars);
+    if (lp.state == LP_PLAY)
+        cv_rect(LT_X + (int32_t)(pos * (uint32_t)LT_W / len), 34 - y0, 2, 174, K_TEXT);
+    cv_blit(0, (uint32_t)y0);
+}
+
 static void draw(void)
 {
     draw_header();
     if (ui.mix) {
         draw_mix(22);
         draw_mix(115);
+    } else if (ui.loop) {
+        draw_loop(22);
+        draw_loop(115);
     } else if (ui.edit) {
         draw_edit(22);
         draw_edit(115);
@@ -1386,9 +2301,45 @@ void app_frame(void)
     }
     if (ui.mix && now - ui.meter_at >= 50u)          /* the mixer's meters, 20 times a second */
         meters_read(now);
+    if (ui.ask && now >= ui.msg_until)               /* HOME + PLAY's question unanswered: nothing emptied */
+        ui.ask = 0;
+    {
+        uint32_t sig = loop_sig();
+        char it[8];
+        loop_ind(it);
+        if (sig != ui.lp_sig) {                      /* the looper did something: the whole screen */
+            ui.lp_sig = sig;
+            ui.redraw = 1;
+        }
+        if (lp.full != ui.full_seen) {               /* a note left out: the part is full */
+            char t[24] = "";
+            ui.full_seen = lp.full;
+            part_name(lp.rpart, t);
+            app_say("FULL", t);
+        }
+        if (!text_eq(it, ui.ind)) {                  /* another beat: the header */
+            ui.ind[0] = 0;
+            text_cat(ui.ind, it);
+            ui.redraw_head = 1;
+        }
+    }
+    if (ui.loop && lp.state != LP_STOP && now - ui.loop_at >= 40u) {   /* the play line, 25 times a second */
+        ui.loop_at = now;
+        ui.redraw_loop = 1;
+    }
     if (ui.redraw) {
-        ui.redraw = ui.redraw_pads = ui.redraw_mix = 0;
+        ui.redraw = ui.redraw_pads = ui.redraw_mix = ui.redraw_loop = ui.redraw_head = 0;
         draw();
+        return;
+    }
+    if (ui.redraw_head) {
+        ui.redraw_head = 0;
+        draw_header();
+    }
+    if (ui.redraw_loop) {
+        ui.redraw_loop = 0;
+        draw_loop(22);
+        draw_loop(115);
     } else if (ui.redraw_mix) {                      /* the strips alone: the meters moved */
         ui.redraw_mix = 0;
         draw_mix(22);
@@ -1465,6 +2416,38 @@ int app_expect(const char *what, int *got)
         *got = kl_note_now(set.part);
     else if (!strcmp(what, "pad"))                   /* DRUMS: the lit pad's semitone, -1 none */
         *got = ui.hit_until ? ui.hit_pc : -1;
+    else if (!strcmp(what, "loop"))                  /* the looper's page is open */
+        *got = ui.loop;
+    else if (!strcmp(what, "lstate"))                /* 0 stopped, 1 counting in, 2 playing */
+        *got = lp.state;
+    else if (!strcmp(what, "rec"))                   /* recording, into part rpart (1..4) */
+        *got = lp.rec;
+    else if (!strcmp(what, "rpart"))
+        *got = lp.rpart + 1;
+    else if (!strcmp(what, "bars"))                  /* the loop's length, 0: AUTO (none yet) */
+        *got = lp.bars;
+    else if (!strcmp(what, "lbar"))                  /* the bar playing, 1.., 0 stopped */
+        *got = lp.state == LP_PLAY ? (int)((lp.pos16 >> 16) / LP_BAR + 1u) : 0;
+    else if (!strcmp(what, "tempo"))
+        *got = lp.tempo;
+    else if (!strcmp(what, "quant"))                 /* 0 OFF, 1 1/32, 2 1/16, 3 1/8, 4 1/4 */
+        *got = lp.quant;
+    else if (!strcmp(what, "click"))                 /* 0 OFF, 1 REC, 2 ON */
+        *got = lp.click;
+    else if (!strcmp(what, "events"))                /* the chosen part's notes on and off in the loop */
+        *got = lp.n[set.part];
+    else if (!strcmp(what, "lsound"))                /* the chosen part's notes the looper has sounding */
+        *got = (lp.on[set.part][0] | lp.on[set.part][1] | lp.on[set.part][2] | lp.on[set.part][3]) != 0;
+    else if (!strcmp(what, "hits"))                  /* the chosen part's notes started so far (keys, MIDI, looper) */
+        *got = (int)kl_hits(set.part, &k);
+    else if (!strcmp(what, "ask"))                   /* HOME + PLAY's question stands */
+        *got = ui.ask;
+    else if ((k = expect_k(what, "lt")) >= 0)        /* the chosen part's event k: its tick (-1 none) */
+        *got = (uint32_t)k < lp.n[set.part] ? lp_ev[set.part][k].tick : -1;
+    else if ((k = expect_k(what, "lv")) >= 0)        /* its velocity (0: a note's end) */
+        *got = (uint32_t)k < lp.n[set.part] ? lp_ev[set.part][k].vel & 0x7F : -1;
+    else if ((k = expect_k(what, "ln")) >= 0)        /* its note */
+        *got = (uint32_t)k < lp.n[set.part] ? lp_ev[set.part][k].note : -1;
     else if ((k = expect_k(what, "v")) >= 0)
         *got = work[set.part][eng_cur()][k];
     else if ((k = expect_k(what, "dsp")) >= 0)

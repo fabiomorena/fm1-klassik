@@ -322,6 +322,29 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   rechnet ohne 64-Bit-Division: (7 919 000 · 16) / (Spitze / 4096) in 32 Bit.
 - **Speicher** (`tools/device_check.py`): App 210 964 B, RAM 53 200 B (+160 B gegenüber den Parts).
 
+## Looper: Rechnungen und Messungen (Stand 27.10.2026, nur Simulator)
+
+- **Zeitraster:** 192 Ticks je Viertel, 4/4, höchstens 16 Takte = 16 × 4 × 192 = 12 288 Ticks (passt in 16 Bit). Ein
+  Tick dauert bei 120 BPM 60 000 / (120 × 192) = 2,6 ms, bei 240 BPM 1,3 ms.
+- **Genauigkeit:** `app_render` rendert den Block (256 Frames) in acht Schritten zu 32 Frames; vor jedem Schritt
+  spielt der Looper die fälligen Noten. Eine Note kommt also bis zu 32 / 44 100 = 0,73 ms zu früh. Aufgenommen wird
+  die Position am Anfang des Blocks, in dem die Note auch klingt (Tasten über die Warteschlange, MIDI direkt).
+  `kl_render` mit 32 statt 256 Frames achtmal aufzurufen kostet je Aufruf vier `ensure_loaded` und die Leerung der
+  Tasten-Warteschlange; wie viel das auf dem Gerät ist, ist **ungemessen**.
+- **Fortschritt je Schritt** (Ticks, Q16): BPM / 60 × 192 × 32 / 44 100 × 65 536 = BPM × 152,174; im Code
+  BPM × 152 174 / 1000 in 32 Bit (240 × 152 174 = 36,5 Mio. < 2³¹). Abweichung vom exakten Wert 152,1743: 2 · 10⁻⁶.
+- **Speicher:** je Part 2048 Ereignisse zu 4 B (Tick 16 Bit, Note, Velocity), dazu ein Puffer zum Zurücknehmen:
+  (4 + 1) × 2048 × 4 B = 40 960 B im Pool. `tools/device_check.py`: Pool 69 384 → 110 344 B (+40 960, wie
+  gerechnet) von 344 064 B; RAM 53 200 → 55 200 B; App 210 964 → 219 364 B. Eine Spur fasst 1024 Noten
+  (an und aus); 16 Takte mit 1/16-Hi-Hats, Kick und Snare auf jedem Schlag sind 16 × (16 + 4 + 4) = 384 Noten.
+- **Klick:** Sinus (Magic-Circle-Oszillator in 32-Bit-Festkomma), 1,5 kHz auf der Eins, 1 kHz sonst, fällt mit
+  τ = 512 Samples (11,6 ms), nach ~40 ms −30 dB. Gemessen im Simulator bei MASTER 50 %: Eins 158 141 → −34,5 dBFS,
+  andere Schläge 94 108 → −39,0 dBFS (eine Stimme: −31,5 dBFS); bei vollem MASTER ein Schlag 376 708 → −27,0 dBFS.
+- **Aufnahme und Abspielen ohne Doppel:** Eine aufgenommene Note, die (nach QUANT) noch vor der Abspielposition
+  liegt, hat schon live geklungen; sie wird in dieser Runde einmal übersprungen (Bit 7 der Velocity). Dasselbe gilt
+  für eine Note kurz vor dem Ende des Vorzählers, die auf Tick 0 rückt (innerhalb einer halben QUANT-Stufe, bei OFF
+  24 Ticks).
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

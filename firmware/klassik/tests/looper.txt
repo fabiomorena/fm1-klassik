@@ -1,0 +1,271 @@
+# KLASSIK's note looper (v0.5) in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/looper.txt firmware/klassik/build/host
+# At 240 BPM a bar is 1 s, a beat 250 ms, a tick (192 a beat) 1.3 ms, QUANT 1/16 48 ticks (62.5 ms).
+wait 600
+listen
+expect lstate 0
+expect loop 0
+# SEQ opens the looper's page: four lanes, all empty
+tap SEQ
+wait 30
+expect loop 1
+said LOOP
+shot looper-empty.png
+# PLAY on an empty loop (LENGTH AUTO): nothing to play yet
+tap PLAY
+wait 30
+expect lstate 0
+said EMPTY REC FIRST
+# K1 TEMPO, HOME + K1 back to 120; QUANT 1/16 and CLICK REC at first
+spin K1 50
+wait 30
+expect tempo 170
+said TEMPO 170 BPM
+press HOME
+wait 30
+said RESET TURN K1-K4
+spin K1 1
+wait 30
+release HOME
+wait 30
+expect tempo 120
+spin K1 120
+wait 30
+expect tempo 240
+expect quant 2
+expect click 1
+expect bars 0
+wait 1300
+# REC while stopped: a bar's count-in with the click (the click sounds, nothing else plays); the header counts down
+expect outl >-1
+tap REC
+wait 30
+expect lstate 1
+expect rec 1
+expect rpart 1
+said REC 1 VA
+expect outl >50000
+shot looper-count.png
+leds
+wait 1000
+expect lstate 2
+expect lbar 1
+# the first take (LENGTH AUTO): F3 on beat 1, A3 on beat 3, C4 on bar 2's beat 1, each started on QUANT's grid
+key 0 down
+wait 100
+key 0 up
+wait 400
+key 4 down
+wait 100
+key 4 up
+wait 400
+key 7 down
+wait 200
+key 7 up
+wait 850
+# REC just after bar 3 begins: the length is 2 bars (the nearest), the loop plays on
+expect lbar 3
+tap REC
+wait 30
+expect rec 0
+expect bars 2
+expect lstate 2
+expect lbar 1
+# the first key lands ~0.1 s into bar 1 (the tap, the 30 ms, the key's scan): on the 1/16 at tick 96; the others
+# 500 ms (384 ticks) and 1 s (768) after it
+expect events 6
+expect lt0 96
+expect ln0 53
+expect lv0 >0
+expect lv1 0
+expect lt2 480
+expect ln2 57
+expect lt4 864
+expect ln4 60
+# the loop plays them: three notes a time round
+expect hits 3
+wait 2000
+expect hits 6
+shot looper-play.png
+# HOME + REC: the first take taken back (its length too: AUTO again, stopped); again: back
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+said UNDO 1 VA
+expect events 0
+expect bars 0
+expect lstate 0
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+said REDO 1 VA
+expect events 6
+expect bars 2
+wait 1300
+# PLAY from the start; part 2 (DRUMS) records on top while it plays (no count-in); the header shows REC
+tap PLAY
+wait 30
+expect lstate 2
+said PLAY
+tap SEL
+wait 30
+expect part 2
+tap REC
+wait 30
+expect rec 1
+expect rpart 2
+expect lstate 2
+key 0 down
+wait 60
+key 0 up
+wait 440
+key 2 down
+wait 60
+key 2 up
+wait 200
+shot looper-rec.png
+wait 240
+tap REC
+wait 30
+expect rec 0
+expect events 4
+# HOME + REC takes the last take back, whichever part made it: part 2's
+spin SELECT -1
+wait 30
+expect part 1
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+said UNDO 2 DRUMS
+expect events 6
+tap SEL
+wait 30
+expect events 0
+spin SELECT -1
+wait 30
+# HOME + PLAY empties the chosen part, once OCT+ says so: OCT- keeps it, HOME + REC brings it back
+press HOME
+wait 30
+tap PLAY
+wait 30
+release HOME
+wait 30
+expect ask 1
+said CLEAR 1 VA? OCT+
+expect lstate 2
+tap OCT-
+wait 30
+expect ask 0
+said KEPT 1 VA
+expect events 6
+expect octave 0
+press HOME
+wait 30
+tap PLAY
+wait 30
+release HOME
+wait 30
+tap OCT+
+wait 30
+said CLEARED 1 VA
+expect events 0
+expect octave 0
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+expect events 6
+# K2 LENGTH: longer adds empty bars; HOME + K2 goes back to the first take's 2 bars
+wait 1300
+spin K2 2
+wait 30
+expect bars 4
+said LENGTH 4 BARS
+shot looper-length.png
+press HOME
+wait 30
+spin K2 1
+wait 30
+release HOME
+wait 30
+expect bars 2
+# QUANT OFF: a note keeps its tick (MIDI on channel 1, just after a 1/16)
+spin K3 -2
+wait 30
+expect quant 0
+said QUANT OFF
+tap REC
+wait 30
+expect rec 1
+midi 90 48 64
+wait 100
+midi 80 48 00
+wait 30
+tap REC
+wait 30
+expect events 8
+# where it was played: tick 75, off the 1/16 grid (a multiple of 48); first in the part, the events in tick order
+expect lt0 75
+expect ln0 72
+expect lt1 96
+# SEL while recording: the recording goes along to the next part
+tap REC
+wait 30
+expect rpart 1
+tap SEL
+wait 30
+expect rpart 2
+expect rec 1
+tap REC
+wait 30
+spin SELECT -1
+wait 30
+# the rack's header shows the looper (bar and beat); PLAY stops on every page, its notes end
+tap OCT-
+wait 1300
+expect loop 0
+expect lstate 2
+shot looper-rack.png
+tap PLAY
+wait 30
+expect lstate 0
+expect lsound 0
+said STOP
+wait 600
+expect voices 0
+# CLICK OFF: REC starts at once, without a count-in
+tap SEQ
+wait 30
+spin K4 -1
+wait 30
+expect click 0
+said CLICK OFF
+expect outl >-1
+tap REC
+wait 30
+expect lstate 2
+expect rec 1
+tap REC
+wait 30
+tap PLAY
+wait 30
+expect lstate 0
+# a reboot forgets the loop (RAM only), and its settings
+reboot
+wait 600
+expect lstate 0
+expect bars 0
+expect events 0
+expect tempo 120

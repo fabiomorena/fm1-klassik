@@ -18,7 +18,8 @@ a{color:#9AA3B2}a:hover{color:#E8EAED}
      it, OCT- goes back too. The strip of the chosen part is framed (SEL goes to the next); K1 LEVEL (-40 .. +6 dB,
      below -40 off), K2 PAN (L50 .. C .. R50), K3 MUTE, K4 SOLO are its. A muted part, or every part but the soloed
      ones, is drawn dim. MASTER: the MASTER pot, the output's peak for L and R, LIM lit while the limiter holds the
-     level down. Here: part 3 chosen and soloed, part 4 muted -->
+     level down. HOME held and K1..K4 turned: back to 0 dB, the middle, off. Here: part 3 chosen and soloed, part 4
+     muted -->
 <div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
 <header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
 <div style="display: flex; align-items: center; gap: 8px; min-width: 0">
@@ -107,7 +108,9 @@ a{color:#9AA3B2}a:hover{color:#E8EAED}
 <div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
 <span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 LEVEL</span>
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">-6 dB</span>
-<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 62%; background: #E3F45E"></span></span>
+<!-- a mark (text colour) on LEVEL's and PAN's bar: where HOME + the knob takes it (0 dB, the middle), while it is
+     elsewhere; MUTE and SOLO have none (OFF or ON says it) -->
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 74%; background: #E3F45E"></span><span style="position: absolute; left: calc(87% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
 </div>
 <div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
 <span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 PAN</span>

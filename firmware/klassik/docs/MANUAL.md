@@ -1,4 +1,4 @@
-# KLASSIK – Bedienung (v0.5, Teile Parts und Mixer)
+# KLASSIK – Bedienung (v0.5: Parts, Mixer, Looper)
 
 ## Parts
 
@@ -29,6 +29,9 @@ jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt,
 | OCT- / OCT+ | Oktave des Parts −2 … +2 |
 | EDIT | Edit-Seiten der Engine öffnen |
 | GLO | Mixer öffnen und schließen |
+| SEQ | Looper-Seite öffnen und schließen |
+| PLAY, REC | Looper starten und stoppen, aufnehmen (auf jeder Seite, siehe Looper) |
+| HOME + REC, HOME + PLAY | letzte Aufnahme zurücknehmen, Part leeren (siehe Looper) |
 | ENV | bei ACID: gehalten, sind die angeschlagenen Noten akzentuiert (`ACC` in der Kopfzeile) |
 | SAVE | die Parts speichern: den gewählten, je Part Engine, Sounds und Oktave (leuchtet, solange etwas ungespeichert ist) |
 | MASTER | Lautstärke |
@@ -47,12 +50,51 @@ Parts ist umrandet, SEL wählt den nächsten. Die Tasten spielen weiter.
 | K2 PAN | links (L50) … Mitte (C) … rechts (R50): die ferne Seite wird leiser, die nahe bleibt; in der Mitte beide voll |
 | K3 MUTE | nach rechts an, nach links aus |
 | K4 SOLO | nach rechts an, nach links aus; ist ein Part auf Solo, sind alle anderen stumm (außer weiteren Solo-Parts) |
-| HOME + K1–K4 | zurück auf 0 dB, Mitte, aus |
+| HOME + K1–K4 | zurück auf 0 dB, Mitte, aus; steht LEVEL oder PAN woanders, zeigt eine helle Marke im Balken, wo 0 dB bzw. die Mitte ist |
 
 Ein stummer Part erscheint grau. MASTER zeigt den MASTER-Regler, den Pegel des Ausgangs für links und rechts und
 `LIM`. Der Limiter hält den Ausgang unter −0,5 dBFS: Er greift sofort ein, wenn es lauter würde, und lässt in etwa
 50 ms wieder los. Solange er arbeitet, leuchtet `LIM`. Änderungen gleiten in wenigen Millisekunden, ohne Knacken.
 SAVE speichert den Mixer mit.
+
+## Looper
+
+Der Looper nimmt Noten auf, keinen Klang: was die Tasten und MIDI dem gewählten Part spielen. Alle vier Parts teilen
+sich eine Schleife (Länge und Tempo); jeder Part hat darin seine eigene Spur. Die Loops liegen im RAM und sind nach
+dem Ausschalten weg; Tempo, QUANT und CLICK auch (sie stehen dann wieder auf 120 BPM, 1/16, REC).
+
+| Bedienelement | Was es tut |
+| --- | --- |
+| PLAY | Schleife von vorn starten, noch einmal: stoppen (auf jeder Seite); leuchtet grün, beim Aufnehmen rot. Leer und LENGTH AUTO: `EMPTY REC FIRST` |
+| REC | den gewählten Part aufnehmen, über das, was er schon hat (Overdub), bis REC noch einmal; leuchtet dabei. Gestoppt: erst ein Takt Vorzähler mit Klick (CLICK OFF: sofort) |
+| SEL, SELECT | beim Aufnehmen wandert die Aufnahme mit zum nächsten Part |
+| HOME + REC | die letzte Aufnahme zurücknehmen, egal welcher Part sie gemacht hat (die Meldung nennt ihn: `UNDO 2 DRUMS`); noch einmal: wieder da (`REDO`). Eine Stufe |
+| HOME + PLAY | den gewählten Part leeren; fragt erst (`CLEAR 2 DRUMS? OCT+`): OCT+ leert, OCT− behält. HOME + REC holt ihn zurück |
+
+**Die erste Aufnahme** (alle Spuren leer, LENGTH AUTO) legt die Länge fest: REC beendet sie, auf ganze Takte gerundet
+(der nächste, 1–16), und die Schleife spielt weiter; PLAY beendet sie und stoppt. Was nach dem Ende gespielt wurde,
+rückt an den Anfang. Nach 16 Takten steht die Länge von selbst fest.
+
+**Die Looper-Seite** (SEQ, OCT− zurück; EDIT und GLO wechseln zu ihren Seiten): je Part eine Spur mit Glyphe, Name
+und seinen Noten (höher = weiter oben, DRUMS eine Zeile je Instrument), die Taktstriche, die weiße Linie, wo gerade
+gespielt wird. Die Spur des gewählten Parts ist umrandet, `REC` steht an der, die aufnimmt; ein stummer Part (Mixer)
+ist grau. Oben die Taktnummern, die gerade spielende hell. Die Tasten spielen weiter.
+
+| Regler | Was er tut |
+| --- | --- |
+| K1 TEMPO | 40–240 BPM; am Anfang 120 |
+| K2 LENGTH | AUTO oder 1–16 Takte. Kürzer blendet die Takte danach aus (sie bleiben erhalten), länger hängt leere an. AUTO nur, solange alles leer ist; nicht während der ersten Aufnahme |
+| K3 QUANT | OFF, 1/32, 1/16, 1/8, 1/4: wohin der Anfang einer aufgenommenen Note rückt (ihr Ende rückt gleich weit, die Länge bleibt); am Anfang 1/16 |
+| K4 CLICK | OFF, REC (beim Vorzählen und Aufnehmen), ON (immer, wenn die Schleife läuft); am Anfang REC. Auf der Eins höher |
+| HOME + K1–K4 | zurück auf 120 BPM, die Länge der ersten Aufnahme (alles leer: AUTO), 1/16, REC; eine helle Marke im Balken zeigt den Wert, solange der Regler woanders steht |
+
+**Kopfzeile:** Auf der Looper-Seite steht links, was der Looper tut (`REC 2 DRUMS`, `PLAY`, `STOP`, `COUNT-IN`,
+`EMPTY`). Rechts, auf jeder Seite: ein roter Punkt beim Aufnehmen (ein grünes Dreieck beim Spielen) und Takt.Schlag
+(`3.2`); beim Vorzählen die Schläge, die noch kommen (`4` … `1`).
+
+Hinweise: Der Looper beendet beim Abspielen nur Noten, die er selbst begonnen hat; spielt er aber genau die Note, die
+du gerade hältst, endet mit seiner auch deine. Eine Spur
+fasst 1024 Noten; ist sie voll, kommen keine neuen dazu (`FULL 2 DRUMS`).
 
 ## Edit-Seiten
 

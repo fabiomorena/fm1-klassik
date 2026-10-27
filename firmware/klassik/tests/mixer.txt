@@ -58,6 +58,8 @@ midi 80 3C 00
 wait 300
 expect outl >30000
 expect outr >100000
+# LEVEL and PAN marked where HOME takes them (0 dB, the middle)
+shot mixer-mark.png
 # HOME and a knob: back to 0 dB, the middle
 press HOME
 wait 30

@@ -36,7 +36,8 @@ Für Pan Kopfhörer nehmen (ob der Lautsprecher des FM-1 stereo ist, ist unbekan
 - [ ] B2 K2 PAN (Kopfhörer): nach links nur noch links, nach rechts nur rechts, Mitte beide.
 - [ ] B3 K3 MUTE nach rechts: `M` leuchtet, der Part ist still und grau; nach links wieder da.
 - [ ] B4 K4 SOLO auf einem Part: alle anderen Parts verstummen (grau). Solo auf einem zweiten Part: beide klingen.
-- [ ] B5 HOME (`Esc`) halten und K1–K4 drehen: zurück auf 0 dB, Mitte, aus.
+- [ ] B5 LEVEL nicht auf 0 dB oder PAN nicht in der Mitte: Eine helle Marke im Balken der Fußzeile zeigt 0 dB bzw.
+  die Mitte. HOME (`Esc`) halten und K1–K4 drehen: zurück auf 0 dB, Mitte, aus; die Marken sind weg.
 - [ ] B6 Die Änderungen klicken nicht, auch nicht bei gehaltenem Ton.
 
 ## C Zusammen

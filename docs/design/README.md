@@ -26,10 +26,12 @@ Browser keine Wirkung.
 | `Edit-ACID` | 12 ACID: Seiten FILTER (TUNE, CUTOFF, RESO, ENV MOD) und VOICE (DECAY, ACCENT, WAVE, SLIDE), Glyphe wie bei VA; `ACC` in der Kopfzeile, solange der Accent-Taster (ENV) gehalten wird |
 | `Edit-Reset` | 13 Regler zurücksetzen, auf jeder Edit-Seite: HOME halten und K1–K4 drehen, dann springt der Regler auf den Wert seines Sounds (Preset oder USER). HOME zeigt kurz `RESET TURN K1-K4`; eine Marke im Balken zeigt den Wert des Sounds, solange der Regler woanders steht |
 | `Rack-Parts` | 14 Rack mit vier Parts: Kopfzeile „1 ACID“ (Part und Engine), auf jeder Kachel die Parts, die ihre Engine spielen (der gewählte gefüllt, die anderen umrandet); SEL (Taster) oder SELECT (Drehregler) wechselt den Part |
-| `Mixer-Parts` | 15 Mixer von v0.5 (GLO öffnet, OCT− zurück): je Part ein Zug mit LEVEL (−40 … +6 dB, darunter aus), PAN, MUTE, SOLO auf K1–K4 für den gewählten Part; MASTER mit Pegel L/R und `LIM`. Ziel mit Sends und Seiten bleibt `Mixer` (v0.6) |
+| `Mixer-Parts` | 15 Mixer von v0.5 (GLO öffnet, OCT− zurück): je Part ein Zug mit LEVEL (−40 … +6 dB, darunter aus), PAN, MUTE, SOLO auf K1–K4 für den gewählten Part; MASTER mit Pegel L/R und `LIM`; HOME + K1–K4 zurück auf 0 dB, Mitte, aus, mit Marke bei LEVEL und PAN. Ziel mit Sends und Seiten bleibt `Mixer` (v0.6) |
+| `Looper` | 16 Noten-Looper von v0.5 (SEQ öffnet, OCT− zurück): je Part eine Spur mit seinen Noten, eine Schleife für alle; PLAY startet und stoppt, REC nimmt auf den gewählten Part auf (Overdub), die erste Aufnahme legt die Länge fest; HOME + REC nimmt die letzte Aufnahme zurück (gleich welcher Part), HOME + PLAY leert den Part; K1 TEMPO, K2 LENGTH, K3 QUANT, K4 CLICK, HOME + K1–K4 auf 120 BPM, Länge der ersten Aufnahme, 1/16, REC |
+| `Looper-Rack` | 17 Der Looper auf den anderen Screens: rechts in der Kopfzeile ein roter Punkt bei Aufnahme (grünes Dreieck beim Spielen), dazu Takt und Schlag; hier die erste Aufnahme im Rack |
 
 `png/`: Renderings vom 26.10.2026, ohne die Webfonts des Canvas erstellt (daher breitere Ersatzschrift und vereinzelt
-Umbrüche); `Main.png`, `Edit-DRUMS.png`, `Edit-ACID.png`, `Edit-Reset.png`, `Rack-Parts.png` und `Mixer-Parts.png` (27.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
+Umbrüche); `Main.png`, `Edit-DRUMS.png`, `Edit-ACID.png`, `Edit-Reset.png`, `Rack-Parts.png`, `Mixer-Parts.png`, `Looper.png` und `Looper-Rack.png` (27.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
 
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --hide-scrollbars \
         --user-data-dir=/tmp/chrome-mockups --window-size=480,480 \

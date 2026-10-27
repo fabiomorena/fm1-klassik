@@ -26,7 +26,7 @@ void app_say(const char *a, const char *b);
 
 /* the host simulator's checks: engine, preset, octave, voices, dirty; edit (a page open), page (1, 2), edited,
  * user (the engine has a USER sound); of the sound playing, v0..v7 (its values), dsp0..dsp7 (as the render plays
- * them), glyph0..glyph7 (its spokes, 0..255) */
+ * them), glyph0..glyph7 (its spokes, 0..255); the mixer's and the looper's (app_expect in app.c) */
 #define APP_HOST_EXPECT
 int app_expect(const char *what, int *got);
 /* the simulator's reboot: the app forgets what the RAM would (the page open, a message) */

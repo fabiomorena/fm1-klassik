@@ -228,7 +228,7 @@ wait 30
 expect edited 0
 expect dirty 0
 shot edit-reset-done.png
-# without HOME the knob turns as before; HOME in the rack is still to come
+# without HOME the knob turns as before; HOME in the rack goes with REC and PLAY (the looper)
 spin K3 1
 wait 30
 expect v2 41
@@ -236,4 +236,4 @@ tap OCT-
 wait 30
 tap HOME
 wait 30
-said HOME SOON
+said HOME + REC UNDO

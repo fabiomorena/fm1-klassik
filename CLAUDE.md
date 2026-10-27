@@ -21,7 +21,7 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | --- | --- |
 | `base/` | fm1-base (Submodul, MPL-2.0): Plattform, Host-Simulator, Browser-Emulator, `tools/build.py`. **Nicht ändern.** |
 | `engines/` | Felucca-Engines (Submodul, MIT): ANALOG, PHASE, WHEEL, LOFI, TRIO, NOISE. **Nicht ändern.** |
-| `firmware/klassik/app.c`, `app.h` | die App (Unity-Build nach der Plattform): UI, Eingabe, Einstellungen, Audio-Ausgabe |
+| `firmware/klassik/app.c`, `app.h` | die App (Unity-Build nach der Plattform): UI, Eingabe, Einstellungen, Audio-Ausgabe, Mixer, Looper |
 | `firmware/klassik/dsp/engines.c` | Stimmen-Host (o2-Einheit, MIT, nach `engines/tests/fe_host.c`): 4 Parts (`KL_NPART`, `prt[]`) zu je 6 Stimmen, gewichtete Obergrenze (`COST`, `KL_BUDGET`), eigene einfache ADSR; FM6, DRUMS und ACID mit eigenen Hüllkurven (`ownenv`, `done`); DRUMS: eine Stimme je Instrument (`same_note`); MONO-Presets (ACID): gehaltene Tasten (`held`), `legato` 1 = Slide, 2 = zurück zur gehaltenen Taste |
 | `firmware/klassik/dsp/eng_fm6.c` | FM6 als `engine_t` (MPL-2.0): acht Makros, eigene Presets (DX7-Stimmen) |
 | `firmware/klassik/dsp/fm6/` | msfa nach C portiert (o2-Einheit, Apache-2.0, `LICENSE`); Änderungen im Dateikopf von `msfa.c` |
@@ -70,12 +70,17 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (`base/bsp/docs/CPU.md`). Stattdessen 32 Bit mit Rechenweg, oder eine `noinline`-Hilfsfunktion. Kein `double`.
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
-## Klang (Stand v0.3)
+## Klang (Stand v0.5)
 - Parts: vier gleichzeitig (am Anfang VA, DRUMS, ACID, FM6), SEL (Taster) oder SELECT (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem
   gewählten (`set.part`, `part_cur()`, `eng_cur()` in `app.c`); MIDI-Kanal 1–4 = Part 1–4; `work`/`orig`/`edited`
   je Part und Engine. Obergrenze: alle Parts zusammen ≤ 240 Zehntel FM6-Stimmen.
 - Mixer (GLO): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance), MUTE, SOLO in `part_set_t`; `mix_update()` setzt
   `mix_tgt`, `app_render` gleitet, mischt stereo, Limiter (−0,5 dBFS) vor dem harten Begrenzen. Speicherformat `KLS7`.
+- Looper (SEQ, PLAY, REC; `lp` in `app.c`): Noten, kein Klang; eine Schleife für alle Parts, je Part `lp_ev[p]`
+  (2048 Ereignisse, Tick 16 Bit bei 192 je Viertel, höchstens 16 Takte), Rückgängig über `lp_undo` (eine Stufe).
+  Läuft im Audio-Interrupt: `app_render` in Schritten zu 32 Frames (`lp_step` vor jedem `kl_render`); die
+  Hauptschleife fragt über `lp_ask` (Befehle) und `lp_key` (Tasten), MIDI nimmt `midi_in` direkt auf. Klick im
+  Render, Loops nur im RAM.
 - Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL, FM6 = msfa (`KL_FM6`, im Rack links von VA; K1 folgt der
   Rack-Reihenfolge), DRUMS (`KL_DRUMS` = 4, Kachel der früheren STRINGS). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
   `engine_t.edit[8]`, `page_title[2]`, `presets`). Festkomma, keine Allokation.
@@ -109,13 +114,17 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - Farben (RGB): ground 11,13,17 · head 17,21,28 · surface 21,25,34 · surface2 28,34,48 · line 42,50,66 ·
   text 232,234,237 · muted 154,163,178.
   Engines: FM6 92,200,255 · VA 255,180,84 · PD 255,122,182 · ORGAN 126,224,138 · DRUMS 185,162,255 · ACID 227,244,94.
+  Aufnahme (Looper): rec 255,92,92 (`K_REC`).
 - **Glyphe:** die acht Parameter eines Sounds als acht Strahlen, im Uhrzeigersinn ab oben, Länge
   r × (0,25 + 0,75 × Wert/255) (Wert = Position im Bereich des Parameters, `kl_shape`), Fläche 3/8 Engine-Farbe über
   dem Hintergrund, Rand 2 px in Engine-Farbe, Mittelpunkt 3×3. Erscheint überall, wo ein Sound genannt wird.
   Maßgeblich ist `glyph_draw` in `app.c`; die Glyphen in den Mockups sind nur Beispiele.
 - Kleinste Schrift auf dem Gerät: `FONT_T`; wo möglich `FONT_XS` oder größer.
-- Bestätigen / Zurück auf Unterseiten: OCT+ / OCT− (wie in Felucca). Regler zurücksetzen: HOME halten + K1–K4
-  (auf den Wert des Sounds, `orig` in `app.c`; Marke im Balken der Fußzeile).
+- Bestätigen / Zurück auf Unterseiten: OCT+ / OCT− (wie in Felucca).
+- Regler zurücksetzen (Fabios Vorgabe): **überall, wo ein Regler einen Grundwert hat**, setzt HOME halten + K1–K4 ihn
+  darauf zurück, und eine Marke im Balken der Fußzeile zeigt den Grundwert, solange der Regler woanders steht. Edit:
+  Wert des Sounds (`orig` in `app.c`); Mixer: 0 dB, Mitte, aus (Marke nur LEVEL und PAN); Looper: 120 BPM,
+  Länge der ersten Aufnahme, 1/16, REC. Neue Screens bekommen das gleich mit.
 - Signatur-Ideen (Klang-Atlas, Glyphen-Browser, Klang-Stammbaum): `docs/CONCEPT.md`, Mockups 08–10.
 
 ## Fahrplan
@@ -125,7 +134,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.1 | Edit-Seiten (EDIT → 2 Seiten × 4 Parameter auf K1–K4), Live-Glyphe, eigener Sound pro Engine (SAVE), README-Hinweis fribidi/.venv, Tests mit Screenshots | erledigt (Simulator) |
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
-| v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | Parts und Mixer erledigt (Simulator), Looper offen |
+| v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | erledigt (Simulator) |
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte | offen |
 | v0.7 | Preset-Liste, Glyphen-Browser (früher v0.4) | offen |
 | v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |
