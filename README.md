@@ -26,7 +26,8 @@ Browser-Emulator, noch nicht auf einem FM-1.
     [Open303](https://github.com/RobinSchmidt/Open303) von Robin Schmidt (MIT, nach C portiert); acht eigene Presets.
 - Rack-Bildschirm mit Glyphen, Kopfzeile, Reglerzeile.
 - Edit-Seiten: EDIT öffnet je Engine zwei Seiten mit je vier Parametern auf K1–K4. Die Glyphe in der Kopfzeile
-  und eine große Live-Glyphe verformen sich beim Drehen, der Klang ändert sich sofort.
+  und eine große Live-Glyphe verformen sich beim Drehen, der Klang ändert sich sofort. HOME halten und einen Regler
+  drehen setzt ihn auf den Wert seines Sounds zurück.
 - Eigener Sound: SAVE speichert einen geänderten Sound als USER-Sound seiner Engine (einer je Engine).
 - Tasten mit Anschlagdynamik, MIDI-In (USB, TRS), MIDI-Out (USB), Oktave, Speichern über den Neustart hinaus,
   Screenreader-Ansagen (fm1-reader).

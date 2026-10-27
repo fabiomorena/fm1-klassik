@@ -6,7 +6,8 @@
  * and from MIDI; K1 picks the engine (in the rack's order), PRESET its sound, OCT- / OCT+ the octave. On ACID a key
  * pressed while ENV is held is accented (ACC in the header). EDIT opens the engine's two pages of four parameters
  * on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once (FM6's MOD, DTUN, ATK, DEC,
- * SUS and REL and ACID's DECAY and ACCENT from the next note).
+ * SUS and REL and ACID's DECAY and ACCENT from the next note). HOME held, a knob turned goes back to its sound's
+ * value (the preset's, or the USER sound's), marked on its bar while it is elsewhere.
  * SAVE keeps the engine, the sounds and the octave across a power cycle, an edited sound as its engine's USER sound.
  * The screen: the header (the engine, the sound's glyph and name, the octave, the battery), then the six engine
  * tiles or an edit page (its tabs, the sound's glyph large, its spokes named; DRUMS:
@@ -77,11 +78,12 @@ typedef struct {
     user_t user[KL_NENG];                            /* each engine's own sound (SAVE after an edit) */
 } settings_t;
 _Static_assert(sizeof(settings_t) <= PLAT_STORE_MAX, "the settings are one store object");
-static settings_t set;
+static settings_t set, set_kept;                     /* as it is, and as the store has it (or the defaults at boot) */
 static uint8_t set_dirty;
 
-/* each engine's sound as it plays: its preset's values or its USER sound's, and what EDIT changed (not saved) */
-static int8_t work[KL_NENG][8];
+/* each engine's sound as it plays: its preset's values or its USER sound's (orig), and whether EDIT has any of them
+ * elsewhere (not saved) */
+static int8_t work[KL_NENG][8], orig[KL_NENG][8];
 static uint8_t edited[KL_NENG];
 
 static void settings_defaults(void)
@@ -134,7 +136,28 @@ static void sound_load(int e)                        /* the engine's sound as ch
             work[e][k] = set.user[e].v[k];
     else
         kl_preset_values(e, set.preset[e], work[e]);
+    for (k = 0; k < 8u; k++)
+        orig[e][k] = work[e][k];
     edited[e] = 0;
+}
+
+static void edited_update(int e)                     /* edited while a value is not its sound's */
+{
+    uint32_t k;
+    edited[e] = 0;
+    for (k = 0; k < 8u; k++)
+        edited[e] |= work[e][k] != orig[e][k];
+}
+
+static void dirty_update(void)                       /* SAVE lit while the settings or a sound differ from the store */
+{
+    uint32_t i;
+    const uint8_t *a = (const uint8_t *)&set, *b = (const uint8_t *)&set_kept;
+    set_dirty = 0;
+    for (i = 0; i < sizeof set; i++)
+        set_dirty |= a[i] != b[i];
+    for (i = 0; i < KL_NENG; i++)
+        set_dirty |= edited[i];
 }
 
 static void sound_select(void) { kl_select(set.engine, sound_base(set.engine), work[set.engine]); }
@@ -193,6 +216,7 @@ void app_init(void)
     int e;
     if (plat_store_load(OBJ_SETTINGS, &set, sizeof set) != (int)sizeof set || !settings_ok())
         settings_defaults();
+    set_kept = set;
     for (e = 0; e < KL_NENG; e++)
         sound_load(e);
     sound_select();
@@ -407,8 +431,24 @@ static void param_step(int32_t k, int32_t d)         /* K1..K4 on an edit page: 
     if (v == work[e][k])
         return;
     work[e][k] = (int8_t)v;
-    edited[e] = 1;
-    set_dirty = 1;
+    edited_update(e);
+    dirty_update();
+    sound_select();
+    ui.redraw = 1;
+    t[0] = 0;
+    param_cat(t, k);
+    announce(t);
+}
+
+static void param_reset(int32_t k)                   /* HOME + K1..K4 on an edit page: back to its sound's value */
+{
+    int e = set.engine;
+    char t[32];
+    if (work[e][k] == orig[e][k])
+        return;
+    work[e][k] = orig[e][k];
+    edited_update(e);
+    dirty_update();
     sound_select();
     ui.redraw = 1;
     t[0] = 0;
@@ -424,7 +464,7 @@ static void save(void)                               /* each edited sound become
         if (!edited[e])
             continue;
         for (k = 0; k < 8u; k++)
-            u->v[k] = work[e][k];
+            u->v[k] = orig[e][k] = work[e][k];
         u->base = (uint8_t)sound_base((int)e);
         u->saved = 1;
         set.preset[e] = (uint8_t)kl_presets((int)e);
@@ -432,6 +472,7 @@ static void save(void)                               /* each edited sound become
         users++;
     }
     if (plat_store_save(OBJ_SETTINGS, &set, sizeof set) == 0) {
+        set_kept = set;
         set_dirty = 0;
         app_say("SAVED", users ? "USER" : "");
     } else {
@@ -491,6 +532,8 @@ static void input(void)
             save();
         else if (k == B_ENV && set.engine == KL_ACID)
             announce("ACCENT");                      /* held: the keys pressed now are accented */
+        else if (k == B_HOME && ui.edit)
+            app_say("RESET", "TURN K1-K4");          /* held: a knob turned goes back to its sound's value */
         else
             app_say(BTN_NAME[k], "SOON");            /* the pages behind the other buttons come later */
     }
@@ -499,6 +542,8 @@ static void input(void)
             continue;
         if (k == EN_PRESET)
             preset_step(e);
+        else if (ui.edit && k >= EN_K1 && (btn & 1u << B_HOME))
+            param_reset(ui.page * 4 + (int32_t)(k - EN_K1));
         else if (ui.edit && k >= EN_K1)
             param_step(ui.page * 4 + (int32_t)(k - EN_K1), e);
         else if (k == EN_K1)
@@ -664,7 +709,7 @@ static void draw_row(int32_t row)                    /* three tiles, 93 rows hig
     cv_blit(0, 22 + row * 93);
 }
 
-static void footer_rack(char lab[4][16], char v[4][12], int32_t frac[4])
+static void footer_rack(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
 {
     char t[8];
     int e = set.engine;
@@ -674,6 +719,7 @@ static void footer_rack(char lab[4][16], char v[4][12], int32_t frac[4])
     int32_t i;
     for (i = 0; i < 4; i++) {
         lab[i][0] = v[i][0] = 0;
+        mark[i] = -1;
         text_cat(lab[i], LAB[i]);
     }
     text_cat(v[0], TILES[TILE_OF[e]].name);
@@ -694,12 +740,13 @@ static void footer_rack(char lab[4][16], char v[4][12], int32_t frac[4])
     frac[3] = (int32_t)pct * 256 / 100;
 }
 
-static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4])   /* K1..K4: the page's parameters */
+/* K1..K4: the page's parameters, each marked where its sound has it while it is elsewhere */
+static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
 {
     int e = set.engine;
     int32_t i;
     for (i = 0; i < 4; i++) {
-        int32_t k = ui.page * 4 + i, x = work[e][k];
+        int32_t k = ui.page * 4 + i, x = work[e][k], o = orig[e][k];
         kl_param_t d;
         kl_param(e, k, work[e], &d);
         lab[i][0] = 'K';
@@ -709,6 +756,7 @@ static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4])   /* K1
         text_cat(lab[i], d.label);
         value_text(&d, x, v[i]);
         frac[i] = d.max > d.min ? (x - d.min) * 256 / (d.max - d.min) : 0;
+        mark[i] = o != x && d.max > d.min ? (o - d.min) * 256 / (d.max - d.min) : -1;
     }
 }
 
@@ -716,11 +764,11 @@ static void draw_footer(void)                        /* what the controls hold, 
 {
     const tile_t *tl = &TILES[TILE_OF[set.engine]];
     char lab[4][16], v[4][12];
-    int32_t frac[4], i;
+    int32_t frac[4], mark[4], i;
     if (ui.edit)
-        footer_edit(lab, v, frac);
+        footer_edit(lab, v, frac, mark);
     else
-        footer_rack(lab, v, frac);
+        footer_rack(lab, v, frac, mark);
     cv_begin(240, 32, K_HEAD);
     cv_rect(0, 0, 240, 1, K_LINE);
     for (i = 0; i < 4; i++) {
@@ -731,6 +779,8 @@ static void draw_footer(void)                        /* what the controls hold, 
         text_fit(x + 6, 13, 52, &FONT_XS, v[i], K_TEXT);
         cv_rect(x + 6, 28, 48, 2, K_LINE);
         cv_rect(x + 6, 28, 48 * clamp(frac[i], 0, 256) / 256, 2, tl->col);
+        if (mark[i] >= 0)                            /* its sound's value */
+            cv_rect(x + 5 + 48 * clamp(mark[i], 0, 256) / 256, 25, 2, 7, K_TEXT);
     }
     cv_blit(0, 208);
 }

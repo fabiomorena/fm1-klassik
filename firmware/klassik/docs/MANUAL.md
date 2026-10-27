@@ -27,10 +27,13 @@ Parameter auf K1–K4 leuchten in der Farbe der Engine. Bei DRUMS stehen dort st
 | K1–K4 | die vier Parameter der Seite; Klang und Glyphen ändern sich sofort (bei FM6 einige erst ab der nächsten Note, siehe unten) |
 | EDIT oder OCT+ | die andere Seite |
 | OCT- | zurück zum Rack |
+| HOME + K1–K4 | HOME halten und einen Regler drehen: Er springt auf den Wert seines Sounds zurück (des Presets oder des USER-Sounds) |
 | PRESET | anderen Sound laden (eine ungespeicherte Änderung geht dabei verloren) |
 | SAVE | wie im Rack, siehe unten |
 
-Ein geänderter, noch nicht gespeicherter Sound hat ein `*` hinter dem Namen, und SAVE leuchtet. SAVE macht ihn zum
+Ein geänderter, noch nicht gespeicherter Sound hat ein `*` hinter dem Namen, und SAVE leuchtet. Eine helle Marke im
+Balken eines Reglers zeigt, wo sein Sound ihn hat; steht jeder Regler wieder dort (mit HOME oder von Hand), sind
+`*` und Marken weg. SAVE macht ihn zum
 USER-Sound seiner Engine und speichert alles über den Neustart hinaus. Jede Engine hat einen USER-Sound; ein neuer
 ersetzt den alten. Er behält Hüllkurve und MONO des Presets, aus dem er entstanden ist. Wer zwischendurch die Engine
 wechselt, behält die Änderungen bis zum Ausschalten; ein SAVE speichert die geänderten Sounds aller Engines.

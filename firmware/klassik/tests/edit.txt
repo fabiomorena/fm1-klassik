@@ -188,3 +188,52 @@ wait 30
 expect preset 6
 expect v2 40
 expect dsp2 40
+# HOME and a knob: back to its sound's value (PD's USER sound: DCW 40); the * and SAVE go when all are back (the
+# engine chosen above saved first: else SAVE stays lit for it)
+tap SAVE
+wait 30
+expect dirty 0
+listen
+tap EDIT
+wait 30
+expect edit 1
+tap HOME
+wait 30
+said RESET TURN K1-K4
+spin K3 7
+wait 30
+spin K4 5
+wait 30
+expect v2 47
+expect edited 1
+expect dirty 1
+shot edit-reset.png
+press HOME
+wait 30
+spin K3 1
+wait 30
+release HOME
+wait 30
+expect v2 40
+expect dsp2 40
+said DCW 31%
+expect edited 1
+expect dirty 1
+press HOME
+wait 30
+spin K4 -1
+wait 30
+release HOME
+wait 30
+expect edited 0
+expect dirty 0
+shot edit-reset-done.png
+# without HOME the knob turns as before; HOME in the rack is still to come
+spin K3 1
+wait 30
+expect v2 41
+tap OCT-
+wait 30
+tap HOME
+wait 30
+said HOME SOON

@@ -104,7 +104,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   dem Hintergrund, Rand 2 px in Engine-Farbe, Mittelpunkt 3×3. Erscheint überall, wo ein Sound genannt wird.
   Maßgeblich ist `glyph_draw` in `app.c`; die Glyphen in den Mockups sind nur Beispiele.
 - Kleinste Schrift auf dem Gerät: `FONT_T`; wo möglich `FONT_XS` oder größer.
-- Bestätigen / Zurück auf Unterseiten: OCT+ / OCT− (wie in Felucca).
+- Bestätigen / Zurück auf Unterseiten: OCT+ / OCT− (wie in Felucca). Regler zurücksetzen: HOME halten + K1–K4
+  (auf den Wert des Sounds, `orig` in `app.c`; Marke im Balken der Fußzeile).
 - Signatur-Ideen (Klang-Atlas, Glyphen-Browser, Klang-Stammbaum): `docs/CONCEPT.md`, Mockups 08–10.
 
 ## Fahrplan
