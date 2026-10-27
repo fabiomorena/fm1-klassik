@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena */
-/* KLASSIK's sound, as the app sees it (dsp/engines.c, compiled apart at -O2). The main loop asks (kl_select,
- * kl_key); the audio interrupt plays (kl_render, and kl_key_now for MIDI that arrives there).
+/* KLASSIK's sound, as the app sees it (dsp/engines.c, compiled apart at -O2): four parts, each its own sound. The
+ * main loop asks (kl_select, kl_key); the audio interrupt plays (kl_render, and kl_key_now for MIDI that arrives
+ * there).
  * A sound is an engine, a preset (its envelope, filter envelope and MONO) and eight parameters (EDIT 1, EDIT 2):
  * the preset's own values, or the app's (an edited sound, a USER sound). */
 #pragma once
@@ -9,6 +10,9 @@
 
 enum { KL_ANALOG, KL_PHASE, KL_WHEEL, KL_FM6, KL_DRUMS, KL_ACID, KL_NENG };
 enum { KL_INT, KL_PCT, KL_ENUM };           /* how a parameter's value reads */
+#define KL_NPART 4                          /* parts, each its own sound (MIDI channels 1..4) */
+#define KL_BUDGET 240                       /* what all parts may sound at once, in tenths of an FM6 voice (engines.c
+                                             * COST; an estimate until measured on an FM-1) */
 
 typedef struct {
     const char *label;                      /* "CUT" */
@@ -31,13 +35,16 @@ const char *kl_drum_name(int kit, int pc);  /* DRUMS: the instrument on a key in
                                              * C = 0): "BD"; G# is the kit's own */
 int kl_drum_pages(int pc);                  /* the edit pages whose knobs change it: bit 0 EDIT 1, bit 1 EDIT 2 */
 
-void kl_select(int e, int p, const int8_t v[8]);   /* main loop: the sound to play, from the next block */
-void kl_key(int on, int note, int vel);     /* main loop: a note on (vel 1..127; ACID: 100 or more accents) or off,
-                                             * queued */
-void kl_key_now(int on, int note, int vel); /* the audio interrupt's own (MIDI in) */
-void kl_silence(void);                      /* every voice off at the next block */
-void kl_render(int32_t *mono, uint32_t n);  /* audio interrupt: adds n frames (a multiple of 32) to mono */
-int kl_voices(void);                        /* voices sounding */
-uint32_t kl_hits(int *note);                /* notes started so far (keys and MIDI), and the last one's note */
-int kl_value_now(int k);                    /* parameter k as the render plays it (the host's checks) */
-int kl_note_now(void);                      /* the first voice's note (a MONO sound's), -1 silent (the host's checks) */
+void kl_select(int part, int e, int p, const int8_t v[8]);   /* main loop: a part's sound to play, from the next block */
+void kl_key(int part, int on, int note, int vel);   /* main loop: a note on (vel 1..127; ACID: 100 or more accents)
+                                                     * or off, queued */
+void kl_key_now(int part, int on, int note, int vel);   /* the audio interrupt's own (MIDI in) */
+void kl_silence(void);                      /* every voice of every part off at the next block */
+void kl_render(int32_t *const out[KL_NPART], uint32_t n);   /* audio interrupt: adds n frames (a multiple of 32) of
+                                                             * each part to its out */
+int kl_voices(int part);                    /* voices sounding: of a part, -1 all */
+int kl_cost_now(void);                      /* what they cost together (tenths of an FM6 voice; KL_BUDGET at most) */
+uint32_t kl_hits(int part, int *note);      /* a part's notes started so far (keys and MIDI), and the last one's note */
+int kl_value_now(int part, int k);          /* parameter k as the render plays it (the host's checks) */
+int kl_note_now(int part);                  /* a part's first voice's note (a MONO sound's), -1 silent (the host's
+                                             * checks) */

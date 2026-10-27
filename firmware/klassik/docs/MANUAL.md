@@ -1,16 +1,34 @@
-# KLASSIK – Bedienung (v0.3)
+# KLASSIK – Bedienung (v0.5, Teil Parts)
+
+## Parts
+
+KLASSIK hat vier Parts, die gleichzeitig klingen, jeder mit eigener Engine, eigenem Sound und eigener Oktave. Am
+Anfang: Part 1 VA, 2 DRUMS, 3 ACID, 4 FM6. Die Kopfzeile zeigt den gewählten Part und seine Engine („1 VA“); auf
+jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt, die anderen umrandet).
+
+- **SEL** wählt den nächsten Part (1, 2, 3, 4, 1). Tasten, K1, PRESET, OCT− / OCT+ und EDIT gehören immer dem
+  gewählten Part. Eine Taste, die beim Wechsel noch gehalten ist, klingt auf ihrem Part weiter, bis sie losgelassen
+  wird.
+- **MIDI:** Kanal 1–4 spielt Part 1–4, die anderen Kanäle den gewählten Part. Die Tasten senden auf dem Kanal ihres
+  Parts.
+- Jeder Part merkt sich je Engine seinen Sound und seine Änderungen. Zwei Parts können dieselbe Engine mit
+  verschiedenen Sounds spielen.
+- Alle Parts zusammen haben eine Obergrenze an Rechenzeit. Wird sie überschritten, endet die älteste Stimme, zuerst
+  eine schon losgelassene. Eine ACID-Stimme kostet so viel wie gut sieben FM6-Stimmen. Die Grenze ist geschätzt und
+  wird mit einem Gerät eingemessen.
 
 ## Rack
 
 | Bedienelement | Was es tut |
 | --- | --- |
-| Tasten | spielen die gewählte Engine (Anschlagdynamik; ACID: Accent mit ENV), senden die Noten über USB-MIDI |
-| K1 | Engine wählen, in der Reihenfolge des Racks: FM6, VA (ANALOG), PD (PHASE), ORGAN (WHEEL), DRUMS, ACID |
+| Tasten | spielen den gewählten Part (Anschlagdynamik; ACID: Accent mit ENV), senden die Noten über USB-MIDI |
+| SEL | nächster Part |
+| K1 | Engine des Parts wählen, in der Reihenfolge des Racks: FM6, VA (ANALOG), PD (PHASE), ORGAN (WHEEL), DRUMS, ACID |
 | PRESET | Sound der Engine wählen; nach den Presets folgt USER, sobald die Engine einen eigenen Sound hat |
-| OCT- / OCT+ | Oktave −2 … +2 |
+| OCT- / OCT+ | Oktave des Parts −2 … +2 |
 | EDIT | Edit-Seiten der Engine öffnen |
 | ENV | bei ACID: gehalten, sind die angeschlagenen Noten akzentuiert (`ACC` in der Kopfzeile) |
-| SAVE | Engine, Sounds und Oktave speichern (leuchtet, solange etwas ungespeichert ist) |
+| SAVE | die Parts speichern: den gewählten, je Part Engine, Sounds und Oktave (leuchtet, solange etwas ungespeichert ist) |
 | MASTER | Lautstärke |
 
 MIDI-In über USB und TRS spielt ebenfalls.
@@ -34,8 +52,8 @@ Parameter auf K1–K4 leuchten in der Farbe der Engine. Bei DRUMS stehen dort st
 Ein geänderter, noch nicht gespeicherter Sound hat ein `*` hinter dem Namen, und SAVE leuchtet. Eine helle Marke im
 Balken eines Reglers zeigt, wo sein Sound ihn hat; steht jeder Regler wieder dort (mit HOME oder von Hand), sind
 `*` und Marken weg. SAVE macht ihn zum
-USER-Sound seiner Engine und speichert alles über den Neustart hinaus. Jede Engine hat einen USER-Sound; ein neuer
-ersetzt den alten. Er behält Hüllkurve und MONO des Presets, aus dem er entstanden ist. Wer zwischendurch die Engine
+USER-Sound seiner Engine und speichert alles über den Neustart hinaus. Jede Engine hat einen USER-Sound für alle
+Parts; ein neuer ersetzt den alten (haben zwei Parts dieselbe Engine geändert, gilt der gewählte Part). Er behält Hüllkurve und MONO des Presets, aus dem er entstanden ist. Wer zwischendurch die Engine
 wechselt, behält die Änderungen bis zum Ausschalten; ein SAVE speichert die geänderten Sounds aller Engines.
 
 ## FM6

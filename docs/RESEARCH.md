@@ -287,6 +287,28 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   nur Host und Web gebaut wurden.
 - **Audio-Looper, nachgerechnet:** 266 488 B Pool / (44 100 × 2 B/s) = 3,0 s mono mit 16 Bit.
 
+## Parts: Kosten je Engine und Speicher (Stand 27.10.2026)
+
+- **Kosten je Stimme**, gemessen im Host-Simulator auf dem Mac (M3, `-O2`). `kl_render` über 4000 Blöcke (2,9 s Klang),
+  das Beste aus drei Läufen. ANALOG mit SOFT PAD, weil SAW LEAD einstimmig ist; DRUMS mit sechs verschiedenen
+  Instrumenten, weil jedes nur eine Stimme hat. Die Werte sind Mac-Zeit, nur das Verhältnis zählt:
+
+  | Engine | 1 Stimme | 6 Stimmen | je Stimme | relativ zu FM6 |
+  | --- | --- | --- | --- | --- |
+  | ANALOG | 1,66 ms | 5,27 ms | 0,88 ms | 0,8 |
+  | PHASE | 0,58 ms | 3,07 ms | 0,51 ms | 0,45 |
+  | WHEEL | 1,47 ms | 7,14 ms | 1,19 ms | 1,05 |
+  | FM6 | 1,27 ms | 6,79 ms | 1,13 ms | 1,0 |
+  | DRUMS | 3,02 ms (BD) | 7,88 ms (5 klangen) | ~1,6 ms | ~1,4 |
+  | ACID | 8,38 ms | (einstimmig) | 8,38 ms | 7,4 |
+
+  Daraus die Kosten in `engines.c` (`COST`, Zehntel einer FM6-Stimme). Die Obergrenze für alle Parts zusammen ist
+  `KL_BUDGET` = 240, also 24 FM6-Stimmen.
+  - Nach der bisherigen Schätzung (FM6 mit sechs Stimmen 7–13 % von 360 MHz) entspricht das 28–52 % der CPU. Das ist
+    **unsicher**, solange es nicht auf dem Gerät gemessen ist.
+- **RAM mit vier Parts** (`tools/device_check.py`): `.data` + `.bss` von 35 052 B auf 53 040 B von 98 304 B. Das
+  sind 18 KB für die drei zusätzlichen Parts (Stimmen, Zustände der Engines, je ein Ausgabepuffer). App 207 704 B.
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

@@ -3,11 +3,12 @@
  *   from Felucca-Engines' tests/fe_host.c)
  * Copyright (C) 2026 fabiomorena */
 /* KLASSIK's engine host: three of Felucca-Engines' MIT engines (ANALOG, PHASE, WHEEL) and KLASSIK's FM6 (eng_fm6.c,
- * on msfa), DRUMS (eng_drums.c, on Plaits' drum models) and ACID (eng_acid.c, on Open303) on one part of six voices.
+ * on msfa), DRUMS (eng_drums.c, on Plaits' drum models) and ACID (eng_acid.c, on Open303) on four parts of six voices
+ * each, every part its own sound; together the parts sound at most KL_BUDGET (each voice costs its engine's COST).
  * Built as one translation unit with the engines, as felucca_engine.h asks. A first version: its envelope is a plain
  * ADSR of its own (not Felucca's voice.c), and there is no LFO, glide, unison or effect yet; FM6, DRUMS and ACID have
- * envelopes of their own (ownenv), DRUMS plays each instrument on one voice (same_note). A MONO preset (ACID's) plays
- * on the first voice and keeps the keys held: a key while another is held is legato, and the latest let go while
+ * envelopes of their own (ownenv), DRUMS plays each instrument on one voice (same_note). A MONO preset (ACID's, some of ANALOG's)
+ * plays on the part's first voice and keeps the keys held: a key while another is held is legato, and the latest let go while
  * another is held goes back to that one (legato 2). The eight parameters come from the app with each sound asked
  * for (an edit plays from the next block: the engines read them every block); the preset gives the rest. */
 #include <stdint.h>
@@ -21,7 +22,7 @@ int memcmp(const void *a, const void *b, unsigned n);
 #include "klassik_dsp.h"
 
 #define NVOICE 6
-#define NPART 1
+#define NPART KL_NPART
 #include "fe_tables.h"
 #include "felucca_engine.h"
 
@@ -113,29 +114,54 @@ void kl_shape(int e, const int8_t v[8], uint8_t out[8])
 }
 
 /* ------------------------------------------------- the main loop asks, the render plays --- */
-static volatile int sel_e = KL_ANALOG, sel_p = 0;   /* asked for */
-static volatile int8_t sel_v[8];
-static volatile uint32_t sel_n;                     /* asks so far: the render takes the values when it moves */
+typedef struct {                                    /* a part: its sound, as asked for and as it plays */
+    volatile int sel_e, sel_p;                      /* asked for */
+    volatile int8_t sel_v[8];
+    volatile uint32_t sel_n;                        /* asks so far: the render takes the values when it moves */
+    uint8_t loaded;                                 /* cur_e and cur_p play */
+    int cur_e, cur_p;                               /* playing */
+    uint32_t cur_n;                                 /* the ask whose values play */
+    uint8_t env_set[4];                             /* the preset's ATK DEC SUS REL, 0..127 */
+    int32_t env_fenv;                               /* its ENV -> FILTER, -64..63 */
+    uint8_t mono_mode;
+    uint8_t held[8], nheld;                         /* MONO: the keys held, the latest last */
+    int32_t last_amp[NVOICE];
+    volatile uint32_t hits;                         /* notes started, and the last one's (the app's DRUMS pads) */
+    volatile uint8_t hit_note;
+} part_t;
+static part_t prt[NPART];
 static volatile int hush;
 #define QN 64u
 static volatile uint32_t q_w, q_r;                  /* main loop writes q_w, the render q_r */
-static uint8_t q_on[QN], q_note[QN], q_vel[QN];
+static uint8_t q_part[QN], q_on[QN], q_note[QN], q_vel[QN];
+static uint32_t vage;                               /* voice starts so far, all parts: the oldest is the lowest */
 
-void kl_select(int e, int p, const int8_t v[8])
+/* what a voice of each engine costs, in tenths of an FM6 voice (measured on the host: RESEARCH.md); the parts
+ * together may sound KL_BUDGET of them: past it the oldest voice anywhere goes */
+static const uint8_t COST[KL_NENG] = {8, 5, 11, 10, 14, 74};
+
+static int part_ok(int part) { return part >= 0 && part < NPART; }
+
+void kl_select(int part, int e, int p, const int8_t v[8])
 {
+    part_t *q;
     uint32_t k;
+    if (!part_ok(part))
+        return;
+    q = &prt[part];
     for (k = 0; k < 8u; k++)
-        sel_v[k] = v[k];
-    sel_e = eng_ok(e) ? e : KL_ANALOG;
-    sel_p = p;
-    sel_n = sel_n + 1u;                             /* last: the render may come between, and takes them next */
+        q->sel_v[k] = v[k];
+    q->sel_e = eng_ok(e) ? e : KL_ANALOG;
+    q->sel_p = p;
+    q->sel_n = q->sel_n + 1u;                       /* last: the render may come between, and takes them next */
 }
 
-void kl_key(int on, int note, int vel)
+void kl_key(int part, int on, int note, int vel)
 {
     uint32_t w = q_w;
-    if (w - q_r >= QN)                              /* full: dropped (64 waiting is more than the keys can do) */
+    if (!part_ok(part) || w - q_r >= QN)            /* full: dropped (64 waiting is more than the keys can do) */
         return;
+    q_part[w % QN] = (uint8_t)part;
     q_on[w % QN] = (uint8_t)(on != 0);
     q_note[w % QN] = (uint8_t)clamp(note, 0, 127);
     q_vel[w % QN] = (uint8_t)clamp(vel, 1, 127);
@@ -145,154 +171,176 @@ void kl_key(int on, int note, int vel)
 void kl_silence(void) { hush = 1; }
 
 /* -------------------------------------------------------------- the voices --- */
-static int cur_e = -1, cur_p = -1;                  /* playing */
-static uint32_t cur_n;                              /* the ask whose values play */
-static uint8_t env_set[4];                          /* the preset's ATK DEC SUS REL, 0..127 */
-static int32_t env_fenv;                            /* its ENV -> FILTER, -64..63 */
-static uint8_t mono_mode;
-static uint32_t vage;
-static volatile uint32_t hits;                      /* notes started, and the last one's (the app's DRUMS pads) */
-static volatile uint8_t hit_note;
-static int32_t last_amp[NVOICE];
-#define NHELD 8
-static uint8_t held[NHELD], nheld;                  /* MONO: the keys held, the latest last */
-
-static void held_drop(int note)
+static void held_drop(part_t *q, int note)
 {
     uint32_t i, j;
-    for (i = j = 0; i < nheld; i++)
-        if (held[i] != note)
-            held[j++] = held[i];
-    nheld = (uint8_t)j;
+    for (i = j = 0; i < q->nheld; i++)
+        if (q->held[i] != note)
+            q->held[j++] = q->held[i];
+    q->nheld = (uint8_t)j;
 }
 
-static void held_push(int note)
+static void held_push(part_t *q, int note)
 {
     uint32_t i;
-    held_drop(note);
-    if (nheld == NHELD) {                           /* full: the oldest goes */
-        for (i = 1; i < NHELD; i++)
-            held[i - 1u] = held[i];
-        nheld--;
+    held_drop(q, note);
+    if (q->nheld == sizeof q->held) {               /* full: the oldest goes */
+        for (i = 1; i < sizeof q->held; i++)
+            q->held[i - 1u] = q->held[i];
+        q->nheld--;
     }
-    held[nheld++] = (uint8_t)note;
+    q->held[q->nheld++] = (uint8_t)note;
 }
 
-static void load(int e, int p)
+static void load(int part, int e, int p)
 {
+    part_t *q = &prt[part];
     const engine_t *en = ENG[e];
     const preset_t *pr;
-    track_t *t = &trk[0];
+    track_t *t = &trk[part];
     if (p < 0 || p >= en->npresets)                /* the engine and the preset asked for at different times */
         p = 0;
     pr = &en->presets[p];
-    if (e != cur_e) {                               /* another engine: from silence, WHEEL's own state cleared */
+    if (!q->loaded || e != q->cur_e) {              /* another engine: from silence, WHEEL's own state cleared */
         memset(t, 0, sizeof *t);
-        memset(drw_t, 0, sizeof drw_t);
-        memset(drw_v, 0, sizeof drw_v);
-        memset(last_amp, 0, sizeof last_amp);
-        nheld = 0;
+        memset(&drw_t[part], 0, sizeof drw_t[part]);
+        memset(drw_v[part], 0, sizeof drw_v[part]);
+        memset(q->last_amp, 0, sizeof q->last_amp);
+        q->nheld = 0;
     }
     t->p[P_ATK] = pr->env[0];
     t->p[P_REL] = pr->env[3];
     t->p[P_FTYPE] = 0;
     t->p[P_PRESET] = (int16_t)p;
-    memcpy(env_set, pr->env, sizeof env_set);
-    env_fenv = pr->fenv;
-    mono_mode = pr->mono;
-    cur_e = e;
-    cur_p = p;
+    memcpy(q->env_set, pr->env, sizeof q->env_set);
+    q->env_fenv = pr->fenv;
+    q->mono_mode = pr->mono;
+    q->cur_e = e;
+    q->cur_p = p;
+    q->loaded = 1;
 }
 
 /* the sound asked for: the preset at a change, then the values, each kept to its range (for a block they may be
  * another engine's, asked for at a different time: none must index past an engine's table) */
-static void ensure_loaded(void)
+static void ensure_loaded(int part)
 {
-    uint32_t n = sel_n, k;
-    int e = sel_e, p = sel_p;
-    if (e == cur_e && p == cur_p && n == cur_n)
+    part_t *q = &prt[part];
+    uint32_t n = q->sel_n, k;
+    int e = q->sel_e, p = q->sel_p;
+    if (q->loaded && e == q->cur_e && p == q->cur_p && n == q->cur_n)
         return;
-    if (e != cur_e || p != cur_p)
-        load(e, p);
+    if (!q->loaded || e != q->cur_e || p != q->cur_p)
+        load(part, e, p);
     for (k = 0; k < 8u; k++)
-        trk[0].p[P_E0 + k] = (int16_t)clamp(sel_v[k], ENG[cur_e]->edit[k].min, ENG[cur_e]->edit[k].max);
-    cur_n = n;
+        trk[part].p[P_E0 + k] = (int16_t)clamp(q->sel_v[k], ENG[q->cur_e]->edit[k].min, ENG[q->cur_e]->edit[k].max);
+    q->cur_n = n;
 }
 
-static int same_note(int a, int b)                  /* DRUMS: the same instrument (eng_drums.c), one voice each */
+static int same_note(int part, int a, int b)        /* DRUMS: the same instrument (eng_drums.c), one voice each */
 {
-    return cur_e == KL_DRUMS ? DR_OF_PC[a % 12] == DR_OF_PC[b % 12] : a == b;
+    return prt[part].cur_e == KL_DRUMS ? DR_OF_PC[a % 12] == DR_OF_PC[b % 12] : a == b;
 }
 
-static void voice_start(int note, int vel)
+/* the engine's note_on; a voice that still sounds keeps its phases and keep slots (from fe_host.c) */
+static void voice_note_on(int part, voice_t *v, int sounding)
 {
-    const engine_t *en = ENG[cur_e];
-    track_t *t = &trk[0];
+    const engine_t *en = ENG[prt[part].cur_e];
+    uint32_t ph0 = v->ph[0], ph1 = v->ph[1], ph2 = v->ph[2], k;
+    int32_t s[8];
+    memcpy(s, v->s, sizeof s);
+    retrig = sounding;
+    en->note_on(&trk[part], v);
+    if (sounding) {
+        v->ph[0] = ph0;
+        v->ph[1] = ph1;
+        v->ph[2] = ph2;
+        for (k = 0; k < 8u; k++)
+            if (k != 2u && k != 3u && (en->keep >> k & 1u))
+                v->s[k] = s[k];
+    }
+}
+
+/* room for a voice of engine e (v, if it sounds, is to be reused): the oldest voices anywhere go, those already
+ * let go first, until the parts' cost with it is within the budget */
+static void voice_room(int e, const voice_t *v)
+{
+    for (;;) {
+        uint32_t used = COST[e], part, k;
+        voice_t *go = 0;
+        for (part = 0; part < NPART; part++)
+            for (k = 0; k < NVOICE; k++) {
+                voice_t *o = &trk[part].v[k];
+                if (!o->active || o == v)
+                    continue;
+                used += COST[prt[part].cur_e];
+                if (!go || o->gate < go->gate || (o->gate == go->gate && o->age < go->age))
+                    go = o;
+            }
+        if (used <= KL_BUDGET || !go)
+            return;
+        go->active = 0;
+        go->stage = 0;
+        go->env = 0;
+    }
+}
+
+static void voice_start(int part, int note, int vel)
+{
+    part_t *q = &prt[part];
+    track_t *t = &trk[part];
     voice_t *v = 0;
     uint32_t k, oldest = 0xFFFFFFFFu;
+    int sounding;
     legato = 0;
-    if (mono_mode) {
+    if (q->mono_mode) {
         v = &t->v[0];
-        legato = nheld > 0 && v->active && v->gate;
-        held_push(note);
+        legato = q->nheld > 0 && v->active && v->gate;
+        held_push(q, note);
     }
     for (k = 0; !v && k < NVOICE; k++)              /* the same note again: that voice */
-        if (t->v[k].active && same_note(t->v[k].note, note))
+        if (t->v[k].active && same_note(part, t->v[k].note, note))
             v = &t->v[k];
     for (k = 0; !v && k < NVOICE; k++)              /* a free one */
         if (!t->v[k].active)
             v = &t->v[k];
-    if (!v)                                         /* else the oldest */
+    if (!v)                                         /* else the part's oldest */
         for (k = 0; k < NVOICE; k++)
             if (t->v[k].age < oldest) {
                 oldest = t->v[k].age;
                 v = &t->v[k];
             }
-    {   /* from fe_host.c: a retrigger keeps the phases and the keep slots */
-        int sounding = v->active && v->stage != 0;
-        uint32_t ph0 = v->ph[0], ph1 = v->ph[1], ph2 = v->ph[2];
-        int32_t s[8];
-        memcpy(s, v->s, sizeof s);
-        v->note = (uint8_t)note;
-        v->vel = (uint8_t)vel;
-        v->gate = 1;
-        v->active = 1;
-        v->stage = 1;
-        v->age = ++vage;
-        hit_note = (uint8_t)note;
-        hits = hits + 1u;
-        v->pitch16 = v->pitch_cur = (int32_t)note * 16;
-        v->fine = 0;
-        if (!sounding)
-            v->env = v->env_out = 0;
-        retrig = sounding;
-        en->note_on(t, v);
-        if (sounding) {
-            v->ph[0] = ph0;
-            v->ph[1] = ph1;
-            v->ph[2] = ph2;
-            for (k = 0; k < 8u; k++)
-                if (k != 2u && k != 3u && (en->keep >> k & 1u))
-                    v->s[k] = s[k];
-        }
-    }
+    voice_room(q->cur_e, v);
+    sounding = v->active && v->stage != 0;
+    v->note = (uint8_t)note;
+    v->vel = (uint8_t)vel;
+    v->gate = 1;
+    v->active = 1;
+    v->stage = 1;
+    v->age = ++vage;
+    q->hit_note = (uint8_t)note;
+    q->hits = q->hits + 1u;
+    v->pitch16 = v->pitch_cur = (int32_t)note * 16;
+    v->fine = 0;
+    if (!sounding)
+        v->env = v->env_out = 0;
+    voice_note_on(part, v, sounding);
 }
 
-static void voice_stop(int note)
+static void voice_stop(int part, int note)
 {
-    track_t *t = &trk[0];
+    part_t *q = &prt[part];
+    track_t *t = &trk[part];
     uint32_t k;
-    if (mono_mode) {
+    if (q->mono_mode) {
         voice_t *v = &t->v[0];
-        held_drop(note);
+        held_drop(q, note);
         if (!v->active || !v->gate || v->note != note)
             return;
-        if (nheld) {                                /* back to the latest key still held */
-            v->note = held[nheld - 1u];
+        if (q->nheld) {                             /* back to the latest key still held */
+            v->note = q->held[q->nheld - 1u];
             v->pitch16 = v->pitch_cur = (int32_t)v->note * 16;
             legato = 2;
-            retrig = 1;
-            ENG[cur_e]->note_on(t, v);
+            voice_note_on(part, v, 1);
             return;
         }
         v->gate = 0;
@@ -306,18 +354,20 @@ static void voice_stop(int note)
         }
 }
 
-void kl_key_now(int on, int note, int vel)
+void kl_key_now(int part, int on, int note, int vel)
 {
-    ensure_loaded();
+    if (!part_ok(part))
+        return;
+    ensure_loaded(part);
     if (on)
-        voice_start(clamp(note, 0, 127), clamp(vel, 1, 127));
+        voice_start(part, clamp(note, 0, 127), clamp(vel, 1, 127));
     else
-        voice_stop(note);
+        voice_stop(part, note);
 }
 
 /* a plain ADSR, once per engine block (32 samples, 0.73 ms): attack up to ~1.5 s, decay toward the sustain
  * level, release by a fraction a block (ATK, DEC, SUS, REL of the preset, 0..127). Returns Q15. */
-static int32_t env_tick(voice_t *v)
+static int32_t env_tick(const uint8_t env_set[4], voice_t *v)
 {
     int32_t sus = (int32_t)env_set[2] << 17;
     switch (v->stage) {
@@ -347,82 +397,109 @@ static int32_t env_tick(voice_t *v)
     return v->env >> 9;
 }
 
-void kl_render(int32_t *mono, uint32_t n)
+static void part_block(int part, int32_t *out)      /* one block of a part's voices, added to out */
 {
-    track_t *t = &trk[0];
-    int32_t out[CTL];
+    part_t *q = &prt[part];
+    track_t *t = &trk[part];
+    const engine_t *en = ENG[q->cur_e];
+    uint32_t k;
+    if (en->block)
+        en->block(t);
+    for (k = 0; k < NVOICE; k++) {
+        voice_t *v = &t->v[k];
+        vmod_t m;
+        int32_t env, a;
+        uint32_t base;
+        if (!v->active)
+            continue;
+        if (en->ownenv) {                           /* its own envelopes and velocity: full, until done */
+            if (en->done(t, v)) {
+                v->active = 0;
+                v->stage = 0;
+                continue;
+            }
+            a = env = 1 << 15;
+        } else {
+            a = env = env_tick(q->env_set, v);
+            if (en->amp)
+                a = en->amp(t, v, a);
+            if (!v->active)
+                continue;
+            a = a * (40 + v->vel) / 167;           /* velocity: 0.24 .. 1 */
+        }
+        base = pitch_inc((uint32_t)clamp(v->pitch16, 0, 2047));
+        memset(&m, 0, sizeof m);
+        m.pitch16 = v->pitch16;
+        m.inc = base;
+        m.amp0 = q->last_amp[k];
+        m.amp1 = a;
+        m.envq15 = env;
+        m.cutoff = q->env_fenv * (env >> 7);       /* ENV -> FILTER: up to +-64 cutoff steps */
+        m.shape = 64 << 8;                          /* the middle: no shape modulation yet */
+        q->last_amp[k] = a;
+        en->render(t, v, out, CTL, &m);
+    }
+}
+
+void kl_render(int32_t *const out[KL_NPART], uint32_t n)
+{
     uint32_t b, i, k;
-    ensure_loaded();
+    int part;
+    for (part = 0; part < NPART; part++)
+        ensure_loaded(part);
     if (hush) {
         hush = 0;
-        for (k = 0; k < NVOICE; k++)
-            t->v[k].active = 0, t->v[k].stage = 0, t->v[k].env = 0;
-        nheld = 0;
+        for (part = 0; part < NPART; part++) {
+            for (k = 0; k < NVOICE; k++)
+                trk[part].v[k].active = 0, trk[part].v[k].stage = 0, trk[part].v[k].env = 0;
+            prt[part].nheld = 0;
+        }
         q_r = q_w;
     }
     while (q_r != q_w) {
         uint32_t j = q_r % QN;
-        kl_key_now(q_on[j], q_note[j], q_vel[j]);
+        kl_key_now(q_part[j], q_on[j], q_note[j], q_vel[j]);
         q_r = q_r + 1u;
     }
-    for (b = 0; b + CTL <= n; b += CTL) {
-        const engine_t *en = ENG[cur_e];
-        if (en->block)
-            en->block(t);
-        memset(out, 0, sizeof out);
-        for (k = 0; k < NVOICE; k++) {
-            voice_t *v = &t->v[k];
-            vmod_t m;
-            int32_t env, a;
-            uint32_t base;
-            if (!v->active)
-                continue;
-            if (en->ownenv) {                           /* its own envelopes and velocity: full, until done */
-                if (en->done(t, v)) {
-                    v->active = 0;
-                    v->stage = 0;
-                    continue;
-                }
-                a = env = 1 << 15;
-            } else {
-                a = env = env_tick(v);
-                if (en->amp)
-                    a = en->amp(t, v, a);
-                if (!v->active)
-                    continue;
-                a = a * (40 + v->vel) / 167;           /* velocity: 0.24 .. 1 */
-            }
-            base = pitch_inc((uint32_t)clamp(v->pitch16, 0, 2047));
-            memset(&m, 0, sizeof m);
-            m.pitch16 = v->pitch16;
-            m.inc = base;
-            m.amp0 = last_amp[k];
-            m.amp1 = a;
-            m.envq15 = env;
-            m.cutoff = env_fenv * (env >> 7);           /* ENV -> FILTER: up to +-64 cutoff steps */
-            m.shape = 64 << 8;                          /* the middle: no shape modulation yet */
-            last_amp[k] = a;
-            en->render(t, v, out, CTL, &m);
+    for (b = 0; b + CTL <= n; b += CTL)
+        for (part = 0; part < NPART; part++) {
+            int32_t blk[CTL];
+            memset(blk, 0, sizeof blk);
+            part_block(part, blk);
+            for (i = 0; i < CTL; i++)
+                out[part][b + i] += blk[i];
         }
-        for (i = 0; i < CTL; i++)
-            mono[b + i] += out[i];
-    }
 }
 
-uint32_t kl_hits(int *note)
+uint32_t kl_hits(int part, int *note)
 {
-    *note = hit_note;
-    return hits;
+    if (!part_ok(part)) {
+        *note = 0;
+        return 0;
+    }
+    *note = prt[part].hit_note;
+    return prt[part].hits;
 }
 
-int kl_voices(void)
+int kl_voices(int part)
 {
     uint32_t k;
-    int n = 0;
-    for (k = 0; k < NVOICE; k++)
-        n += trk[0].v[k].active ? 1 : 0;
+    int n = 0, p;
+    for (p = 0; p < NPART; p++)
+        for (k = 0; k < NVOICE; k++)
+            n += (part < 0 || part == p) && trk[p].v[k].active ? 1 : 0;
     return n;
 }
 
-int kl_value_now(int k) { return k >= 0 && k < 8 ? trk[0].p[P_E0 + k] : 0; }
-int kl_note_now(void) { return trk[0].v[0].active ? trk[0].v[0].note : -1; }
+int kl_cost_now(void)
+{
+    uint32_t k;
+    int n = 0, p;
+    for (p = 0; p < NPART; p++)
+        for (k = 0; k < NVOICE; k++)
+            n += trk[p].v[k].active ? COST[prt[p].cur_e] : 0;
+    return n;
+}
+
+int kl_value_now(int part, int k) { return part_ok(part) && k >= 0 && k < 8 ? trk[part].p[P_E0 + k] : 0; }
+int kl_note_now(int part) { return part_ok(part) && trk[part].v[0].active ? trk[part].v[0].note : -1; }

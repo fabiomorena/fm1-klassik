@@ -158,10 +158,11 @@ static void fm6_make(int p, const int16_t m[8], uint8_t out[FM_PATCH])
 
 static struct {
     uint8_t patch[FM_PATCH];                        /* the voice as it plays */
-    int16_t made[9];                                /* made from: the preset and the eight values (-1: not yet) */
+    uint8_t ready;                                  /* patch made (every part starts without) */
+    int16_t made[9];                                /* made from: the preset and the eight values */
     fm_lfo_t lfo;
     int32_t lfo_val, lfo_delay;                     /* this block's */
-} fm6_part[NPART] = {{.made = {-1}}};
+} fm6_part[NPART];
 static fm_note_t fm6_note[NPART][NVOICE];
 
 static void fm6_sync(struct track *t)               /* the voice made again when the sound changed */
@@ -170,12 +171,13 @@ static void fm6_sync(struct track *t)               /* the voice made again when
     int16_t m[8];
     for (k = 0; k < 8; k++)
         m[k] = t->p[P_E0 + k];
-    if (fm6_part[part].made[0] == p && !memcmp(&fm6_part[part].made[1], m, sizeof m))
+    if (fm6_part[part].ready && fm6_part[part].made[0] == p && !memcmp(&fm6_part[part].made[1], m, sizeof m))
         return;
     fm6_make(p, m, fm6_part[part].patch);
     fm_lfo_reset(&fm6_part[part].lfo, fm6_part[part].patch + 137);
     fm6_part[part].made[0] = (int16_t)p;
     memcpy(&fm6_part[part].made[1], m, sizeof m);
+    fm6_part[part].ready = 1;
 }
 
 static fm_note_t *fm6_voice(struct track *t, voice_t *v) { return &fm6_note[t - trk][v - t->v]; }
