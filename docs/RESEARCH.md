@@ -171,6 +171,95 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   Sekunde sind das 5,7 bis 13,2 Mio. Takte je Sekunde. Sechs Snare-Stimmen auf einmal (der ungünstigste Fall)
   brauchen 34 bis 79 Mio. Takte, das sind 10 bis 22 % von 360 MHz. Messbar erst mit Gerät.
 
+## ACID: Open303, Port und Messungen (Stand 27.10.2026, nur auf dem Mac)
+
+- **Lizenzprüfung** (github.com/RobinSchmidt/Open303, Stand `313bf0d`, 29.03.2024):
+  - `License.txt`: „The Open303 source code is released under the terms of the MIT license“, Copyright (c) 2009 Robin
+    Schmidt. Die Dateien in `Source/DSPCode/` haben keine eigenen Lizenzköpfe.
+  - Die Suche nach „GPL“, „GNU“, „license“ und „copyright“ in `Source/` findet nur das Compiler-Makro `__GNUC__`.
+    Die Dateien sind ISO-8859 kodiert, deshalb mit `grep -a` gesucht: Ein einfaches `grep` überspringt sie als
+    Binärdateien.
+  - Nicht übernommen: `Libraries/` (VST-SDK 2.4 von Steinberg, CLAP), `fft4g.c` (Ooura; die Tabellen rechnet ein
+    eigenes Python-Werkzeug), `rosic_AcidSequencer`, `rosic_AcidPattern` (Sequencer, vielleicht für v0.5), das
+    VST-Plugin.
+- **Fakten aus dem Code**, wichtig für die Makros:
+  - Accent: Eine Note mit Velocity ≥ 100 ist akzentuiert (`rosic_Open303.cpp`, `noteOn`).
+  - Slide: Eine Note, die kommt, solange eine andere gehalten ist, gleitet (`noteOn`: Notenliste nicht leer →
+    `slideToNote`). Wird die letzte Taste losgelassen und ist noch eine gehalten, gleitet der Ton zu ihr zurück
+    (`releaseNote`).
+  - `setSlideTime(ms)` setzt die Zeitkonstante des Slew-Limiters auf 0,2 × ms („\todo: tweak the scaling
+    constant“). Der Konstruktor setzt sie direkt auf 60 ms. Das Plugin hat keinen Slide-Regler, also gelten dort
+    60 ms.
+  - Die Bereiche im Plugin (`Open303VST.cpp`): CUTOFF 314–2394 Hz exponentiell, DECAY 200–2000 ms exponentiell,
+    RESONANCE, ENVMOD und ACCENT 0–100 %, WAVEFORM 0–1 (Säge → Rechteck), TUNING 400–480 Hz.
+  - Filter: Der Kern nimmt den Modus `TB_303` (`rosic_TeeBeeFilter.cpp`, Konstruktor: „ala mystran & kunn“). Das
+    Plugin stellt standardmäßig `LP_18` ein (`Open303VST.cpp:23`). Beide Modi sind portiert.
+  - Fest im Kern: Amplituden-Hüllkurve mit Decay 1230 ms, Sustain 0 und Release 1 ms (mit Accent 50 ms);
+    Accent-Decay 200 ms; Hochpass 44,486 Hz vor und 24,167 Hz nach dem Filter; 150 Hz in der Rückkopplung; Notch
+    7,5164 Hz; 4-fache Überabtastung mit einem elliptischen Filter 12. Ordnung.
+- **Speicher** der Wellenform-Tabellen:
+  - Original: 2 Wellenformen × 12 Tabellen × 2052 Werte × 8 B (double) = 393 984 B.
+  - Port: Es braucht nur die Tabellen 0–9, denn eine Note unter 20 kHz erreicht höchstens Tabelle 9. Die Rechnung:
+    Inkrement 2048 × 20 000 / 176 400 = 232, Exponent 7, plus 2 ergibt Tabelle 9.
+  - Ab Tabelle 5 ist jede halb so lang wie die vorige. Sie hat auch nur halb so viele Obertöne, also bleiben
+    mindestens 32 Werte je Periode des höchsten.
+  - Gespeichert als int16 mit einem Wert Überhang: 5 × 2049 + 1025 + 513 + 257 + 129 + 65 = 12 234 Werte je
+    Wellenform. × 2 Wellenformen × 2 B = **48 936 B im Flash**.
+  - RAM: ein `acid_t` mit gut 50 floats, etwa 200 B.
+- **Tabellen gegen das Original:** `gen_acid_tables.py` (Python, double) gegen die `tableSet`-Werte von Open303:
+  höchstens 2,6e-14 Abweichung je Wert in allen 20 Tabellen. Das elliptische Filter als sechs Biquads trifft den
+  Frequenzgang der Direktform auf 1e-6 (das prüft der Generator selbst).
+- **Port gegen das Original:** Open303 (C++, double, `Source/DSPCode/` unverändert bis auf die x86-Assembler-Zweige)
+  und der C-Port (`firmware/klassik/dsp/acid/acid.c`, float) auf dem Mac nebeneinander, 44,1 kHz, dieselben Noten
+  über die Notenliste von `noteOn`, je 1–2 s. Rauschabstand Port gegen Original:
+
+  | Fall | Einstellung | Rauschabstand |
+  | --- | --- | --- |
+  | vst_default | Plugin-Standard (Cutoff 500 Hz, Reso 50 %, EnvMod 25 %, Decay 400 ms), TB_303 | 60,9 dB |
+  | saw_dark | Cutoff 314 Hz, Reso 0, Säge | 66,0 dB |
+  | square_open | Cutoff 2394 Hz, Reso 90 %, EnvMod 100 %, Rechteck, Accent | 64,2 dB |
+  | slide_up | 36 → 48 gebunden, Accent | 64,6 dB |
+  | slide_back | 36 → 43 → zurück zu 36, Slide 300 ms | 63,2 dB |
+  | retrigger | Wiederanschlag ohne Zurücksetzen, Accent | 62,4 dB |
+  | high_note | Note 96 (Tabelle 7) | 67,2 dB |
+  | low_selfosc | Note 24, Reso 100 % (Filter schwingt selbst) | 56,3 dB |
+  | pattern | zwei Sekunden Linie mit Slides und Accents | 61,9 dB |
+  | lp18_default | Plugin-Standard mit LP_18 | 63,3 dB |
+  | lp18_squelch | LP_18, Reso 90 %, Accent | 59,6 dB |
+
+- **Was in float nicht hielt** (gemessen, dann behoben):
+  - Der Slew-Limiter blieb 0,004 Hz vor dem Ziel stehen, bei 130 Hz sind das 3e-5. Unterhalb davon geht ein Schritt
+    in der Rundung unter. Jetzt wird der Abstand zum Ziel geführt; vorher 49,3 dB in slide_up.
+  - Koeffizienten knapp unter 1, zum Beispiel 0,99962 für den Slide: In float ist die Zeitkonstante dann um bis zu
+    1,6e-4 ungenau. Jetzt wird 1 − Koeffizient gespeichert; vorher 52,6 dB in slide_back.
+  - Das elliptische Filter in Direktform II hat Koeffizienten bis 308. In float ist das nicht stabil zu halten,
+    deshalb Biquads (nicht gemessen, sondern vorab ersetzt).
+  - Die verkürzten Tabellen kosten nur bei hohen Noten etwas: high_note 67,2 statt 72,2 dB mit allen Tabellen in
+    voller Länge.
+- **Rechenlast (Schätzung, unsicher):** etwa 500 Gleitkomma-Operationen und eine Division je Sample.
+  - Davon 4 × ~95 überabgetastet: das elliptische Filter mit 54 je Schritt ist der größte Teil, dazu Oszillator,
+    Hochpass und Filter.
+  - Bei 44,1 kHz sind das ~22 MFLOP/s. Mit 2–3 Takten je Operation ergibt das 44–66 Mio. Takte, also 12–18 % von
+    360 MHz, für eine Stimme. Auf dem Gerät messen.
+
+- **Pegel im Simulator** (`AC_LEVEL` = 2 × VOICE_FS, MASTER 50 %, Note F3, 400 ms gehalten; Messung mit
+  `peak_db_max`), normal / mit Accent in dBFS:
+
+  | Preset | normal | Accent |
+  | --- | --- | --- |
+  | ACID LINE | −27,3 | −17,8 |
+  | SQUELCH | −27,2 | −16,2 |
+  | DEEP SAW | −28,6 | −22,0 |
+  | SQUARE | −33,0 | −24,8 |
+  | RUBBER | −32,1 | −24,6 |
+  | SCREAM | −28,2 | −17,2 |
+  | PLUCK | −27,2 | −18,8 |
+  | SLOW SLIDE | −29,9 | −21,3 |
+
+  Der lauteste Fall (SCREAM mit Accent, fünf Tasten je Oktave, MASTER 50 %), je Oktave −2 … +2: −15,1, −16,2,
+  −15,2, −9,1, −6,6 dBFS. Bei vollem MASTER sind das 12 dB mehr (0,25 → 1). Damit übersteuern die Oktaven +1 und +2
+  um bis zu 5,6 dB, der Bassbereich nicht. Höher klingt lauter, weil die Resonanzspitze dort die Obertöne trifft.
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

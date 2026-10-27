@@ -37,6 +37,14 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 | 27.10. | DRUMS G#: ein eigenes Instrument je Kit statt einer zweiten CH: 606 RD (Ride), 707 TB (Tamburin), 808 CL (Claves), 909 RD | Fabios Test: „zweimal closed hi-hat“; was die Maschinen noch hatten | Fabios Entscheidung (Claudes Empfehlung); umgesetzt, Mockup angepasst |
 | 27.10. | DRUMS: die Oktave ändert nichts am Klang; kein SD DEC | GM-Belegung in jeder Oktave; die Originale hatten keinen Snare-Decay | Fabios Entscheidung (Claudes Empfehlung) |
 | 27.10. | DRUMS-Toms: eigenes Modell (Sinus mit Tonhöhenabfall, Stockgeräusch) statt des Bassdrum-Modells; HAT TONE 1,9–9,6 kHz statt 0,15–9,6 kHz, hellere Becken | Fabios Test: Toms „nach Bassdrum“, OH und Becken „blechern“ (Messung in RESEARCH.md) | umgesetzt, im Simulator gemessen; nach Gehör noch zu prüfen |
+| 27.10. | ACID-Makros: TUNE, CUTOFF, RESO, ENV MOD (EDIT 1), DECAY, ACCENT, WAVE, SLIDE (EDIT 2): die sieben Regler der TB-303 plus Slide | Spieler kennen sie; Slide ist bei der 303 fest, bei Open303 einstellbar | Fabios Entscheidung (Claudes Vorschlag); Seiten FILTER / VOICE, Mockup `Edit-ACID` von Fabio angenommen |
+| 27.10. | ACID-Slide über Legato: eine Taste halten und die nächste drücken, dann gleitet der Ton; die letzte losgelassen, gleitet er zur noch gehaltenen zurück | so macht es Open303 (`noteOn`, `releaseNote`); ein Sequencer kommt erst mit v0.5 | Fabio hat den Plan angenommen |
+| 27.10. | ACID-Accent über einen Taster, der beim Anschlag gehalten wird; MIDI-Velocity ≥ 100 wie bei Open303 | Anschlagstärke liefern nur die Tasten auf den analogen Reihen (`plat_sense`), ohne Gerät nicht prüfbar | Fabios Entscheidung: Taster ENV (auf ACID ohne andere Aufgabe), `ACC` in der Kopfzeile, solange er gehalten ist (Mockup angenommen) |
+| 27.10. | ACID-Port: Open303 nach C mit float; Wellenform-Tabellen beim Build (int16, Tabellen 0–9, ab Tabelle 5 halb so lang: 48 936 B statt 393 984 B), das elliptische Filter als sechs Biquads | kein double auf dem FM-1; die Direktform 12. Ordnung hält in float nicht (RESEARCH.md) | umgesetzt, gegen das Original geprüft (56–67 dB, RESEARCH.md) |
+| 27.10. | ACID-Filter: der Modus `TB_303` des Kerns statt `LP_18`, den das Open303-Plugin als Standard nimmt | der Kern ist „die 303“ des Autors; beide sind portiert | Fabios Entscheidung nach Gehör (`acid-tb303.wav` gegen `acid-lp18.wav`) |
+| 27.10. | ACID im Host: MONO-Presets merken sich die gehaltenen Tasten (bis 8); ACID ist die sechste Engine (`KL_ACID` = 5), K1 erreicht sie nach DRUMS; Speicherformat `KLS5` (Einstellungen von v0.3 Teil DRUMS werden verworfen) | Slide und Zurückgleiten brauchen die gehaltenen Tasten; eine Engine mehr | umgesetzt, im Simulator getestet (`tests/acid.txt`) |
+| 27.10. | ACID: TUNE wirkt sofort, ein gehaltener Ton gleitet dorthin (Open303 stimmt erst die nächste Note) | ein Stimm-Regler, der erst bei der nächsten Note wirkt, fühlt sich kaputt an | Claudes Entscheidung, im Protokoll C5 zu prüfen |
+| 27.10. | ACID-Pegel `AC_LEVEL` = 2 × VOICE_FS: normale Noten −27 … −33, Accents −16 … −25 dBFS bei MASTER 50 % (F3); hohe Lagen mit viel Resonanz und Accent übersteuern bei vollem MASTER (bis +5,6 dB) | so laut wie die anderen Engines; ein Limiter wäre eine Abweichung von Open303, sechs VA-Stimmen übersteuern dort auch | Claudes Vorschlag; Feinabstimmung mit Gerät, Fabio prüft F2 im Protokoll |
 
 ## Offene Punkte
 
@@ -50,4 +58,5 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 - DRUMS nach Gehör prüfen (Protokoll `docs/tests/DRUMS.md`, `drums-*.wav`) und die Kits nachstimmen.
 - DRUMS-Rechenlast auf dem Gerät messen (Schätzung: 10–22 % von 360 MHz bei sechs Snare-Stimmen, unsicher).
 - FM6-Rechenlast auf dem Gerät messen (Schätzung: 7–13 % von 360 MHz bei sechs Stimmen, unsicher).
+- ACID-Rechenlast auf dem Gerät messen (Schätzung: 12–18 % von 360 MHz für die eine Stimme, unsicher).
 - FM6-Edit-Seite nach dem Mockup `Edit-FM6` (Algorithmus-Grafik, Pegel je Operator).

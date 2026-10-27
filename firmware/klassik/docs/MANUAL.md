@@ -1,23 +1,24 @@
-# KLASSIK – Bedienung (v0.3, Teil DRUMS)
+# KLASSIK – Bedienung (v0.3)
 
 ## Rack
 
 | Bedienelement | Was es tut |
 | --- | --- |
-| Tasten | spielen die gewählte Engine (Anschlagdynamik), senden die Noten über USB-MIDI |
-| K1 | Engine wählen, in der Reihenfolge des Racks: FM6, VA (ANALOG), PD (PHASE), ORGAN (WHEEL), DRUMS |
+| Tasten | spielen die gewählte Engine (Anschlagdynamik; ACID: Accent mit ENV), senden die Noten über USB-MIDI |
+| K1 | Engine wählen, in der Reihenfolge des Racks: FM6, VA (ANALOG), PD (PHASE), ORGAN (WHEEL), DRUMS, ACID |
 | PRESET | Sound der Engine wählen; nach den Presets folgt USER, sobald die Engine einen eigenen Sound hat |
 | OCT- / OCT+ | Oktave −2 … +2 |
 | EDIT | Edit-Seiten der Engine öffnen |
+| ENV | bei ACID: gehalten, sind die angeschlagenen Noten akzentuiert (`ACC` in der Kopfzeile) |
 | SAVE | Engine, Sounds und Oktave speichern (leuchtet, solange etwas ungespeichert ist) |
 | MASTER | Lautstärke |
 
-MIDI-In über USB und TRS spielt ebenfalls. ACID ist als Kachel sichtbar, aber noch nicht spielbar.
+MIDI-In über USB und TRS spielt ebenfalls.
 
 ## Edit-Seiten
 
 Jede Engine hat zwei Seiten mit je vier Parametern: FM6 ALGO und ENV, VA OSC und FLT, PD PHS und LINE, ORGAN BARS
-und TONE, DRUMS DRUM und KIT. In der Mitte steht die Glyphe des Sounds groß; die Namen an den Strahlen der vier
+und TONE, DRUMS DRUM und KIT, ACID FILTER und VOICE. In der Mitte steht die Glyphe des Sounds groß; die Namen an den Strahlen der vier
 Parameter auf K1–K4 leuchten in der Farbe der Engine. Bei DRUMS stehen dort stattdessen die Tasten einer Oktave
 (siehe DRUMS).
 
@@ -100,3 +101,30 @@ Regler der Seite ändern; das zuletzt gespielte leuchtet kurz.
 Die anderen Instrumente (Rimshot, Clap, Cowbell, Becken, das Instrument auf G#) behalten die Einstellungen ihres
 Kits. Die Toms setzen etwas höher ein und fallen dann auf ihren Ton, wie bei 808 und 909. Im Browser-Emulator
 kommt jede Taste mit gleicher Stärke an, der Accent lässt sich dort nicht spielen.
+
+## ACID
+
+Ein einstimmiger Bass im Stil der Roland TB-303, berechnet auf [Open303](https://github.com/RobinSchmidt/Open303)
+von Robin Schmidt (MIT, nach C portiert), mit dessen 303-Filter. Es klingt immer nur ein Ton.
+
+- **Slide:** Eine Taste halten und eine zweite drücken: Der Ton gleitet zur neuen Note, ohne neuen Anschlag. Wird
+  die zuletzt gedrückte losgelassen, während die erste noch gehalten ist, gleitet er zu ihr zurück.
+- **Accent:** ENV halten und dann die Taste anschlagen: Die Note ist akzentuiert, lauter und mit kräftigerem
+  Filter-Schwung. Solange ENV gehalten ist, steht `ACC` in der Kopfzeile. Über MIDI ist eine Note mit Velocity ab
+  100 akzentuiert. Die Anschlagdynamik der Tasten wirkt bei ACID sonst nicht.
+- Wie bei der 303 klingt ein gehaltener Ton über etwa eine Sekunde aus. Beim Loslassen ist er sofort weg, eine
+  akzentuierte Note nach etwa 50 ms.
+
+| Seite | Parameter | Was er tut |
+| --- | --- | --- |
+| FILTER | TUNE −12 … +12 | Stimmung in Halbtönen; ein gehaltener Ton gleitet dorthin |
+| FILTER | CUTOFF 0–99 | Grenzfrequenz des Filters, 314 Hz bis 2,4 kHz |
+| FILTER | RESO 0–99 | Resonanz: höher quäkt und pfeift es, bei 99 fast ein Pfeifton |
+| FILTER | ENV MOD 0–99 | wie weit die Hüllkurve das Filter im Anschlag öffnet |
+| VOICE | DECAY 0–99 | wie schnell sich das Filter nach dem Anschlag schließt, 0,2 bis 2 s; ab der nächsten Note |
+| VOICE | ACCENT 0–99 | wie stark akzentuierte Noten hervortreten; ab der nächsten Note |
+| VOICE | WAVE 0–99 | Wellenform: 0 Sägezahn, 99 Rechteck, dazwischen gemischt |
+| VOICE | SLIDE 0–99 | Gleitzeit beim Slide, in ms (Zeitkonstante); 60 ist die der 303, 0 springt ohne Gleiten |
+
+Presets: ACID LINE, SQUELCH, DEEP SAW, SQUARE, RUBBER, SCREAM, PLUCK, SLOW SLIDE. Für Bass die Oktave mit OCT−
+nach unten stellen. In hohen Lagen können SCREAM und SQUELCH mit Accent bei vollem MASTER übersteuern.

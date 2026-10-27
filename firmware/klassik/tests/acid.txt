@@ -1,0 +1,238 @@
+# KLASSIK's ACID in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/acid.txt firmware/klassik/build/host
+wait 600
+expect engine 0
+# K1 goes in the rack's order: FM6, VA, PD, ORGAN, DRUMS, ACID (the last tile, playing now)
+listen
+spin K1 4
+wait 50
+expect engine 5
+expect preset 0
+said ENGINE ACID. ACID LINE
+shot acid.png
+# one voice: a second key slides to its note, the voice stays one; the latest let go, it slides back to the one held
+key 0 down 100
+wait 100
+expect voices 1
+expect note 53
+key 7 down 100
+wait 100
+expect voices 1
+expect note 60
+key 7 up
+wait 50
+expect note 53
+key 0 up
+wait 300
+expect voices 0
+expect note -1
+# an older key let go while the latest is held changes nothing
+key 0 down 100
+wait 50
+key 7 down 100
+wait 50
+key 0 up
+wait 50
+expect note 60
+expect voices 1
+key 7 up
+wait 300
+expect voices 0
+# the octave: OCT- twice, key 7 is C2
+tap OCT-
+wait 30
+tap OCT-
+wait 30
+expect octave -2
+key 7 down
+wait 50
+expect note 36
+key 7 up
+wait 300
+tap OCT+
+wait 30
+tap OCT+
+wait 30
+expect octave 0
+# the accent: ENV held as the key goes down (ACC in the header); measured -27.3 and -17.8 dBFS at MASTER 50 % (F3)
+peakreset
+key 0 down 30
+wait 400
+key 0 up
+wait 300
+expect peak_db_min -29
+expect peak_db_max -25.5
+press ENV
+wait 30
+said ACCENT
+shot acid-acc.png
+peakreset
+key 0 down 30
+wait 400
+key 0 up
+wait 300
+release ENV
+wait 30
+expect peak_db_min -19.5
+expect peak_db_max -16
+# from MIDI, velocity 100 or more accents, as in Open303
+peakreset
+midi 90 35 63
+wait 400
+midi 80 35 00
+wait 300
+expect peak_db_max -25.5
+peakreset
+midi 90 35 64
+wait 400
+midi 80 35 00
+wait 300
+expect peak_db_min -19.5
+expect voices 0
+# EDIT: FILTER (TUNE, CUTOFF, RESO, ENV MOD), VOICE (DECAY, ACCENT, WAVE, SLIDE)
+tap EDIT
+wait 30
+expect edit 1
+expect page 1
+said EDIT FILTER
+expect v0 0
+expect v1 35
+expect v2 75
+expect v3 60
+key 0 down 100
+wait 200
+shot acid-edit-1.png
+key 0 up
+spin K2 5
+wait 50
+expect v1 40
+expect dsp1 40
+expect edited 1
+# TUNE moves a held note at once (by its slide): the note itself stays the key's
+key 0 down 100
+wait 50
+spin K1 -5
+wait 200
+expect v0 -5
+expect note 53
+key 0 up
+wait 300
+tap EDIT
+wait 30
+expect page 2
+said EDIT VOICE
+expect v4 40
+expect v5 70
+expect v6 0
+expect v7 60
+shot acid-edit-2.png
+tap OCT-
+wait 30
+expect edit 0
+# every preset, its name said; all eight play
+spin PRESET 1
+wait 50
+said SQUELCH
+expect edited 0
+expect v1 25
+spin PRESET 1
+wait 50
+said DEEP SAW
+spin PRESET 1
+wait 50
+said SQUARE
+expect v6 99
+spin PRESET 1
+wait 50
+said RUBBER
+spin PRESET 1
+wait 50
+said SCREAM
+spin PRESET 1
+wait 50
+said PLUCK
+spin PRESET 1
+wait 50
+said SLOW SLIDE
+expect v7 99
+spin PRESET 1
+wait 50
+expect preset 0
+said ACID LINE
+# a line of sixteenths at 125 bpm (120 ms) with slides (the next note before the last one's off) and accents (7F)
+tap OCT-
+wait 30
+wav acid-line.wav
+midi 90 24 40
+wait 66
+midi 80 24 00
+wait 54
+midi 90 24 7F
+wait 66
+midi 80 24 00
+wait 54
+midi 90 30 40
+wait 120
+midi 90 27 40
+midi 80 30 00
+wait 66
+midi 80 27 00
+wait 54
+midi 90 24 40
+wait 66
+midi 80 24 00
+wait 54
+midi 90 2B 7F
+wait 66
+midi 80 2B 00
+wait 54
+midi 90 24 40
+wait 120
+midi 90 2E 40
+midi 80 24 00
+wait 66
+midi 80 2E 00
+wait 54
+midi 90 24 40
+wait 66
+midi 80 24 00
+wait 54
+midi 90 24 7F
+wait 66
+midi 80 24 00
+wait 54
+midi 90 30 40
+wait 66
+midi 80 30 00
+wait 54
+midi 90 33 40
+wait 120
+midi 90 24 7F
+midi 80 33 00
+wait 66
+midi 80 24 00
+wait 54
+midi 90 2B 40
+wait 66
+midi 80 2B 00
+wait 54
+midi 90 22 40
+wait 120
+midi 90 24 40
+midi 80 22 00
+wait 66
+midi 80 24 00
+wait 500
+wavstop
+expect voices 0
+# the engine and its sound are kept across a power cycle (the format KLS5)
+spin PRESET 1
+wait 50
+tap SAVE
+wait 50
+said SAVED
+reboot
+wait 600
+expect engine 5
+expect preset 1

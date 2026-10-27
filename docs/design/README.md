@@ -23,9 +23,10 @@ Browser keine Wirkung.
 | `Glyphs` | 09 Glyphen-Browser |
 | `Family` | 10 Klang-Stammbaum |
 | `Edit-DRUMS` | 11 DRUMS: eine Oktave als Pads (jede Taste mit ihrem Instrument), Seiten DRUM und KIT |
+| `Edit-ACID` | 12 ACID: Seiten FILTER (TUNE, CUTOFF, RESO, ENV MOD) und VOICE (DECAY, ACCENT, WAVE, SLIDE), Glyphe wie bei VA; `ACC` in der Kopfzeile, solange der Accent-Taster (ENV) gehalten wird |
 
 `png/`: Renderings vom 26.10.2026, ohne die Webfonts des Canvas erstellt (daher breitere Ersatzschrift und vereinzelt
-Umbrüche); `Main.png` und `Edit-DRUMS.png` neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
+Umbrüche); `Main.png`, `Edit-DRUMS.png` und `Edit-ACID.png` (27.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
 
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --hide-scrollbars \
         --user-data-dir=/tmp/chrome-mockups --window-size=480,480 \

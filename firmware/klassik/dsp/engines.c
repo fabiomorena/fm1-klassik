@@ -3,10 +3,12 @@
  *   from Felucca-Engines' tests/fe_host.c)
  * Copyright (C) 2026 fabiomorena */
 /* KLASSIK's engine host: three of Felucca-Engines' MIT engines (ANALOG, PHASE, WHEEL) and KLASSIK's FM6 (eng_fm6.c,
- * on msfa) and DRUMS (eng_drums.c, on Plaits' drum models) on one part of six voices. Built as one translation unit
- * with the engines, as felucca_engine.h asks. A first version: its envelope is a plain ADSR of its own (not
- * Felucca's voice.c), and there is no LFO, glide, unison or effect yet; FM6 and DRUMS have envelopes of their own
- * (ownenv), and DRUMS plays each instrument on one voice (same_note). The eight parameters come from the app with each sound asked
+ * on msfa), DRUMS (eng_drums.c, on Plaits' drum models) and ACID (eng_acid.c, on Open303) on one part of six voices.
+ * Built as one translation unit with the engines, as felucca_engine.h asks. A first version: its envelope is a plain
+ * ADSR of its own (not Felucca's voice.c), and there is no LFO, glide, unison or effect yet; FM6, DRUMS and ACID have
+ * envelopes of their own (ownenv), DRUMS plays each instrument on one voice (same_note). A MONO preset (ACID's) plays
+ * on the first voice and keeps the keys held: a key while another is held is legato, and the latest let go while
+ * another is held goes back to that one (legato 2). The eight parameters come from the app with each sound asked
  * for (an edit plays from the next block: the engines read them every block); the preset gives the rest. */
 #include <stdint.h>
 #include <string.h>
@@ -24,6 +26,8 @@ typedef struct track {
 } track_t;
 static track_t trk[NPART];
 static int retrig;                                  /* the voice a note_on starts still sounds (FM6 goes on from it) */
+static int legato;                                  /* MONO: 1 the note_on comes while a key is held (a slide), 2 it
+                                                     * goes back to a key still held (the latest let go) */
 
 #include "dsp.c"
 #include "eng_analog.c"
@@ -31,8 +35,9 @@ static int retrig;                                  /* the voice a note_on start
 #include "eng_wheel.c"
 #include "eng_fm6.c"
 #include "eng_drums.c"
+#include "eng_acid.c"
 
-static const engine_t *const ENG[KL_NENG] = {&ENG_ANALOG, &ENG_PHASE, &ENG_WHEEL, &ENG_FM6, &ENG_DRUMS};
+static const engine_t *const ENG[KL_NENG] = {&ENG_ANALOG, &ENG_PHASE, &ENG_WHEEL, &ENG_FM6, &ENG_DRUMS, &ENG_ACID};
 
 /* ------------------------------------------------------------ the app's questions --- */
 static int eng_ok(int e) { return e >= 0 && e < KL_NENG; }
@@ -143,6 +148,27 @@ static uint32_t vage;
 static volatile uint32_t hits;                      /* notes started, and the last one's (the app's DRUMS pads) */
 static volatile uint8_t hit_note;
 static int32_t last_amp[NVOICE];
+#define NHELD 8
+static uint8_t held[NHELD], nheld;                  /* MONO: the keys held, the latest last */
+
+static void held_drop(int note)
+{
+    uint32_t i, j;
+    for (i = j = 0; i < nheld; i++)
+        if (held[i] != note)
+            held[j++] = held[i];
+    nheld = (uint8_t)j;
+}
+
+static void held_push(int note)
+{
+    held_drop(note);
+    if (nheld == NHELD) {                           /* full: the oldest goes */
+        memmove(held, held + 1, NHELD - 1u);
+        nheld--;
+    }
+    held[nheld++] = (uint8_t)note;
+}
 
 static void load(int e, int p)
 {
@@ -157,6 +183,7 @@ static void load(int e, int p)
         memset(drw_t, 0, sizeof drw_t);
         memset(drw_v, 0, sizeof drw_v);
         memset(last_amp, 0, sizeof last_amp);
+        nheld = 0;
     }
     t->p[P_ATK] = pr->env[0];
     t->p[P_REL] = pr->env[3];
@@ -195,8 +222,12 @@ static void voice_start(int note, int vel)
     track_t *t = &trk[0];
     voice_t *v = 0;
     uint32_t k, oldest = 0xFFFFFFFFu;
-    if (mono_mode)
+    legato = 0;
+    if (mono_mode) {
         v = &t->v[0];
+        legato = nheld > 0 && v->active && v->gate;
+        held_push(note);
+    }
     for (k = 0; !v && k < NVOICE; k++)              /* the same note again: that voice */
         if (t->v[k].active && same_note(t->v[k].note, note))
             v = &t->v[k];
@@ -243,6 +274,23 @@ static void voice_stop(int note)
 {
     track_t *t = &trk[0];
     uint32_t k;
+    if (mono_mode) {
+        voice_t *v = &t->v[0];
+        held_drop(note);
+        if (!v->active || !v->gate || v->note != note)
+            return;
+        if (nheld) {                                /* back to the latest key still held */
+            v->note = held[nheld - 1u];
+            v->pitch16 = v->pitch_cur = (int32_t)v->note * 16;
+            legato = 2;
+            retrig = 1;
+            ENG[cur_e]->note_on(t, v);
+            return;
+        }
+        v->gate = 0;
+        v->stage = 3;
+        return;
+    }
     for (k = 0; k < NVOICE; k++)
         if (t->v[k].active && t->v[k].gate && t->v[k].note == note) {
             t->v[k].gate = 0;
@@ -301,6 +349,7 @@ void kl_render(int32_t *mono, uint32_t n)
         hush = 0;
         for (k = 0; k < NVOICE; k++)
             t->v[k].active = 0, t->v[k].stage = 0, t->v[k].env = 0;
+        nheld = 0;
         q_r = q_w;
     }
     while (q_r != q_w) {
@@ -368,3 +417,4 @@ int kl_voices(void)
 }
 
 int kl_value_now(int k) { return k >= 0 && k < 8 ? trk[0].p[P_E0 + k] : 0; }
+int kl_note_now(void) { return trk[0].v[0].active ? trk[0].v[0].note : -1; }

@@ -7,7 +7,7 @@
 #pragma once
 #include <stdint.h>
 
-enum { KL_ANALOG, KL_PHASE, KL_WHEEL, KL_FM6, KL_DRUMS, KL_NENG };
+enum { KL_ANALOG, KL_PHASE, KL_WHEEL, KL_FM6, KL_DRUMS, KL_ACID, KL_NENG };
 enum { KL_INT, KL_PCT, KL_ENUM };           /* how a parameter's value reads */
 
 typedef struct {
@@ -18,7 +18,8 @@ typedef struct {
     uint8_t fmt;                            /* KL_* */
 } kl_param_t;
 
-const char *kl_engine_name(int e);          /* the engine's own name: "ANALOG", "PHASE", "WHEEL", "FM6", "DRUMS" */
+const char *kl_engine_name(int e);          /* the engine's own name: "ANALOG", "PHASE", "WHEEL", "FM6", "DRUMS",
+                                             * "ACID" */
 int kl_presets(int e);
 const char *kl_preset_name(int e, int p);
 void kl_preset_values(int e, int p, int8_t v[8]);   /* the preset's eight parameters */
@@ -31,10 +32,12 @@ const char *kl_drum_name(int kit, int pc);  /* DRUMS: the instrument on a key in
 int kl_drum_pages(int pc);                  /* the edit pages whose knobs change it: bit 0 EDIT 1, bit 1 EDIT 2 */
 
 void kl_select(int e, int p, const int8_t v[8]);   /* main loop: the sound to play, from the next block */
-void kl_key(int on, int note, int vel);     /* main loop: a note on (vel 1..127) or off, queued */
+void kl_key(int on, int note, int vel);     /* main loop: a note on (vel 1..127; ACID: 100 or more accents) or off,
+                                             * queued */
 void kl_key_now(int on, int note, int vel); /* the audio interrupt's own (MIDI in) */
 void kl_silence(void);                      /* every voice off at the next block */
 void kl_render(int32_t *mono, uint32_t n);  /* audio interrupt: adds n frames (a multiple of 32) to mono */
 int kl_voices(void);                        /* voices sounding */
 uint32_t kl_hits(int *note);                /* notes started so far (keys and MIDI), and the last one's note */
 int kl_value_now(int k);                    /* parameter k as the render plays it (the host's checks) */
+int kl_note_now(void);                      /* the first voice's note (a MONO sound's), -1 silent (the host's checks) */

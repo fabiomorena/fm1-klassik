@@ -1,15 +1,15 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0.3 (DRUMS; ACID to come): the rack and its edit pages. Five engines, FM6 (msfa's six operators), three
- * of Felucca-Engines (ANALOG, PHASE, WHEEL) and DRUMS (four kits on Plaits' drum models), play from the keys and
- * from MIDI; K1 picks the engine (in the rack's order), PRESET its sound, OCT- / OCT+ the octave. EDIT opens the
- * engine's two
- * pages of four parameters on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once
- * (FM6's MOD, DTUN, ATK, DEC, SUS and REL from the next note).
+/* KLASSIK v0.3: the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of Felucca-Engines
+ * (ANALOG, PHASE, WHEEL), DRUMS (four kits on Plaits' drum models) and ACID (Open303's TB-303), play from the keys
+ * and from MIDI; K1 picks the engine (in the rack's order), PRESET its sound, OCT- / OCT+ the octave. On ACID a key
+ * pressed while ENV is held is accented (ACC in the header). EDIT opens the engine's two pages of four parameters
+ * on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once (FM6's MOD, DTUN, ATK, DEC,
+ * SUS and REL and ACID's DECAY and ACCENT from the next note).
  * SAVE keeps the engine, the sounds and the octave across a power cycle, an edited sound as its engine's USER sound.
  * The screen: the header (the engine, the sound's glyph and name, the octave, the battery), then the six engine
- * tiles (five playing, one to come) or an edit page (its tabs, the sound's glyph large, its spokes named; DRUMS:
+ * tiles or an edit page (its tabs, the sound's glyph large, its spokes named; DRUMS:
  * the octave's keys as pads, each with its instrument), and a row of what the knobs hold.
  * A sound's glyph: its eight parameters as eight spokes, each as long as its value in its range, in the engine's
  * colour. Part of the unity build (base/device/unity.c, base/host/plat_host.c), after the platform: gfx.c and
@@ -39,9 +39,9 @@ static const tile_t TILES[6] = {
     {"PD", "PHASE DIST", KL_PHASE, RGB(255, 122, 182)},
     {"ORGAN", "DRAWBAR", KL_WHEEL, RGB(126, 224, 138)},
     {"DRUMS", "DRUM KITS", KL_DRUMS, RGB(185, 162, 255)},
-    {"ACID", "MONO BASS", -1, RGB(227, 244, 94)},
+    {"ACID", "MONO BASS", KL_ACID, RGB(227, 244, 94)},
 };
-static const uint8_t TILE_OF[KL_NENG] = {1, 2, 3, 0, 4};   /* engine -> its tile */
+static const uint8_t TILE_OF[KL_NENG] = {1, 2, 3, 0, 4, 5};   /* engine -> its tile */
 
 static int engine_pos(int e)                         /* its place among the playing tiles, as the rack shows them */
 {
@@ -61,8 +61,8 @@ static int engine_at(int pos)                        /* the engine at that place
 }
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5334u                        /* "KLS4": another magic (v0.2's KLS3, v0.1's KLS2, v0's KLS1)
-                                                     * loads defaults */
+#define SET_MAGIC 0x4B4C5335u                        /* "KLS5": another magic (DRUMS' KLS4, v0.2's KLS3, v0.1's KLS2,
+                                                     * v0's KLS1) loads defaults */
 typedef struct {
     int8_t v[8];                                     /* the eight parameters */
     uint8_t base;                                    /* the preset it was made from: its envelopes and MONO */
@@ -464,6 +464,8 @@ static void input(void)
         if ((keys & bit) && !(ui.keys & bit)) {
             int32_t note = clamp(53 + (int32_t)k + 12 * set.octave, 0, 127);
             uint32_t v = touch_vel(k);
+            if (set.engine == KL_ACID)               /* its accent is ENV held, as Open303's: velocity 100 or more */
+                v = btn & 1u << B_ENV ? 127u : 64u;
             ui.knote[k] = (int8_t)note;
             kl_key(1, note, (int)v);
             plat_midi_send(0x09u | 0x90u << 8 | (uint32_t)note << 16 | v << 24, TO_USB);
@@ -487,6 +489,8 @@ static void input(void)
             octave_step(1);
         else if (k == B_SAVE)
             save();
+        else if (k == B_ENV && set.engine == KL_ACID)
+            announce("ACCENT");                      /* held: the keys pressed now are accented */
         else
             app_say(BTN_NAME[k], "SOON");            /* the pages behind the other buttons come later */
     }
@@ -595,6 +599,8 @@ static void draw_battery(int32_t x, int32_t y)
             cv_rect(x + 3 + i * 4, y + 3, 3, 4, K_TEXT);
 }
 
+static int acc_on(void) { return set.engine == KL_ACID && (ui.btn & 1u << B_ENV); }
+
 static void draw_header(void)
 {
     const tile_t *tl = &TILES[TILE_OF[set.engine]];
@@ -613,11 +619,16 @@ static void draw_header(void)
         kl_shape(set.engine, work[set.engine], sh);  /* the sound as it plays: an edit shows at once */
         glyph_draw(6 + w + 11, 11, 8, sh, tl->col, K_HEAD);
         sound_title(set.engine, name);
-        text_fit(6 + w + 23, 3, 150 - w, &FONT_B, name, K_TEXT);
+        text_fit(6 + w + 23, 3, (acc_on() ? 124 : 150) - w, &FONT_B, name, K_TEXT);
     }
     octave_text(t);
     text_cat(o, t);
     cv_text(206 - text_w(&FONT_XS, o), 4, &FONT_XS, o, K_MUTED);
+    if (acc_on()) {                                  /* ACID's accent held */
+        int32_t x = 202 - text_w(&FONT_XS, o) - text_w(&FONT_T, "ACC") - 6;
+        box_edge(x, 5, text_w(&FONT_T, "ACC") + 6, 13, 1, tl->col);
+        cv_text(x + 3, 6, &FONT_T, "ACC", tl->col);
+    }
     draw_battery(214, 6);
     cv_blit(0, 0);
 }
@@ -920,6 +931,8 @@ int app_expect(const char *what, int *got)
         *got = edited[set.engine];
     else if (!strcmp(what, "user"))
         *got = set.user[set.engine].saved;
+    else if (!strcmp(what, "note"))                  /* ACID: the note its voice plays, -1 none */
+        *got = kl_note_now();
     else if (!strcmp(what, "pad"))                   /* DRUMS: the lit pad's semitone, -1 none */
         *got = ui.hit_until ? ui.hit_pc : -1;
     else if ((k = expect_k(what, "v")) >= 0)
