@@ -71,9 +71,11 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
 ## Klang (Stand v0.3)
-- Parts: vier gleichzeitig (am Anfang VA, DRUMS, ACID, FM6), SEL wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem
+- Parts: vier gleichzeitig (am Anfang VA, DRUMS, ACID, FM6), SEL (Taster) oder SELECT (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem
   gewählten (`set.part`, `part_cur()`, `eng_cur()` in `app.c`); MIDI-Kanal 1–4 = Part 1–4; `work`/`orig`/`edited`
-  je Part und Engine; Speicherformat `KLS6`. Obergrenze: alle Parts zusammen ≤ 240 Zehntel FM6-Stimmen.
+  je Part und Engine. Obergrenze: alle Parts zusammen ≤ 240 Zehntel FM6-Stimmen.
+- Mixer (GLO): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance), MUTE, SOLO in `part_set_t`; `mix_update()` setzt
+  `mix_tgt`, `app_render` gleitet, mischt stereo, Limiter (−0,5 dBFS) vor dem harten Begrenzen. Speicherformat `KLS7`.
 - Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL, FM6 = msfa (`KL_FM6`, im Rack links von VA; K1 folgt der
   Rack-Reihenfolge), DRUMS (`KL_DRUMS` = 4, Kachel der früheren STRINGS). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
   `engine_t.edit[8]`, `page_title[2]`, `presets`). Festkomma, keine Allokation.
@@ -123,7 +125,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.1 | Edit-Seiten (EDIT → 2 Seiten × 4 Parameter auf K1–K4), Live-Glyphe, eigener Sound pro Engine (SAVE), README-Hinweis fribidi/.venv, Tests mit Screenshots | erledigt (Simulator) |
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
-| v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | Parts erledigt (Simulator), Mixer und Looper offen |
+| v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | Parts und Mixer erledigt (Simulator), Looper offen |
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte | offen |
 | v0.7 | Preset-Liste, Glyphen-Browser (früher v0.4) | offen |
 | v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |

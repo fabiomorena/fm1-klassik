@@ -309,6 +309,19 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
 - **RAM mit vier Parts** (`tools/device_check.py`): `.data` + `.bss` von 35 052 B auf 53 040 B von 98 304 B. Das
   sind 18 KB für die drei zusätzlichen Parts (Stimmen, Zustände der Engines, je ein Ausgabepuffer). App 207 704 B.
 
+## Mixer: Messungen (Stand 27.10.2026, nur Simulator)
+
+- **Pegel:** LEVEL ist eine Tabelle 2048 × 10^(dB/20) (Q11) für −40 … +6 dB. Part 1 (VA, SAW LEAD, MASTER 50 %) misst
+  bei 0 dB −31,5 dBFS wie vorher, bei −6 dB −37,6 dBFS (1026 / 2048 = −6,02 dB).
+- **Pan:** Ganz links ist der rechte Kanal 0, links ~110 000 bei −6 dB; ein Viertel rechts (R25) gibt rechts voll,
+  links halb.
+- **Gleiten:** Jede Verstärkung gleitet mit einer Zeitkonstante von 256 Samples (5,8 ms). Ganz bei 0 ist sie nach
+  ln(2048) × 256 ≈ 1950 Samples (~44 ms).
+- **Limiter:** ACID SCREAM, +6 dB, voller MASTER, akzentuierte Noten 84, 90 und 96. Der Ausgang bleibt bei −0,5 dBFS,
+  ohne Limiter wäre er bis ~6 dB darüber. Die Decke ist 8 388 607 × 10^(−0,5/20) = 7 919 000. Die Verstärkung
+  rechnet ohne 64-Bit-Division: (7 919 000 · 16) / (Spitze / 4096) in 32 Bit.
+- **Speicher** (`tools/device_check.py`): App 210 964 B, RAM 53 200 B (+160 B gegenüber den Parts).
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

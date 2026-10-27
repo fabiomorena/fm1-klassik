@@ -26,10 +26,10 @@ Im Browser nicht prüfbar: MIDI-In und -Out auf den Kanälen 1–4, die Rechenla
 | Taste oder Taster festhalten | Rechtsklick oder Shift-Klick: bleibt gedrückt, bis du noch einmal klickst |
 | weiße Tasten | `Q W E R T Z U I` = F3 … F4, `A S D F G H J K` = G4 … G5 |
 | OCT− / OCT+ | `Y` / `X` |
-| SEL | Taster SEL anklicken (kein Kürzel) |
+| SEL | Taster SEL (obere Tasterreihe, der zweite) anklicken, oder den Drehregler SELECT drehen (Pfeiltasten ↑ / ↓) |
 
 - [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Factory reset“ zweimal, dann „Switch on“ (neues
-  Speicherformat `KLS6`: alte Einstellungen sind verworfen). Falls die Seite nicht lädt:
+  Speicherformat `KLS7`: alte Einstellungen sind verworfen). Falls die Seite nicht lädt:
   `python3 -m http.server 8000 -d firmware/klassik/build/emu`.
 
 ## A Parts wählen
@@ -38,6 +38,8 @@ Im Browser nicht prüfbar: MIDI-In und -Out auf den Kanälen 1–4, die Rechenla
   ACID `3`, FM6 `4` (umrandet).
 - [ ] A2 SEL: `2 DRUMS` (lila), DRUMS umrandet und mit gefüllter `2`. Weiter mit SEL: `3 ACID`, `4 FM6`, wieder
   `1 VA`.
+- [ ] A2b Drehregler SELECT (oder Pfeiltasten ↑ / ↓): nach rechts der nächste Part, nach links der vorige, von 1 nach
+  links zu 4.
 - [ ] A3 Die Tasten spielen immer den Part in der Kopfzeile (auf Part 2 also Drums, auf Part 3 den ACID-Bass).
 
 ## B Jeder Part für sich

@@ -29,7 +29,7 @@ gerade halten).
 | mit Gerät | eigene Hüllkurve verfeinern, Pegel auf Hardware einmessen, Beschleunigung der Regler | offen |
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits im Stil von 606, 707, 808, 909; Plaits, MIT, und eigener Code; ersetzt STRINGS), ACID (Open303, MIT) | erledigt (Simulator) |
-| v0.5 | Parts (4, je eine Engine), Mixer mit Limiter, Noten-Looper | Parts erledigt (Simulator), Mixer und Looper offen |
+| v0.5 | Parts (4, je eine Engine), Mixer mit Limiter, Noten-Looper | Parts und Mixer erledigt (Simulator), Looper offen |
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte | offen |
 | v0.7 | Preset-Liste und Glyphen-Browser (früher v0.4) | offen |
 | v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |

@@ -1,0 +1,164 @@
+# KLASSIK's mixer in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/mixer.txt firmware/klassik/build/host
+wait 600
+# GLO opens the mixer: a strip a part, the chosen one's on K1..K4; at first 0 dB, the middle, nothing muted
+listen
+tap GLO
+wait 30
+expect mix 1
+said MIX
+expect level 0
+expect pan 0
+expect mute 0
+expect solo 0
+# LEVEL: part 1's SAW LEAD measured -31.5 dBFS at 0 dB and -37.6 at -6 dB (MASTER 50 %)
+peakreset
+midi 90 3C 64
+wait 300
+midi 80 3C 00
+wait 300
+expect peak_db_min -32
+expect peak_db_max -31
+spin K1 -6
+wait 30
+expect level -6
+said LEVEL -6 dB
+peakreset
+midi 90 3C 64
+wait 300
+midi 80 3C 00
+wait 300
+expect peak_db_min -38
+expect peak_db_max -37
+# PAN: all the way left, the right side is silent (at -6 dB: half of 223166); a quarter right, both (each change
+# glides in ~45 ms to its end: no click)
+spin K2 -50
+wait 30
+expect pan -50
+said PAN L50
+wait 100
+expect outl >-1
+expect outr >-1
+midi 90 3C 64
+wait 300
+midi 80 3C 00
+wait 300
+expect outl >100000
+expect outr 0
+wait 100
+expect outl >-1
+expect outr >-1
+spin K2 75
+wait 30
+expect pan 25
+midi 90 3C 64
+wait 300
+midi 80 3C 00
+wait 300
+expect outl >30000
+expect outr >100000
+# HOME and a knob: back to 0 dB, the middle
+press HOME
+wait 30
+spin K1 1
+wait 30
+spin K2 1
+wait 30
+release HOME
+wait 30
+expect level 0
+expect pan 0
+# MUTE: silent; SOLO on another part mutes every part not soloed
+spin K3 1
+wait 30
+expect mute 1
+said MUTE ON
+shot mixer-mute.png
+wait 100
+expect outl >-1
+expect outr >-1
+midi 90 3C 64
+wait 300
+midi 80 3C 00
+wait 300
+expect outl 0
+expect outr 0
+spin K3 -1
+wait 30
+expect mute 0
+tap SEL
+wait 30
+expect part 2
+spin K4 1
+wait 30
+expect solo 1
+shot mixer-solo.png
+wait 100
+expect outl >-1
+midi 90 3C 64
+wait 300
+midi 80 3C 00
+wait 300
+expect outl 0
+midi 91 24 64
+wait 300
+expect outl >100000
+spin K4 -1
+wait 30
+expect solo 0
+# the limiter: ACID's SCREAM at +6 dB, full MASTER and accented high notes stays at its ceiling, -0.5 dBFS (it
+# would pass full scale by about 6 dB), LIM lit
+tap SEL
+wait 30
+expect part 3
+spin PRESET 5
+wait 30
+said SCREAM
+spin K1 6
+wait 30
+expect level 6
+master 4096
+expect lim >-1
+peakreset
+midi 92 54 7F
+wait 250
+midi 82 54 00
+midi 92 5A 7F
+wait 250
+midi 82 5A 00
+midi 92 60 7F
+wait 200
+expect lim 1
+shot mixer-lim.png
+wait 50
+midi 82 60 00
+expect peak_db_max -0.45
+expect peak_db_min -0.6
+master 2048
+wait 1000
+# OCT- and GLO shut it; EDIT opens the edit pages instead; the mixer is kept across a power cycle (KLS7)
+tap OCT-
+wait 30
+expect mix 0
+tap GLO
+wait 30
+expect mix 1
+tap EDIT
+wait 30
+expect mix 0
+expect edit 1
+tap OCT-
+wait 30
+tap SAVE
+wait 50
+reboot
+wait 600
+expect part 3
+expect level 6
+tap SEL
+wait 30
+tap SEL
+wait 30
+expect part 1
+expect level 0

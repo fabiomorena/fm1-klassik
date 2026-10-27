@@ -3,8 +3,9 @@
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
 /* KLASSIK v0.5 (parts): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
  * Felucca-Engines (ANALOG, PHASE, WHEEL), DRUMS (four kits on Plaits' drum models) and ACID (Open303's TB-303), on
- * four parts that play at once, each its own sound and octave: SEL goes to the next part, and the keys, K1 (the
- * engine, in the rack's order), PRESET (its sound), OCT- / OCT+ (its octave) and EDIT are the chosen part's; MIDI
+ * four parts that play at once, each its own sound and octave: SEL, or SELECT turned, goes to the next part (SELECT
+ * to the left: the one before), and the keys, K1 (the engine, in the rack's order), PRESET (its sound), OCT- / OCT+
+ * (its octave) and EDIT are the chosen part's; MIDI
  * channel 1..4 plays part 1..4 (others the chosen part), the keys send on their part's channel. On ACID a key
  * pressed while ENV is held is accented (ACC in the header). EDIT opens the engine's two pages of four parameters
  * on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once (FM6's MOD, DTUN, ATK, DEC,
@@ -12,6 +13,8 @@
  * value (the preset's, or the USER sound's), marked on its bar while it is elsewhere.
  * SAVE keeps the parts (the one chosen, each one's engine, sounds and octave) across a power cycle, an edited sound
  * as its engine's USER sound (every part's).
+ * GLO opens the mixer: a strip a part (LEVEL, PAN, MUTE, SOLO on K1..K4 for the chosen part) and the master's
+ * meters; the output is stereo, through a limiter.
  * The screen: the header (the part and its engine, the sound's glyph and name, the octave, the battery), then the
  * six engine tiles (each with the parts that play it) or an edit page (its tabs, the sound's glyph large, its
  * spokes named; DRUMS: the octave's keys as pads, each with its instrument), and a row of what the knobs hold.
@@ -65,8 +68,8 @@ static int engine_at(int pos)                        /* the engine at that place
 }
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5336u                        /* "KLS6": another magic (v0.3's KLS5, DRUMS' KLS4, v0.2's KLS3,
-                                                     * v0.1's KLS2, v0's KLS1) loads defaults */
+#define SET_MAGIC 0x4B4C5337u                        /* "KLS7": another magic (the parts' KLS6, v0.3's KLS5, DRUMS'
+                                                     * KLS4, v0.2's KLS3, v0.1's KLS2, v0's KLS1) loads defaults */
 typedef struct {
     int8_t v[8];                                     /* the eight parameters */
     uint8_t base;                                    /* the preset it was made from: its envelopes and MONO */
@@ -77,6 +80,9 @@ typedef struct {
     uint8_t preset[KL_NENG];                         /* each engine's last sound on the part; kl_presets(e) is its
                                                      * USER sound */
     int8_t octave;                                   /* -2 .. +2 */
+    int8_t level;                                    /* the mixer: dB, -40 .. +6, LEVEL_OFF below */
+    int8_t pan;                                      /* -50 (left) .. 50 (right) */
+    uint8_t mute, solo;
 } part_set_t;
 typedef struct {
     uint32_t magic;
@@ -89,6 +95,7 @@ _Static_assert(sizeof(settings_t) <= PLAT_STORE_MAX, "the settings are one store
 static settings_t set, set_kept;                     /* as it is, and as the store has it (or the defaults at boot) */
 static uint8_t set_dirty;
 static const uint8_t PART_ENGINE[KL_NPART] = {KL_ANALOG, KL_DRUMS, KL_ACID, KL_FM6};   /* the parts at first */
+#define LEVEL_OFF (-41)                              /* the mixer's LEVEL below -40 dB: off */
 
 /* each part's sound of each engine as it plays: its preset's values or its USER sound's (orig), and whether EDIT has
  * any of them elsewhere (not saved) */
@@ -128,7 +135,8 @@ static int settings_ok(void)
         return 0;
     for (p = 0; p < KL_NPART; p++) {
         const part_set_t *ps = &set.parts[p];
-        if (ps->engine >= KL_NENG || ps->octave < -2 || ps->octave > 2)
+        if (ps->engine >= KL_NENG || ps->octave < -2 || ps->octave > 2 || ps->level < LEVEL_OFF || ps->level > 6 ||
+            ps->pan < -50 || ps->pan > 50 || ps->mute > 1 || ps->solo > 1)
             return 0;
         for (i = 0; i < KL_NENG; i++)
             if (ps->preset[i] >= kl_presets((int)i) + set.user[i].saved)
@@ -187,14 +195,48 @@ static void sound_select(int p)                      /* a part's sound to the DS
     kl_select(p, e, sound_base(p, e), work[p][e]);
 }
 
+/* ------------------------------------------------------------------ the mixer --- */
+static const int16_t LEVEL_Q11[47] = {               /* 2048 * 10^(dB / 20), rounded, for dB -40 .. +6 */
+    20, 23, 26, 29, 32, 36, 41, 46, 51, 58, 65, 73,
+    82, 91, 103, 115, 129, 145, 163, 183, 205, 230, 258, 289,
+    325, 364, 409, 458, 514, 577, 648, 727, 815, 915, 1026, 1152,
+    1292, 1450, 1627, 1825, 2048, 2298, 2578, 2893, 3246, 3642, 4086};
+static volatile int32_t mix_tgt[KL_NPART][2];        /* each part's gain to L and R, Q11: the main loop sets them */
+
+/* the gains from LEVEL, PAN, MUTE and SOLO: a soloed part mutes every part not soloed; PAN keeps the near side and
+ * turns the far one down (the middle: both at LEVEL, as without a mixer) */
+static void mix_update(void)
+{
+    int p, solo = 0;
+    for (p = 0; p < KL_NPART; p++)
+        solo |= set.parts[p].solo;
+    for (p = 0; p < KL_NPART; p++) {
+        const part_set_t *ps = &set.parts[p];
+        int32_t g = ps->level < -40 || ps->mute || (solo && !ps->solo) ? 0 : LEVEL_Q11[ps->level + 40];
+        mix_tgt[p][0] = g * (ps->pan > 0 ? 50 - ps->pan : 50) / 50;
+        mix_tgt[p][1] = g * (ps->pan < 0 ? 50 + ps->pan : 50) / 50;
+    }
+}
+
 /* ------------------------------------------------------------------ audio --- */
 static int32_t part_buf[KL_NPART][APP_BLOCK];
 static int32_t gain_q8;                              /* MASTER's gain, gliding: no step at a block's edge */
+static int32_t mix_q19[KL_NPART][2];                 /* the parts' gains as they glide, Q19 (Q11 << 8) */
+static int32_t lim_q24 = 1 << 24;                    /* the limiter's gain, Q24 */
+static volatile int32_t out_peak[2];                 /* the output's peak, L and R, since the screen last looked */
+static volatile int32_t lim_low = 1 << 16;           /* the limiter's lowest gain (Q16) since the screen last looked */
+#ifdef PLAT_HOST
+static int32_t test_peak[2], test_lim = 1 << 16;     /* the same for the host's checks (app_expect reads and resets) */
+#endif
 static volatile uint32_t midi_seen;
+#define LIM_TOP 7919000                              /* the limiter's ceiling: -0.5 dBFS (8388607 * 10^(-0.5 / 20)) */
 
 /* (a * b) >> 7 in 64 bits, out of line: an inlined 64-bit multiply beside loads now and then leaves a register a bit
  * off on the FM-1 (base/bsp/docs/CPU.md) */
 static __attribute__((noinline)) int64_t mul_shr7(int32_t a, int32_t b) { return ((int64_t)a * b) >> 7; }
+static __attribute__((noinline)) int32_t mul_q16(int32_t a, int32_t g) { return (int32_t)(((int64_t)a * g) >> 16); }
+
+static int32_t clamp30(int64_t v) { return v > (1 << 30) ? 1 << 30 : v < -(1 << 30) ? -(1 << 30) : (int32_t)v; }
 
 static void midi_in(void)                            /* audio interrupt: the packets that came in, channel 1..4 to part
                                                      * 1..4, the others to the part chosen */
@@ -227,18 +269,45 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
             part_buf[p][i] = 0;
     kl_render(out, n);
     for (i = 0; i < n; i++) {
-        int64_t s;
-        int32_t mono = 0;
-        for (p = 0; p < KL_NPART; p++)
-            mono += part_buf[p][i];
+        int32_t c, sum[2] = {0, 0}, y[2], pk, lim;
+        for (p = 0; p < KL_NPART; p++) {             /* each part at its gains: L and R */
+            int32_t x = clamp(part_buf[p][i], -524287, 524287);   /* 2^19 * the most gain, 4086, fits 32 bits */
+            for (c = 0; c < 2; c++) {
+                mix_q19[p][c] += ((mix_tgt[p][c] << 8) - mix_q19[p][c]) >> 8;   /* ~6 ms */
+                sum[c] += x * (mix_q19[p][c] >> 8) >> 11;
+            }
+        }
         gain_q8 += (target - gain_q8) >> 8;          /* ~6 ms */
-        s = mul_shr7(mono, gain_q8 >> 8);            /* x32 at full MASTER, toward 24-bit */
-        if (s > 8388607)
-            s = 8388607;
-        else if (s < -8388607)
-            s = -8388607;
-        lr[2 * i] = (int32_t)s;
-        lr[2 * i + 1] = (int32_t)s;
+        for (c = 0; c < 2; c++)
+            y[c] = clamp30(mul_shr7(sum[c], gain_q8 >> 8));   /* x32 at full MASTER, toward 24-bit */
+        /* the limiter: down at once where a sample would pass the ceiling, back up in ~46 ms (2048 samples) */
+        pk = y[0] < 0 ? -y[0] : y[0];
+        pk = y[1] > pk ? y[1] : -y[1] > pk ? -y[1] : pk;
+        lim = lim_q24 >> 8;
+        if (mul_q16(pk, lim) > LIM_TOP) {
+            lim = (LIM_TOP << 4) / (pk >> 12);       /* LIM_TOP * 2^16 / pk, in 32 bits */
+            if (lim > 1 << 16)
+                lim = 1 << 16;
+            lim_q24 = lim << 8;
+        } else {
+            lim_q24 += ((1 << 24) - lim_q24) >> 11;
+        }
+        if (lim < lim_low)
+            lim_low = lim;
+        for (c = 0; c < 2; c++) {
+            int32_t v = clamp(mul_q16(y[c], lim), -8388607, 8388607), a = v < 0 ? -v : v;
+            lr[2 * i + (uint32_t)c] = v;
+            if (a > out_peak[c])
+                out_peak[c] = a;
+#ifdef PLAT_HOST
+            if (a > test_peak[c])
+                test_peak[c] = a;
+#endif
+        }
+#ifdef PLAT_HOST
+        if (lim < test_lim)
+            test_lim = lim;
+#endif
     }
 }
 
@@ -255,6 +324,7 @@ void app_init(void)
             sound_load(p, e);
         sound_select(p);
     }
+    mix_update();
 }
 
 /* --------------------------------------------------------------------- UI --- */
@@ -267,6 +337,9 @@ static struct {
     int8_t knote[NKEYS];                             /* the note each held key started (the octave may change) */
     uint8_t kpart[NKEYS];                            /* and on which part (SEL may change it meanwhile) */
     uint8_t edit, page;                              /* an edit page is open, which (0: EDIT 1, 1: EDIT 2) */
+    uint8_t mix, redraw_mix;                         /* the mixer is open; its strips again (the meters moved) */
+    uint32_t meter_at, lim_until;                    /* the meters last read; LIM lit until */
+    int32_t meter[2];                                /* the output's meters, L and R, in pixels */
     uint8_t redraw, redraw_pads;                     /* the whole screen; DRUMS' pads only (a hit lit or gone) */
     uint32_t hits, hit_until;                        /* the DSP's note count as last seen; the hit pad lit until */
     int8_t hit_pc;                                   /* the last note's semitone (C = 0) */
@@ -384,6 +457,34 @@ void app_say(const char *a, const char *b)
     announce(t);
 }
 
+/* a mixer knob's value as the screen shows it: K1 LEVEL "-6 dB" / "OFF", K2 PAN "C" / "L10" / "R25", K3 MUTE and
+ * K4 SOLO "ON" / "OFF"; short: as under a strip ("-6", "OFF") */
+static void mix_text(const part_set_t *ps, int32_t k, char *b, int short_form)
+{
+    char t[8];
+    b[0] = 0;
+    if (k == 0 && ps->level < -40) {
+        text_cat(b, "OFF");
+    } else if (k == 0) {
+        if (ps->level > 0)
+            text_cat(b, "+");
+        int_text(ps->level, t);
+        text_cat(b, t);
+        if (!short_form)
+            text_cat(b, " dB");
+    } else if (k == 1) {
+        text_cat(b, ps->pan < 0 ? "L" : ps->pan > 0 ? "R" : "C");
+        if (ps->pan) {
+            int_text(ps->pan < 0 ? -ps->pan : ps->pan, t);
+            text_cat(b, t);
+        }
+    } else {
+        text_cat(b, (k == 2 ? ps->mute : ps->solo) ? "ON" : "OFF");
+    }
+}
+
+static const char *const MIX_LABEL[4] = {"LEVEL", "PAN", "MUTE", "SOLO"};
+
 /* a screen reader that has just started listening (or asks) hears the whole screen */
 static void speak(void)
 {
@@ -402,6 +503,17 @@ static void speak(void)
             text_cat(t, ", EDITED");
         text_cat(t, ". OCTAVE ");
         text_cat(t, o);
+        if (ui.mix) {                                /* the mixer: the chosen part's strip */
+            text_cat(t, ". MIX");
+            for (k = 0; k < 4; k++) {
+                char v[12];
+                text_cat(t, ". ");
+                text_cat(t, MIX_LABEL[k]);
+                text_cat(t, " ");
+                mix_text(part_cur(), k, v, 0);
+                text_cat(t, v);
+            }
+        }
         if (ui.edit) {                               /* the page and what its knobs hold */
             text_cat(t, ". EDIT ");
             text_cat(t, kl_page_title(eng_cur(), ui.page));
@@ -415,11 +527,12 @@ static void speak(void)
     ann_tick(plat_ms());
 }
 
-static void part_step(int32_t d)                     /* SEL: the next part (1, 2, 3, 4, 1); EDIT closes */
+static void part_step(int32_t d)                     /* SEL, SELECT: the next part (1, 2, 3, 4, 1), or the one before;
+                                                     * an edit page closes */
 {
     char t[48] = "PART ";
     int hit;
-    set.part = (uint8_t)((set.part + KL_NPART + d) % KL_NPART);
+    set.part = (uint8_t)(((set.part + d) % KL_NPART + KL_NPART) % KL_NPART);
     dirty_update();
     ui.edit = 0;
     ui.redraw = 1;
@@ -470,6 +583,7 @@ static void page_show(uint32_t page)                 /* EDIT 1 (0) or EDIT 2 (1)
 {
     char t[24] = "EDIT ";
     ui.edit = 1;
+    ui.mix = 0;
     ui.page = (uint8_t)page;
     ui.redraw = 1;
     text_cat(t, kl_page_title(eng_cur(), (int)page));
@@ -518,6 +632,63 @@ static void param_reset(int32_t k)                   /* HOME + K1..K4 on an edit
     t[0] = 0;
     param_cat(t, k);
     announce(t);
+}
+
+static void mix_said(int32_t k)                      /* a screen reader hears the knob: "LEVEL -6 dB" */
+{
+    char t[32], v[12];
+    t[0] = 0;
+    text_cat(t, MIX_LABEL[k]);
+    text_cat(t, " ");
+    mix_text(part_cur(), k, v, 0);
+    text_cat(t, v);
+    announce(t);
+}
+
+static void mix_show(int on)                         /* GLO: the mixer open (an edit page closes), or shut */
+{
+    ui.mix = (uint8_t)(on != 0);
+    ui.edit = 0;
+    ui.redraw = 1;
+    announce(on ? "MIX" : "RACK");
+}
+
+static void mix_changed(int32_t k)
+{
+    mix_update();
+    dirty_update();
+    ui.redraw = 1;
+    mix_said(k);
+}
+
+/* K1..K4 on the mixer, the chosen part's: LEVEL a dB a detent (below -40 off), PAN a step of 50 a side, MUTE and
+ * SOLO on to the right, off to the left */
+static void mix_step(int32_t k, int32_t d)
+{
+    part_set_t *ps = part_cur();
+    if (k == 0)
+        ps->level = (int8_t)clamp(ps->level + d, LEVEL_OFF, 6);
+    else if (k == 1)
+        ps->pan = (int8_t)clamp(ps->pan + d, -50, 50);
+    else if (k == 2)
+        ps->mute = d > 0;
+    else
+        ps->solo = d > 0;
+    mix_changed(k);
+}
+
+static void mix_reset(int32_t k)                     /* HOME + K1..K4 on the mixer: 0 dB, the middle, off */
+{
+    part_set_t *ps = part_cur();
+    if (k == 0)
+        ps->level = 0;
+    else if (k == 1)
+        ps->pan = 0;
+    else if (k == 2)
+        ps->mute = 0;
+    else
+        ps->solo = 0;
+    mix_changed(k);
 }
 
 /* each edited sound becomes its engine's USER sound (two parts with the same engine edited: the chosen part's, else
@@ -600,6 +771,8 @@ static void input(void)
             continue;
         if (k == B_OCTDN && ui.edit)
             edit_close();                            /* back, as on Felucca's pages */
+        else if ((k == B_OCTDN && ui.mix) || k == B_GLO)
+            mix_show(!ui.mix);                       /* the mixer, open and shut */
         else if (k == B_OCTDN)
             octave_step(-1);
         else if (k == B_EDIT || (k == B_OCTUP && ui.edit))
@@ -612,7 +785,7 @@ static void input(void)
             part_step(1);
         else if (k == B_ENV && eng_cur() == KL_ACID)
             announce("ACCENT");                      /* held: the keys pressed now are accented */
-        else if (k == B_HOME && ui.edit)
+        else if (k == B_HOME && (ui.edit || ui.mix))
             app_say("RESET", "TURN K1-K4");          /* held: a knob turned goes back to its sound's value */
         else
             app_say(BTN_NAME[k], "SOON");            /* the pages behind the other buttons come later */
@@ -622,6 +795,12 @@ static void input(void)
             continue;
         if (k == EN_PRESET)
             preset_step(e);
+        else if (k == EN_SELECT)
+            part_step(e);                            /* the part, as SEL: to the right the next */
+        else if (ui.mix && k >= EN_K1 && (btn & 1u << B_HOME))
+            mix_reset((int32_t)(k - EN_K1));
+        else if (ui.mix && k >= EN_K1)
+            mix_step((int32_t)(k - EN_K1), e);
         else if (ui.edit && k >= EN_K1 && (btn & 1u << B_HOME))
             param_reset(ui.page * 4 + (int32_t)(k - EN_K1));
         else if (ui.edit && k >= EN_K1)
@@ -634,7 +813,7 @@ static void input(void)
     ui.keys = keys;
     ui.btn = btn;
     plat_glow(1);                                    /* the unlit buttons glow, readable in the dark */
-    plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u), keys);
+    plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u) | (ui.mix ? 1u << B_GLO : 0u), keys);
 }
 
 void app_input_only(void) { input(); }
@@ -735,6 +914,14 @@ static void draw_header(void)
     if (plat_ms() < ui.msg_until) {
         int32_t x = cv_text(8, 3, &FONT_B, ui.msg[0], K_TEXT);
         cv_text(x + 6, 3, &FONT_B, ui.msg[1], tl->col);
+    } else if (ui.mix) {                             /* the mixer: all four parts */
+        int32_t w = text_w(&FONT_XS, "MIX") + 8;
+        cv_rect(6, 4, w, 15, K_TEXT);
+        cv_text(10, 4, &FONT_XS, "MIX", K_GROUND);
+        cv_text(6 + w + 8, 3, &FONT_B, "PARTS 1-4", K_TEXT);
+        draw_battery(214, 6);
+        cv_blit(0, 0);
+        return;
     } else {
         uint8_t sh[8];
         char name[24];
@@ -893,12 +1080,34 @@ static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
     }
 }
 
+static void footer_mix(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])   /* K1..K4: the
+                                                                                             * chosen part's strip */
+{
+    const part_set_t *ps = part_cur();
+    int32_t i;
+    for (i = 0; i < 4; i++) {
+        lab[i][0] = 'K';
+        lab[i][1] = (char)('1' + i);
+        lab[i][2] = ' ';
+        lab[i][3] = 0;
+        text_cat(lab[i], MIX_LABEL[i]);
+        mix_text(ps, i, v[i], 0);
+        mark[i] = -1;
+    }
+    frac[0] = (ps->level - LEVEL_OFF) * 256 / (6 - LEVEL_OFF);
+    frac[1] = (ps->pan + 50) * 256 / 100;
+    frac[2] = ps->mute ? 256 : 0;
+    frac[3] = ps->solo ? 256 : 0;
+}
+
 static void draw_footer(void)                        /* what the controls hold, each with a bar of where it is */
 {
     const tile_t *tl = &TILES[TILE_OF[eng_cur()]];
     char lab[4][16], v[4][12];
     int32_t frac[4], mark[4], i;
-    if (ui.edit)
+    if (ui.mix)
+        footer_mix(lab, v, frac, mark);
+    else if (ui.edit)
         footer_edit(lab, v, frac, mark);
     else
         footer_rack(lab, v, frac, mark);
@@ -1024,10 +1233,118 @@ static void draw_edit(int32_t y0)
     cv_blit(0, (uint32_t)y0);
 }
 
+/* ---------------------------------------------------------------- the mixer --- */
+static int32_t meter_px(int32_t pk)                  /* a peak (24 bits) as a meter's height: -48 .. 0 dBFS in 88 px,
+                                                     * 6 dB a bit of the peak, its next three bits between */
+{
+    int32_t msb = 23, pos;
+    if (pk <= 0)
+        return 0;
+    while (msb > 0 && !(pk >> msb))
+        msb--;
+    pos = (msb - 15) * 8 + (msb >= 3 ? (pk >> (msb - 3)) & 7 : 0);
+    return clamp(pos, 0, 64) * 88 / 64;
+}
+
+static void meters_read(uint32_t now)                /* the output's peaks since the last look, falling 2 px a look */
+{
+    int32_t c;
+    for (c = 0; c < 2; c++) {
+        int32_t h = meter_px(out_peak[c]);
+        out_peak[c] = 0;
+        ui.meter[c] = h > ui.meter[c] - 2 ? h : ui.meter[c] - 2;
+    }
+    if (lim_low < 64000)                             /* ~-0.2 dB or more: the limiter is working */
+        ui.lim_until = now + 300u;
+    lim_low = 1 << 16;
+    ui.meter_at = now;
+    ui.redraw_mix = 1;
+}
+
+static void draw_mix(int32_t y0)                     /* the mixer's strips, the rows y0 .. y0 + 92 of the screen */
+{
+    int32_t p, i, solo = 0;
+    cv_begin(240, 93, K_GROUND);
+    for (p = 0; p < KL_NPART; p++)
+        solo |= set.parts[p].solo;
+    for (p = 0; p < KL_NPART; p++) {                 /* a strip a part: glyph, name, fader, LEVEL, PAN, M S */
+        const part_set_t *ps = &set.parts[p];
+        const tile_t *tl = &TILES[TILE_OF[ps->engine]];
+        int32_t x = 1 + p * 48, cx = x + 23, ly = ps->level < -40 ? 146 : 146 - (ps->level + 40) * 88 / 46;
+        int sel = p == set.part, dim = ps->mute || (solo && !ps->solo);
+        uint16_t bg = sel ? K_SURF2 : K_SURF;
+        uint8_t sh[8];
+        char t[12] = "";
+        cv_rect(x, 24 - y0, 46, 182, bg);
+        if (sel) {
+            cv_rect(x, 24 - y0, 46, 2, tl->col);
+            cv_rect(x, 204 - y0, 46, 2, tl->col);
+            cv_rect(x, 24 - y0, 2, 182, tl->col);
+            cv_rect(x + 44, 24 - y0, 2, 182, tl->col);
+        }
+        kl_shape(ps->engine, work[p][ps->engine], sh);
+        glyph_draw(cx, 34 - y0, 7, sh, tl->col, bg);
+        t[0] = (char)('1' + p);
+        t[1] = ' ';
+        t[2] = 0;
+        text_cat(t, tl->name);
+        text_fit(cx - clamp(text_w(&FONT_T, t), 0, 42) / 2, 43 - y0, 42, &FONT_T, t, sel ? tl->col : K_TEXT);
+        cv_rect(cx - 1, 58 - y0, 3, 88, K_LINE);
+        if (ps->level >= -40)
+            cv_rect(cx - 1, ly - y0, 3, 146 - ly, dim ? K_MUTED : tl->col);
+        cv_rect(cx - 9, ly - 2 - y0, 18, 5, K_TEXT);
+        mix_text(ps, 0, t, 1);
+        cv_text(cx - text_w(&FONT_T, t) / 2, 149 - y0, &FONT_T, t, K_TEXT);
+        cv_rect(cx - 17, 165 - y0, 34, 2, K_LINE);
+        disc(cx + ps->pan * 17 / 50, 166 - y0, 3, dim ? K_MUTED : tl->col);
+        mix_text(ps, 1, t, 1);
+        cv_text(cx - text_w(&FONT_T, t) / 2, 170 - y0, &FONT_T, t, K_MUTED);
+        for (i = 0; i < 2; i++) {                    /* M and S */
+            int on = i ? ps->solo : ps->mute;
+            int32_t bx = cx - 16 + i * 18;
+            const char *l = i ? "S" : "M";
+            if (on)
+                cv_rect(bx, 186 - y0, 14, 13, K_TEXT);
+            else
+                box_edge(bx, 186 - y0, 14, 13, 1, K_LINE);
+            cv_text(bx + (14 - text_w(&FONT_T, l)) / 2, 186 - y0, &FONT_T, l, on ? K_GROUND : K_MUTED);
+        }
+    }
+    {   /* MASTER: the pot, the output's meters, LIM */
+        int32_t x = 193, cx = x + 13, pct = (int32_t)(plat_master() * 100u / 4096u), my = 146 - pct * 88 / 100;
+        int lim = plat_ms() < ui.lim_until;
+        char v[8];
+        cv_rect(x, 24 - y0, 46, 182, K_SURF);
+        cv_text(x + (46 - text_w(&FONT_T, "MASTER")) / 2, 30 - y0, &FONT_T, "MASTER", K_TEXT);
+        cv_rect(cx - 1, 58 - y0, 3, 88, K_LINE);
+        cv_rect(cx - 1, my - y0, 3, 146 - my, K_TEXT);
+        cv_rect(cx - 8, my - 2 - y0, 16, 5, K_TEXT);
+        for (i = 0; i < 2; i++) {
+            int32_t mx = x + 27 + i * 8;
+            cv_rect(mx, 58 - y0, 5, 88, K_LINE);
+            cv_rect(mx, 146 - ui.meter[i] - y0, 5, ui.meter[i], K_GREEN);
+            cv_text(mx, 149 - y0, &FONT_T, i ? "R" : "L", K_MUTED);
+        }
+        v[0] = 0;
+        int_text(pct, v);
+        text_cat(v, "%");
+        cv_text(x + (46 - text_w(&FONT_T, v)) / 2, 165 - y0, &FONT_T, v, K_TEXT);
+        if (lim)
+            cv_rect(x + 8, 184 - y0, 30, 15, K_TEXT);
+        else
+            box_edge(x + 8, 184 - y0, 30, 15, 1, K_MUTED);
+        cv_text(x + 8 + (30 - text_w(&FONT_T, "LIM")) / 2, 185 - y0, &FONT_T, "LIM", lim ? K_GROUND : K_MUTED);
+    }
+    cv_blit(0, (uint32_t)y0);
+}
+
 static void draw(void)
 {
     draw_header();
-    if (ui.edit) {
+    if (ui.mix) {
+        draw_mix(22);
+        draw_mix(115);
+    } else if (ui.edit) {
         draw_edit(22);
         draw_edit(115);
     } else {
@@ -1067,9 +1384,15 @@ void app_frame(void)
             ui.msg_until = 0;
         ui.redraw = 1;
     }
+    if (ui.mix && now - ui.meter_at >= 50u)          /* the mixer's meters, 20 times a second */
+        meters_read(now);
     if (ui.redraw) {
-        ui.redraw = ui.redraw_pads = 0;
+        ui.redraw = ui.redraw_pads = ui.redraw_mix = 0;
         draw();
+    } else if (ui.redraw_mix) {                      /* the strips alone: the meters moved */
+        ui.redraw_mix = 0;
+        draw_mix(22);
+        draw_mix(115);
     } else if (ui.redraw_pads) {                     /* the pads alone: a hit costs two strips, not the screen */
         ui.redraw_pads = 0;
         draw_edit(22);
@@ -1110,6 +1433,24 @@ int app_expect(const char *what, int *got)
         *got = kl_voices(set.part);
     else if (!strcmp(what, "cost"))                  /* what they cost, tenths of an FM6 voice */
         *got = kl_cost_now();
+    else if (!strcmp(what, "mix"))                   /* the mixer is open */
+        *got = ui.mix;
+    else if (!strcmp(what, "level"))                 /* the chosen part's strip */
+        *got = part_cur()->level;
+    else if (!strcmp(what, "pan"))
+        *got = part_cur()->pan;
+    else if (!strcmp(what, "mute"))
+        *got = part_cur()->mute;
+    else if (!strcmp(what, "solo"))
+        *got = part_cur()->solo;
+    else if (!strcmp(what, "outl") || !strcmp(what, "outr")) {   /* the output's peak since the last ask, 24 bits */
+        int c = what[3] == 'r';
+        *got = test_peak[c];
+        test_peak[c] = 0;
+    } else if (!strcmp(what, "lim")) {               /* 1: the limiter held the level down since the last ask */
+        *got = test_lim < 64000;
+        test_lim = 1 << 16;
+    }
     else if (!strcmp(what, "dirty"))
         *got = set_dirty;
     else if (!strcmp(what, "edit"))

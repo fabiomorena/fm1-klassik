@@ -26,6 +26,23 @@ tap SEL
 wait 30
 expect part 1
 expect engine 0
+# SELECT turned does the same: to the right the next part, to the left the one before, round
+spin SELECT 1
+wait 30
+expect part 2
+said PART 2. DRUMS. 606
+spin SELECT -1
+wait 30
+expect part 1
+spin SELECT -1
+wait 30
+expect part 4
+spin SELECT -6
+wait 30
+expect part 2
+spin SELECT 3
+wait 30
+expect part 1
 # MIDI channel 1..4 plays part 1..4, all at once: VA (SAW LEAD), a bass drum, ACID, an FM6 chord
 midi 90 3C 64
 midi 91 24 64

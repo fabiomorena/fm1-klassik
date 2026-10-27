@@ -1,4 +1,4 @@
-# KLASSIK – Bedienung (v0.5, Teil Parts)
+# KLASSIK – Bedienung (v0.5, Teile Parts und Mixer)
 
 ## Parts
 
@@ -6,7 +6,8 @@ KLASSIK hat vier Parts, die gleichzeitig klingen, jeder mit eigener Engine, eige
 Anfang: Part 1 VA, 2 DRUMS, 3 ACID, 4 FM6. Die Kopfzeile zeigt den gewählten Part und seine Engine („1 VA“); auf
 jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt, die anderen umrandet).
 
-- **SEL** wählt den nächsten Part (1, 2, 3, 4, 1). Tasten, K1, PRESET, OCT− / OCT+ und EDIT gehören immer dem
+- **SEL** (der Taster) wählt den nächsten Part (1, 2, 3, 4, 1); der Drehregler **SELECT** ebenso, nach rechts den
+  nächsten, nach links den vorigen. Tasten, K1, PRESET, OCT− / OCT+ und EDIT gehören immer dem
   gewählten Part. Eine Taste, die beim Wechsel noch gehalten ist, klingt auf ihrem Part weiter, bis sie losgelassen
   wird.
 - **MIDI:** Kanal 1–4 spielt Part 1–4, die anderen Kanäle den gewählten Part. Die Tasten senden auf dem Kanal ihres
@@ -22,16 +23,36 @@ jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt,
 | Bedienelement | Was es tut |
 | --- | --- |
 | Tasten | spielen den gewählten Part (Anschlagdynamik; ACID: Accent mit ENV), senden die Noten über USB-MIDI |
-| SEL | nächster Part |
+| SEL, SELECT | nächster Part (SELECT nach links: voriger) |
 | K1 | Engine des Parts wählen, in der Reihenfolge des Racks: FM6, VA (ANALOG), PD (PHASE), ORGAN (WHEEL), DRUMS, ACID |
 | PRESET | Sound der Engine wählen; nach den Presets folgt USER, sobald die Engine einen eigenen Sound hat |
 | OCT- / OCT+ | Oktave des Parts −2 … +2 |
 | EDIT | Edit-Seiten der Engine öffnen |
+| GLO | Mixer öffnen und schließen |
 | ENV | bei ACID: gehalten, sind die angeschlagenen Noten akzentuiert (`ACC` in der Kopfzeile) |
 | SAVE | die Parts speichern: den gewählten, je Part Engine, Sounds und Oktave (leuchtet, solange etwas ungespeichert ist) |
 | MASTER | Lautstärke |
 
 MIDI-In über USB und TRS spielt ebenfalls.
+
+## Mixer
+
+GLO öffnet den Mixer (GLO leuchtet), GLO oder OCT− schließt ihn, EDIT wechselt zu den Edit-Seiten. Für jeden Part
+gibt es einen Kanalzug: Glyphe, Part und Engine, Fader, Pegel, Pan, M (Mute) und S (Solo). Der Zug des gewählten
+Parts ist umrandet, SEL wählt den nächsten. Die Tasten spielen weiter.
+
+| Regler | Was er tut |
+| --- | --- |
+| K1 LEVEL | Pegel des Parts, −40 … +6 dB in 1-dB-Schritten, darunter aus (OFF); am Anfang 0 dB |
+| K2 PAN | links (L50) … Mitte (C) … rechts (R50): die ferne Seite wird leiser, die nahe bleibt; in der Mitte beide voll |
+| K3 MUTE | nach rechts an, nach links aus |
+| K4 SOLO | nach rechts an, nach links aus; ist ein Part auf Solo, sind alle anderen stumm (außer weiteren Solo-Parts) |
+| HOME + K1–K4 | zurück auf 0 dB, Mitte, aus |
+
+Ein stummer Part erscheint grau. MASTER zeigt den MASTER-Regler, den Pegel des Ausgangs für links und rechts und
+`LIM`. Der Limiter hält den Ausgang unter −0,5 dBFS: Er greift sofort ein, wenn es lauter würde, und lässt in etwa
+50 ms wieder los. Solange er arbeitet, leuchtet `LIM`. Änderungen gleiten in wenigen Millisekunden, ohne Knacken.
+SAVE speichert den Mixer mit.
 
 ## Edit-Seiten
 

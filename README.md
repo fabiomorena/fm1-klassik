@@ -4,17 +4,18 @@ Eine eigene Firmware für den M-VAVE FM-1: mehrere klassische Synth-Engines in e
 übersichtlichen Oberfläche, in der jeder Sound ein eigenes Symbol hat (seine **Glyphe**: die acht Parameter des
 Sounds als acht Strahlen).
 
-**Status: v0.5 in Arbeit (Parts fertig, Mixer und Looper folgen), experimentell.** Getestet nur im Host-Simulator und im
+**Status: v0.5 in Arbeit (Parts und Mixer fertig, Looper folgt), experimentell.** Getestet nur im Host-Simulator und im
 Browser-Emulator, noch nicht auf einem FM-1.
 
 ![Rack im Host-Simulator (240×240)](docs/img/rack-va.png)
 ![DRUMS: die Tasten einer Oktave als Pads (240×240)](docs/img/drums-edit.png)
 ![ACID: die Filterseite mit Live-Glyphe (240×240)](docs/img/acid-edit.png)
 
-## Was es kann (Stand v0.5, Teil Parts)
+## Was es kann (Stand v0.5, Teile Parts und Mixer)
 
 - Vier Parts gleichzeitig, jeder mit eigener Engine, eigenem Sound und eigener Oktave; SEL wählt den Part, MIDI-Kanal
   1–4 spielt Part 1–4.
+- Mixer (GLO): je Part Pegel, Pan, Mute, Solo; Ausgang stereo mit Limiter.
 - Sechs Engines, sechs Stimmen je Part:
   - **FM6**: sechs Operatoren wie ein DX7, 32 Algorithmen, auf dem FM-Kern
     [msfa](https://github.com/google/music-synthesizer-for-android) (Apache-2.0, nach C portiert); acht eigene
