@@ -22,7 +22,7 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `base/` | fm1-base (Submodul, MPL-2.0): Plattform, Host-Simulator, Browser-Emulator, `tools/build.py`. **Nicht ändern.** |
 | `engines/` | Felucca-Engines (Submodul, MIT): ANALOG, PHASE, WHEEL, LOFI, TRIO, NOISE. **Nicht ändern.** |
 | `firmware/klassik/app.c`, `app.h` | die App (Unity-Build nach der Plattform): UI, Eingabe, Einstellungen, Audio-Ausgabe, Mixer, Looper |
-| `firmware/klassik/dsp/engines.c` | Stimmen-Host (o2-Einheit, MIT, nach `engines/tests/fe_host.c`): 4 Parts (`KL_NPART`, `prt[]`) zu je 6 Stimmen, gewichtete Obergrenze (`COST`, `KL_BUDGET`), eigene einfache ADSR; FM6, DRUMS und ACID mit eigenen Hüllkurven (`ownenv`, `done`); DRUMS: eine Stimme je Instrument (`same_note`); MONO-Presets (ACID): gehaltene Tasten (`held`), `legato` 1 = Slide, 2 = zurück zur gehaltenen Taste |
+| `firmware/klassik/dsp/engines.c` | Stimmen-Host (o2-Einheit, MIT, nach `engines/tests/fe_host.c`): 6 Parts (`KL_NPART`, `prt[]`) zu je 6 Stimmen, gewichtete Obergrenze (`COST`, `KL_BUDGET`), eigene einfache ADSR; FM6, DRUMS und ACID mit eigenen Hüllkurven (`ownenv`, `done`); DRUMS: eine Stimme je Instrument (`same_note`); MONO-Presets (ACID): gehaltene Tasten (`held`), `legato` 1 = Slide, 2 = zurück zur gehaltenen Taste |
 | `firmware/klassik/dsp/eng_fm6.c` | FM6 als `engine_t` (MPL-2.0): acht Makros, eigene Presets (DX7-Stimmen) |
 | `firmware/klassik/dsp/fm6/` | msfa nach C portiert (o2-Einheit, Apache-2.0, `LICENSE`); Änderungen im Dateikopf von `msfa.c` |
 | `firmware/klassik/tools/gen_fm6_tables.py` | rechnet msfas Tabellen beim Build (`gen` → `fm6_tables.h`, Apache-2.0) |
@@ -73,13 +73,14 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
 ## Klang (Stand v0.6)
-- Parts: vier gleichzeitig (am Anfang VA, DRUMS, ACID, FM6), SEL (Taster) oder SELECT (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem
-  gewählten (`set.part`, `part_cur()`, `eng_cur()` in `app.c`); MIDI-Kanal 1–4 = Part 1–4; `work`/`orig`/`edited`
+- Parts: sechs gleichzeitig (am Anfang VA, DRUMS, ACID, FM6, PD, ORGAN: `PART_ENGINE`), SEL (Taster) oder SELECT
+  (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem gewählten (`set.part`, `part_cur()`, `eng_cur()` in
+  `app.c`); MIDI-Kanal 1–6 = Part 1–6; Mixer drei Parts je Seite (die des gewählten), Looper, Step und FX alle sechs; `work`/`orig`/`edited`
   je Part und Engine. Obergrenze: alle Parts zusammen ≤ 240 Zehntel FM6-Stimmen.
 - Mixer (GLO; GLO/OCT+ wechselt MIX/SEND, OCT− schließt): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance),
   MUTE, SOLO, `send[2]` in `part_set_t`; `mix_update()` setzt `mix_tgt`, `snd_tgt` (nach LEVEL/MUTE/SOLO, vor PAN,
   quadratisch) und `ret_tgt`; `app_render` gleitet, mischt stereo, Limiter (−0,5 dBFS) vor dem harten Begrenzen.
-  Speicherformat `KLS8` (`KLS7` wird in `settings_load` übernommen).
+  Speicherformat `KLS9` (`KLS8` und `KLS7` mit vier Parts werden in `settings_load` übernommen).
 - Effekte (FX; FX/OCT+ wechselt DELAY/HALL; `set.fx[2][4]`, `fx_*` in `app.c`, `dsp/fx.c`): Send-Effekte, die Sends
   mono summiert, die Rückwege stereo vor dem Limiter. DELAY Ping-Pong (erstes Echo links), höchstens 0,5 s je Seite
   (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
@@ -146,7 +147,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
 | v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | erledigt (Simulator) |
-| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall) | erledigt (Simulator) |
+| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts | erledigt (Simulator) |
 | v0.7 | Preset-Liste, Glyphen-Browser (früher v0.4) | offen |
 | v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |
 | am Ende | Feinschliff: Klang nach Gehör, Design-Fragen | offen |

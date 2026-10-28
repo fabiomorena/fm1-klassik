@@ -1,8 +1,8 @@
-# KLASSIK's four parts in the host simulator, from the repository's root:
+# KLASSIK's six parts in the host simulator, from the repository's root:
 #   python3 base/tools/build.py firmware/klassik --host
 #   firmware/klassik/build/host/klassik_host firmware/klassik/tests/parts.txt firmware/klassik/build/host
 wait 600
-# at first: part 1 VA, 2 DRUMS, 3 ACID, 4 FM6; part 1 chosen
+# at first: part 1 VA, 2 DRUMS, 3 ACID, 4 FM6, 5 PD, 6 ORGAN (each engine once); part 1 chosen
 expect part 1
 expect engine 0
 shot rack-parts.png
@@ -24,6 +24,16 @@ expect part 4
 expect engine 3
 tap SEL
 wait 30
+expect part 5
+expect engine 1
+said PART 5. PD
+tap SEL
+wait 30
+expect part 6
+expect engine 2
+said PART 6. ORGAN
+tap SEL
+wait 30
 expect part 1
 expect engine 0
 # SELECT turned does the same: to the right the next part, to the left the one before, round
@@ -36,26 +46,30 @@ wait 30
 expect part 1
 spin SELECT -1
 wait 30
-expect part 4
-spin SELECT -6
+expect part 6
+spin SELECT -4
 wait 30
 expect part 2
-spin SELECT 3
+spin SELECT 5
 wait 30
 expect part 1
-# MIDI channel 1..4 plays part 1..4, all at once: VA (SAW LEAD), a bass drum, ACID, an FM6 chord
+# MIDI channel 1..6 plays part 1..6, all at once: VA (SAW LEAD), a bass drum, ACID, an FM6 chord, PD, ORGAN
 midi 90 3C 64
 midi 91 24 64
 midi 92 30 64
 midi 93 40 64
 midi 93 43 64
+midi 94 48 64
+midi 95 4C 64
 wait 50
-expect voices 5
+expect voices 7
 expect pvoices 1
 midi 80 3C 00
 midi 82 30 00
 midi 83 40 00
 midi 83 43 00
+midi 84 48 00
+midi 85 4C 00
 wait 3000
 expect voices 0
 # the keys play the part chosen, and send on its channel; a key let go after SEL ends its note on its own part
@@ -78,11 +92,27 @@ key 0 up
 wait 300
 expect voices 0
 expect_out USB 82 35 00
+# part 6's keys send on channel 6
+tap SEL
+wait 30
+tap SEL
+wait 30
+expect part 6
+out
+key 0 down 100
+wait 50
+expect_out USB 95 35 64
+key 0 up
+wait 50
+expect_out USB 85 35 00
+spin SELECT -2
+wait 30
+expect part 4
 # each part its own octave
 tap OCT-
 wait 30
 expect octave -1
-tap SEL
+spin SELECT 3
 wait 30
 expect part 1
 expect octave 0
@@ -107,7 +137,7 @@ spin PRESET 1
 wait 30
 expect preset 1
 said SOFT PAD
-tap SEL
+spin SELECT 3
 wait 30
 expect part 1
 expect engine 0
@@ -133,7 +163,7 @@ expect edited 0
 expect v1 20
 # the parts together sound at most the budget (240 tenths of an FM6 voice): six ORGAN 66, ACID 74, six FM6 60, six
 # VA (SOFT PAD) 48 would be 248; the oldest voice goes (the first organ note)
-tap SEL
+spin SELECT 3
 wait 30
 expect part 1
 spin PRESET 1
@@ -198,12 +228,8 @@ midi 80 4C 00
 midi 80 4D 00
 wait 4000
 expect voices 0
-# the parts are kept across a power cycle: the part chosen, each part's engine, sound and octave (KLS6)
-tap SEL
-wait 30
-tap SEL
-wait 30
-tap SEL
+# the parts are kept across a power cycle: the part chosen, each part's engine, sound and octave (KLS9)
+spin SELECT -1
 wait 30
 expect part 3
 tap OCT-
@@ -222,6 +248,14 @@ tap SEL
 wait 30
 expect part 4
 expect engine 3
+tap SEL
+wait 30
+expect part 5
+expect engine 1
+tap SEL
+wait 30
+expect part 6
+expect engine 2
 tap SEL
 wait 30
 expect part 1

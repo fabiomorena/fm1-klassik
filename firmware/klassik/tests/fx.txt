@@ -270,8 +270,8 @@ wait 30
 expect send1 0
 wait 6000
 expect fxawake1 0
-# the pages as the mockups (docs/design: Mixer-Send, FX-Delay, FX-Hall): part 1 VA DLY 20 HALL 35, part 2 DRUMS
-# HALL 15, part 3 ACID DLY 30 HALL 45 (chosen), part 4 FM6 DLY 50 HALL 60 and muted; FDBK 55 %, DECAY 70 %
+# the pages as the mockups (docs/design: Mixer-6-Page1, FX-6): part 1 VA DLY 20 HALL 35, part 2 DRUMS HALL 15, part
+# 3 ACID DLY 30 HALL 45 (chosen), part 4 FM6 DLY 50 HALL 60 and muted, part 5 PD DLY 40 HALL 20; FDBK 55 %, DECAY 70 %
 spin K1 20
 wait 30
 spin K2 35
@@ -296,6 +296,13 @@ expect mute 1
 tap OCT+
 wait 30
 tap SEL
+wait 30
+expect part 5
+spin K1 40
+wait 30
+spin K2 20
+wait 30
+spin SELECT -4
 wait 30
 expect part 1
 tap SEL
@@ -331,6 +338,31 @@ expect send1 45
 expect fx1 55
 expect fx5 70
 expect fx 0
+spin SELECT 2
+wait 30
+expect part 5
+expect send0 40
+spin SELECT -2
+wait 30
+expect part 3
+# the effects' settings with four parts (KLS8) are taken over: parts 1-4, their sends and the effects as they were,
+# parts 5 and 6 as at first
+kls8
+reboot
+wait 600
+expect part 3
+expect send0 30
+expect send1 45
+expect fx1 55
+expect fx5 70
+expect dirty 0
+spin SELECT 2
+wait 30
+expect part 5
+expect send0 0
+expect engine 1
+spin SELECT -2
+wait 30
 # v0.5's settings (KLS7) are taken over: the parts, their sounds and the mixer as they were, no sends, the effects at
 # their values
 kls7

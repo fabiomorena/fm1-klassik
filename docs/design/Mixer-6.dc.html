@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mixer – six parts, a page of three</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- Six parts (v0.6, decided 28.10.2026): the mixer shows three parts a page and the master on both. The page follows
+     the chosen part: SEL or SELECT goes 1 .. 6, parts 1-3 on the first page, 4-6 on the second (the header says
+     which, the two marks in the tab row light the page shown); no button of its own, GLO or OCT+ still switch MIX
+     and SEND, OCT- shuts it. The strips are wider than with four (62 px on the FM-1 instead of 46): longer send bars,
+     wider M and S. Everything else as Mixer-Send (20).
+     Here: part 5 PD chosen (page 4-6), part 4 FM6 muted -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #E8EAED; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">MIX</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">PARTS 4-6</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="Mixer with six parts: a page of three and the master" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">MIX</text>
+<rect x="10" y="28" width="34" height="3" fill="#E8EAED"/>
+<text x="60" y="22" font-size="17" font-weight="600" letter-spacing="1" fill="#9AA3B2">SEND</text>
+<rect x="456" y="12" width="14" height="10" rx="3" fill="#E8EAED"/>
+<rect x="436" y="12" width="14" height="10" rx="3" fill="#2A3242"/>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<rect x="2" y="42" width="124" height="334" rx="8" fill="#151922" stroke="none" stroke-width="4"/>
+<g opacity="0.45">
+<polygon points="28.0,64.1 34.4,63.6 40.0,70.0 34.1,76.1 28.0,83.0 21.4,76.6 20.2,70.0 21.9,63.9" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="46" y="76" font-size="19" font-weight="700" fill="#E8EAED">4 FM6</text>
+<rect x="61" y="102" width="6" height="124" rx="3" fill="#2A3242"/>
+<rect x="61" y="140" width="6" height="86" rx="3" fill="#4A5468"/>
+<rect x="44" y="135" width="40" height="10" rx="3" fill="#E8EAED"/>
+<text x="64" y="254" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="21" font-weight="600" fill="#E8EAED">-8</text>
+<rect x="18" y="266" width="92" height="4" rx="2" fill="#2A3242"/>
+<circle cx="87" cy="268" r="6" fill="#5CC8FF"/>
+<text x="64" y="292" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">R25</text>
+<text x="14" y="314" font-size="15" fill="#9AA3B2">DLY</text>
+<rect x="54" y="305" width="60" height="6" rx="3" fill="#2A3242"/>
+<rect x="54" y="305" width="30" height="6" rx="3" fill="#9AA3B2"/>
+<text x="14" y="336" font-size="15" fill="#9AA3B2">HALL</text>
+<rect x="54" y="327" width="60" height="6" rx="3" fill="#2A3242"/>
+<rect x="54" y="327" width="36" height="6" rx="3" fill="#9AA3B2"/>
+</g>
+<rect x="20" y="346" width="40" height="22" rx="4" fill="#E8EAED" stroke="#4A5468" stroke-width="2"/>
+<text x="40" y="363" text-anchor="middle" font-size="16" font-weight="700" fill="#0B0D11">M</text>
+<rect x="68" y="346" width="40" height="22" rx="4" fill="none" stroke="#4A5468" stroke-width="2"/>
+<text x="88" y="363" text-anchor="middle" font-size="16" font-weight="700" fill="#9AA3B2">S</text>
+<rect x="130" y="42" width="124" height="334" rx="8" fill="#1C2230" stroke="#FF7AB6" stroke-width="4"/>
+<g opacity="1">
+<polygon points="156.0,58.0 160.7,65.3 166.9,70.0 161.5,75.5 156.0,80.1 152.1,73.9 144.7,70.0 151.0,65.0" fill="#FF7AB6" fill-opacity="0.375" stroke="#FF7AB6" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="174" y="76" font-size="19" font-weight="700" fill="#FF7AB6">5 PD</text>
+<rect x="189" y="102" width="6" height="124" rx="3" fill="#2A3242"/>
+<rect x="189" y="129" width="6" height="97" rx="3" fill="#FF7AB6"/>
+<rect x="172" y="124" width="40" height="10" rx="3" fill="#E8EAED"/>
+<text x="192" y="254" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="21" font-weight="600" fill="#E8EAED">-4</text>
+<rect x="146" y="266" width="92" height="4" rx="2" fill="#2A3242"/>
+<circle cx="164" cy="268" r="6" fill="#FF7AB6"/>
+<text x="192" y="292" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">L30</text>
+<text x="142" y="314" font-size="15" fill="#9AA3B2">DLY</text>
+<rect x="182" y="305" width="60" height="6" rx="3" fill="#2A3242"/>
+<rect x="182" y="305" width="24" height="6" rx="3" fill="#9AA3B2"/>
+<text x="142" y="336" font-size="15" fill="#9AA3B2">HALL</text>
+<rect x="182" y="327" width="60" height="6" rx="3" fill="#2A3242"/>
+<rect x="182" y="327" width="12" height="6" rx="3" fill="#9AA3B2"/>
+</g>
+<rect x="148" y="346" width="40" height="22" rx="4" fill="none" stroke="#4A5468" stroke-width="2"/>
+<text x="168" y="363" text-anchor="middle" font-size="16" font-weight="700" fill="#9AA3B2">M</text>
+<rect x="196" y="346" width="40" height="22" rx="4" fill="none" stroke="#4A5468" stroke-width="2"/>
+<text x="216" y="363" text-anchor="middle" font-size="16" font-weight="700" fill="#9AA3B2">S</text>
+<rect x="258" y="42" width="124" height="334" rx="8" fill="#151922" stroke="none" stroke-width="4"/>
+<g opacity="1">
+<polygon points="284.0,61.4 291.7,62.3 292.6,70.0 291.7,77.7 284.0,78.6 276.3,77.7 275.4,70.0 276.3,62.3" fill="#7EE08A" fill-opacity="0.375" stroke="#7EE08A" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="302" y="76" font-size="19" font-weight="700" fill="#E8EAED">6 ORGAN</text>
+<rect x="317" y="102" width="6" height="124" rx="3" fill="#2A3242"/>
+<rect x="317" y="145" width="6" height="81" rx="3" fill="#7EE08A"/>
+<rect x="300" y="140" width="40" height="10" rx="3" fill="#E8EAED"/>
+<text x="320" y="254" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="21" font-weight="600" fill="#E8EAED">-10</text>
+<rect x="274" y="266" width="92" height="4" rx="2" fill="#2A3242"/>
+<circle cx="333" cy="268" r="6" fill="#7EE08A"/>
+<text x="320" y="292" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">R15</text>
+<text x="270" y="314" font-size="15" fill="#9AA3B2">DLY</text>
+<rect x="310" y="305" width="60" height="6" rx="3" fill="#2A3242"/>
+<text x="270" y="336" font-size="15" fill="#9AA3B2">HALL</text>
+<rect x="310" y="327" width="60" height="6" rx="3" fill="#2A3242"/>
+<rect x="310" y="327" width="30" height="6" rx="3" fill="#9AA3B2"/>
+</g>
+<rect x="276" y="346" width="40" height="22" rx="4" fill="none" stroke="#4A5468" stroke-width="2"/>
+<text x="296" y="363" text-anchor="middle" font-size="16" font-weight="700" fill="#9AA3B2">M</text>
+<rect x="324" y="346" width="40" height="22" rx="4" fill="none" stroke="#4A5468" stroke-width="2"/>
+<text x="344" y="363" text-anchor="middle" font-size="16" font-weight="700" fill="#9AA3B2">S</text>
+<rect x="386" y="42" width="92" height="334" rx="8" fill="#151922"/>
+<text x="432" y="78" text-anchor="middle" font-size="18" font-weight="700" fill="#E8EAED">MASTER</text>
+<rect x="413" y="102" width="6" height="124" rx="3" fill="#2A3242"/>
+<rect x="413" y="164" width="6" height="62" rx="3" fill="#E8EAED"/>
+<rect x="398" y="159" width="36" height="10" rx="3" fill="#E8EAED"/>
+<rect x="448" y="102" width="8" height="124" rx="2" fill="#2A3242"/>
+<rect x="448" y="149" width="8" height="77" rx="2" fill="#7EE08A"/>
+<text x="452" y="244" text-anchor="middle" font-size="14" fill="#9AA3B2">L</text>
+<rect x="462" y="102" width="8" height="124" rx="2" fill="#2A3242"/>
+<rect x="462" y="158" width="8" height="68" rx="2" fill="#7EE08A"/>
+<text x="466" y="244" text-anchor="middle" font-size="14" fill="#9AA3B2">R</text>
+<text x="432" y="272" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="20" font-weight="600" fill="#E8EAED">50%</text>
+<text x="394" y="314" font-size="15" fill="#9AA3B2">DLY</text>
+<rect x="432" y="305" width="40" height="6" rx="3" fill="#2A3242"/>
+<rect x="432" y="305" width="35" height="6" rx="3" fill="#4A5468"/>
+<text x="394" y="336" font-size="15" fill="#9AA3B2">HALL</text>
+<rect x="432" y="327" width="40" height="6" rx="3" fill="#2A3242"/>
+<rect x="432" y="327" width="35" height="6" rx="3" fill="#4A5468"/>
+<rect x="406" y="344" width="52" height="26" rx="5" fill="none" stroke="#E8EAED" stroke-width="2"/>
+<text x="432" y="363" text-anchor="middle" font-size="16" font-weight="700" fill="#E8EAED">LIM</text>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 LEVEL</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">-4 dB</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 79%; background: #FF7AB6"></span><span style="position: absolute; left: calc(87% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 PAN</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">L30</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 20%; background: #FF7AB6"></span><span style="position: absolute; left: calc(50% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 MUTE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">OFF</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: #FF7AB6"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4 SOLO</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">OFF</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: #FF7AB6"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

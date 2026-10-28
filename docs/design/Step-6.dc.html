@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Step sequencer – six parts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- Six parts (v0.6, decided 28.10.2026): the step sequencer with all six parts' rows (16 px on the FM-1 instead of
+     22), the held step's panel a little smaller below. Everything else as Step (18). Here: part 3 ACID chosen, its
+     step 9 held; part 6 ORGAN has no steps -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #E8EAED; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">STEP</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">3 ACID</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-label="Playing"><polygon points="2,1 13,7 2,13" fill="#7EE08A"></polygon></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">1.2</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="Step sequencer with six parts" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="600" letter-spacing="1" fill="#9AA3B2">LOOP</text>
+<text x="71" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">STEP</text>
+<rect x="71" y="28" width="45" height="3" fill="#E3F45E"/>
+<text x="470" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">BAR 1/2</text>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<text x="110.0" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" fill="#9AA3B2">1</text>
+<text x="203.0" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" fill="#9AA3B2">5</text>
+<rect x="216.2" y="42" width="20" height="20" rx="3" fill="#E8EAED"/>
+<text x="226.2" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" font-weight="600" fill="#0B0D11">6</text>
+<text x="296.0" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" fill="#9AA3B2">9</text>
+<text x="389.0" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" fill="#9AA3B2">13</text>
+<rect x="215.2" y="64" width="22" height="200" rx="3" fill="#2A3242" fill-opacity="0.5"/>
+<polygon points="18.0,73.5 21.8,77.2 25.0,81.0 23.9,86.9 18.0,87.0 14.7,84.3 12.6,81.0 15.3,78.3" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="32" y="87" font-size="15" font-weight="700" fill="#E8EAED">1 VA</text>
+<rect x="100.0" y="68" width="20" height="25" rx="3" fill="#FFB454" opacity="0.8"/>
+<rect x="123.2" y="68" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="146.5" y="68" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="169.8" y="68" width="20" height="25" rx="3" fill="#FFB454" opacity="0.8"/>
+<rect x="193.0" y="68" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="216.2" y="68" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="239.5" y="68" width="20" height="25" rx="3" fill="#FFB454" opacity="0.8"/>
+<rect x="262.8" y="68" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="286.0" y="68" width="20" height="25" rx="3" fill="#FFB454" opacity="0.8"/>
+<rect x="309.2" y="68" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="332.5" y="68" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="355.8" y="68" width="20" height="25" rx="3" fill="#FFB454" opacity="0.8"/>
+<rect x="379.0" y="68" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="402.2" y="68" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="425.5" y="68" width="20" height="25" rx="3" fill="#FFB454" opacity="0.8"/>
+<rect x="448.8" y="68" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<polygon points="18.0,108.8 23.9,108.1 24.0,114.0 23.3,119.3 18.0,119.4 13.4,118.6 14.2,114.0 13.6,109.6" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="32" y="120" font-size="15" font-weight="700" fill="#E8EAED">2 DRUMS</text>
+<rect x="100.0" y="101" width="20" height="25" rx="3" fill="#B9A2FF" opacity="0.8"/>
+<rect x="123.2" y="101" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="146.5" y="101" width="20" height="25" rx="3" fill="#B9A2FF" opacity="0.8"/>
+<rect x="169.8" y="101" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="193.0" y="101" width="20" height="25" rx="3" fill="#B9A2FF" opacity="0.8"/>
+<rect x="216.2" y="101" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="239.5" y="101" width="20" height="25" rx="3" fill="#B9A2FF" opacity="0.8"/>
+<rect x="262.8" y="101" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="286.0" y="101" width="20" height="25" rx="3" fill="#B9A2FF" opacity="0.8"/>
+<rect x="309.2" y="101" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="332.5" y="101" width="20" height="25" rx="3" fill="#B9A2FF" opacity="0.8"/>
+<rect x="355.8" y="101" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="379.0" y="101" width="20" height="25" rx="3" fill="#B9A2FF" opacity="0.8"/>
+<rect x="402.2" y="101" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="425.5" y="101" width="20" height="25" rx="3" fill="#B9A2FF" opacity="0.8"/>
+<rect x="448.8" y="101" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="2" y="131" width="476" height="31" rx="6" fill="#1C2230" stroke="#E3F45E" stroke-width="3"/>
+<polygon points="18.0,140.5 21.8,143.2 26.3,147.0 23.1,152.1 18.0,153.0 12.1,152.9 12.6,147.0 12.1,141.1" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="32" y="153" font-size="15" font-weight="700" fill="#E3F45E">3 ACID</text>
+<rect x="100.0" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="123.2" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="146.5" y="134" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="169.8" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="193.0" y="134" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="216.2" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="239.5" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="262.8" y="134" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="286.0" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="284.0" y="131" width="24" height="31" rx="4" fill="none" stroke="#E8EAED" stroke-width="3"/>
+<rect x="309.2" y="134" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="332.5" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="355.8" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="379.0" y="134" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="402.2" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<rect x="425.5" y="134" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="448.8" y="134" width="20" height="25" rx="3" fill="#E3F45E" opacity="1"/>
+<polygon points="18.0,175.9 22.4,175.6 26.3,180.0 22.2,184.2 18.0,189.0 13.4,184.6 12.6,180.0 13.8,175.8" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="32" y="186" font-size="15" font-weight="700" fill="#E8EAED">4 FM6</text>
+<rect x="100.0" y="167" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="123.2" y="167" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="146.5" y="167" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="169.8" y="167" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="193.0" y="167" width="20" height="25" rx="3" fill="#5CC8FF" opacity="0.8"/>
+<rect x="216.2" y="167" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="239.5" y="167" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="262.8" y="167" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="286.0" y="167" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="309.2" y="167" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="332.5" y="167" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="355.8" y="167" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="379.0" y="167" width="20" height="25" rx="3" fill="#5CC8FF" opacity="0.8"/>
+<rect x="402.2" y="167" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="425.5" y="167" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="448.8" y="167" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<polygon points="18.0,204.7 21.3,209.7 25.5,213.0 21.8,216.8 18.0,220.0 15.3,215.7 10.2,213.0 14.5,209.5" fill="#FF7AB6" fill-opacity="0.375" stroke="#FF7AB6" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="32" y="219" font-size="15" font-weight="700" fill="#E8EAED">5 PD</text>
+<rect x="100.0" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="123.2" y="200" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="146.5" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="169.8" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="193.0" y="200" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="216.2" y="200" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="239.5" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="262.8" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="286.0" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="309.2" y="200" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="332.5" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="355.8" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="379.0" y="200" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="402.2" y="200" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="425.5" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<rect x="448.8" y="200" width="20" height="25" rx="3" fill="#FF7AB6" opacity="0.8"/>
+<polygon points="18.0,240.0 23.3,240.7 24.0,246.0 23.3,251.3 18.0,252.0 12.7,251.3 12.0,246.0 12.7,240.7" fill="#7EE08A" fill-opacity="0.375" stroke="#7EE08A" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="32" y="252" font-size="15" font-weight="700" fill="#E8EAED">6 ORGAN</text>
+<rect x="100.0" y="233" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="123.2" y="233" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="146.5" y="233" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="169.8" y="233" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="193.0" y="233" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="216.2" y="233" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="239.5" y="233" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="262.8" y="233" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="286.0" y="233" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="309.2" y="233" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="332.5" y="233" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="355.8" y="233" width="20" height="25" rx="3" fill="#2A303D" opacity="1"/>
+<rect x="379.0" y="233" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="402.2" y="233" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="425.5" y="233" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="448.8" y="233" width="20" height="25" rx="3" fill="#1C2230" opacity="1"/>
+<rect x="2" y="268" width="476" height="114" rx="6" fill="#151922"/>
+<text x="16" y="294" font-size="17" font-weight="700" fill="#E3F45E">STEP 09 - 3 ACID</text>
+<text x="464" y="294" text-anchor="end" font-size="15" fill="#9AA3B2">HELD</text>
+<text x="16" y="322" font-size="15" fill="#9AA3B2">NOTE</text>
+<text x="16" y="352" font-size="24" font-weight="700" fill="#E8EAED">C2</text>
+<text x="166" y="322" font-size="15" fill="#9AA3B2">VEL</text>
+<text x="166" y="352" font-size="24" font-weight="700" fill="#E8EAED">96</text>
+<text x="316" y="322" font-size="15" fill="#9AA3B2">LEN</text>
+<text x="316" y="352" font-size="24" font-weight="700" fill="#E8EAED">1/16</text>
+<text x="16" y="374" font-size="14" fill="#9AA3B2">WHITE KEYS: STEPS - HOLD ONE, TURN K2-K4</text>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 BAR</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">1/2</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: #E3F45E"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 NOTE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">C2</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 33%; background: #E3F45E"></span><span style="position: absolute; left: calc(50% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 VEL</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">96</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 76%; background: #E3F45E"></span><span style="position: absolute; left: calc(79% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4 LEN</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">1/16</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 12%; background: #E3F45E"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena */
-/* KLASSIK's sound, as the app sees it (dsp/engines.c, compiled apart at -O2): four parts, each its own sound. The
+/* KLASSIK's sound, as the app sees it (dsp/engines.c, compiled apart at -O2): six parts, each its own sound. The
  * main loop asks (kl_select, kl_key); the audio interrupt plays (kl_render, and kl_key_now for MIDI that arrives
  * there).
  * A sound is an engine, a preset (its envelope, filter envelope and MONO) and eight parameters (EDIT 1, EDIT 2):
@@ -10,7 +10,7 @@
 
 enum { KL_ANALOG, KL_PHASE, KL_WHEEL, KL_FM6, KL_DRUMS, KL_ACID, KL_NENG };
 enum { KL_INT, KL_PCT, KL_ENUM };           /* how a parameter's value reads */
-#define KL_NPART 4                          /* parts, each its own sound (MIDI channels 1..4) */
+#define KL_NPART 6                          /* parts, each its own sound (MIDI channels 1..6) */
 #define KL_BUDGET 240                       /* what all parts may sound at once, in tenths of an FM6 voice (engines.c
                                              * COST; an estimate until measured on an FM-1) */
 

@@ -2,15 +2,15 @@
 
 ## Parts
 
-KLASSIK hat vier Parts, die gleichzeitig klingen, jeder mit eigener Engine, eigenem Sound und eigener Oktave. Am
-Anfang: Part 1 VA, 2 DRUMS, 3 ACID, 4 FM6. Die Kopfzeile zeigt den gewählten Part und seine Engine („1 VA“); auf
+KLASSIK hat sechs Parts, die gleichzeitig klingen, jeder mit eigener Engine, eigenem Sound und eigener Oktave. Am
+Anfang spielt jeder Part eine andere Engine: Part 1 VA, 2 DRUMS, 3 ACID, 4 FM6, 5 PD, 6 ORGAN. Die Kopfzeile zeigt den gewählten Part und seine Engine („1 VA“); auf
 jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt, die anderen umrandet).
 
-- **SEL** (der Taster) wählt den nächsten Part (1, 2, 3, 4, 1); der Drehregler **SELECT** ebenso, nach rechts den
+- **SEL** (der Taster) wählt den nächsten Part (1, 2, … 6, 1); der Drehregler **SELECT** ebenso, nach rechts den
   nächsten, nach links den vorigen. Tasten, K1, PRESET, OCT− / OCT+ und EDIT gehören immer dem
   gewählten Part. Eine Taste, die beim Wechsel noch gehalten ist, klingt auf ihrem Part weiter, bis sie losgelassen
   wird.
-- **MIDI:** Kanal 1–4 spielt Part 1–4, die anderen Kanäle den gewählten Part. Die Tasten senden auf dem Kanal ihres
+- **MIDI:** Kanal 1–6 spielt Part 1–6, die anderen Kanäle den gewählten Part. Die Tasten senden auf dem Kanal ihres
   Parts.
 - Jeder Part merkt sich je Engine seinen Sound und seine Änderungen. Zwei Parts können dieselbe Engine mit
   verschiedenen Sounds spielen.
@@ -43,8 +43,10 @@ MIDI-In über USB und TRS spielt ebenfalls.
 
 GLO öffnet den Mixer auf dem Tab MIX (GLO leuchtet); GLO oder OCT+ wechselt zum Tab SEND und zurück (wie SEQ auf
 der Looper-Seite), OCT− schließt ihn, EDIT, SEQ und FX wechseln zu ihren Seiten. Für jeden Part gibt es einen
-Kanalzug: Glyphe, Part und Engine, Fader, Pegel, Pan, die Sends DLY und HALL als Balken, M (Mute) und S (Solo). Der
-Zug des gewählten Parts ist umrandet, SEL wählt den nächsten. Farbig ist, was die Regler des Tabs gerade drehen (MIX:
+Kanalzug: Glyphe, Part und Engine, Fader, Pegel, Pan, die Sends DLY und HALL als Balken, M (Mute) und S (Solo).
+Der Mixer zeigt drei Parts auf einmal, dazu MASTER: die Seite des gewählten Parts, 1–3 oder 4–6 (Kopfzeile
+`PARTS 1-3` bzw. `PARTS 4-6`; zwei kleine Marken rechts in der Tab-Zeile, die helle ist die Seite). SEL oder
+SELECT wechselt den Part und damit, wenn nötig, die Seite. Der Zug des gewählten Parts ist umrandet. Farbig ist, was die Regler des Tabs gerade drehen (MIX:
 die Fader, SEND: die Sends). Die Tasten spielen weiter.
 
 **Tab MIX:**
@@ -83,7 +85,7 @@ vor den Limiter.
 
 FX öffnet die Effekt-Seite auf dem Tab DELAY (FX leuchtet); FX oder OCT+ wechselt zu HALL und zurück, OCT− schließt
 sie, EDIT, GLO und SEQ wechseln zu ihren Seiten. Oben ein Bild des Effekts, darunter für jeden Part, wie viel er an
-diesen Effekt schickt (der gewählte umrandet, ein stummer grau mit `M`). Die Tasten spielen weiter.
+diesen Effekt schickt (sechs Kacheln, der gewählte umrandet, ein stummer grau mit `M`). Die Tasten spielen weiter.
 
 **DELAY:** Das erste Echo kommt links, das nächste rechts, dann wieder links, jedes um FDBK leiser und mit TONE
 dunkler. Das Bild zeigt die Note und ihre Echos (links nach oben, rechts nach unten), darüber steht, was gespielt wird
@@ -115,7 +117,7 @@ kostet dann keine Rechenzeit). SAVE speichert die Effekte und die Sends mit.
 
 ## Looper
 
-Der Looper nimmt Noten auf, keinen Klang: was die Tasten und MIDI dem gewählten Part spielen. Alle vier Parts teilen
+Der Looper nimmt Noten auf, keinen Klang: was die Tasten und MIDI dem gewählten Part spielen. Alle sechs Parts teilen
 sich eine Schleife (Länge und Tempo); jeder Part hat darin seine eigene Spur. Die Loops liegen im RAM und sind nach
 dem Ausschalten weg; Tempo, QUANT und CLICK auch (sie stehen dann wieder auf 120 BPM, 1/16, REC).
 
@@ -132,9 +134,10 @@ dem Ausschalten weg; Tempo, QUANT und CLICK auch (sie stehen dann wieder auf 120
 rückt an den Anfang. Nach 16 Takten steht die Länge von selbst fest.
 
 **Die Looper-Seite** (SEQ öffnet sie auf dem Tab LOOP; SEQ oder OCT+ wechselt zum Tab STEP, wie EDIT und OCT+ auf den
-Edit-Seiten; OCT− zurück; EDIT, GLO und FX wechseln zu ihren Seiten): je Part eine Spur mit Glyphe, Name
-und seinen Noten (höher = weiter oben, DRUMS eine Zeile je Instrument), die Taktstriche, die weiße Linie, wo gerade
-gespielt wird. Die Spur des gewählten Parts ist umrandet, `REC` steht an der, die aufnimmt; ein stummer Part (Mixer)
+Edit-Seiten; OCT− zurück; EDIT, GLO und FX wechseln zu ihren Seiten): alle sechs Parts je eine Spur mit Glyphe und
+Name in einer Zeile und seinen Noten (höher = weiter oben, DRUMS eine Zeile je Instrument), die Taktstriche, die
+weiße Linie, wo gerade gespielt wird. Die Spur des gewählten Parts ist umrandet, ein roter Punkt steht vor der, die
+aufnimmt; ein stummer Part (Mixer)
 ist grau. Oben die Taktnummern, die gerade spielende hell. Die Tasten spielen weiter.
 
 | Regler | Was er tut |
@@ -155,7 +158,8 @@ fasst 1024 Noten; ist sie voll, kommen keine neuen dazu (`FULL 2 DRUMS`).
 
 ## Step-Sequencer
 
-Der Tab STEP der Looper-Seite (SEQ oder OCT+) zeigt einen Takt der Schleife als 16 Steps zu 1/16, eine Reihe je Part.
+Der Tab STEP der Looper-Seite (SEQ oder OCT+) zeigt einen Takt der Schleife als 16 Steps zu 1/16, eine Reihe je Part
+(alle sechs).
 Es sind dieselben Noten wie im Looper: Ein Step ist gesetzt, wo eine Note des Parts in ihm beginnt (bis 1/32 davor
 oder danach). Live Eingespieltes erscheint also als Steps und lässt sich hier nachbearbeiten. Der Step, der gerade
 spielt, leuchtet in allen Reihen auf, seine Nummer oben auch.

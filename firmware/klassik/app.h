@@ -32,6 +32,7 @@ int app_expect(const char *what, int *got);
 /* the simulator's reboot: the app forgets what the RAM would (the page open, a message) */
 #define APP_HOST_REBOOT
 void app_host_reboot(void);
-/* the simulator's own command: kls7 (the settings saved as v0.5's KLS7 would have them, for the takeover's check) */
+/* the simulator's own commands: kls8, kls7 (the settings saved as KLS8 or v0.5's KLS7 would have them, four parts:
+ * for the takeover's check) */
 #define APP_HOST_CMD
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d);

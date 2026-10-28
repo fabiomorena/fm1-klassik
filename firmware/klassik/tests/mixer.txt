@@ -167,9 +167,7 @@ reboot
 wait 600
 expect part 3
 expect level 6
-tap SEL
-wait 30
-tap SEL
+spin SELECT -2
 wait 30
 expect part 1
 expect level 0

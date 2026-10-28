@@ -34,9 +34,15 @@ Browser keine Wirkung.
 | `Mixer-Send` | 20 Mixer von v0.6, Tab SEND neben MIX (GLO öffnet auf MIX, GLO oder OCT+ wechselt den Tab, OCT− zurück): dieselben Züge in beiden Tabs, jetzt mit den Sends DLY und HALL als Balken; K1 DELAY und K2 HALL senden den gewählten Part (0–100, nach dem Fader, vor Pan: die Effekte nehmen mono), K3/K4 frei (später Chorus/Drive); HOME + K1/K2 zurück auf 0. MASTER zeigt die Rückwege (LEVEL der FX-Seite) |
 | `FX-Delay` | 21 FX-Seite (FX öffnet auf DELAY, FX oder OCT+ wechselt zu HALL, OCT− zurück): Ping-Pong-Delay im TEMPO des Loopers, höchstens 0,5 s je Seite; Bild: Note und Echos L/R; darunter die Sends der vier Parts; K1 TIME (1/32 … 1/4, punktiert, triolisch; über 0,5 s die halbe Zeit), K2 FDBK, K3 TONE, K4 LEVEL; HOME + K1–K4: 1/8., 35 %, 70 %, 0 dB |
 | `FX-Hall` | 22 FX-Seite, Tab HALL: Rings-Hall (feste Räume, kein SIZE); Bild: Note, Lücke PRE, Nachhall L/R; K1 PRE (0–100 ms), K2 DECAY, K3 TONE, K4 LEVEL; HOME + K1–K4: 20 ms, 50 %, 60 %, 0 dB |
+| `Mixer-6-Page1` | 23a Sechs Parts (entschieden 28.10.2026): derselbe Mixer, Seite 1–3 (Part 3 ACID gewählt) |
+| `Mixer-6` | 23b **Sechs Parts** (entschieden 28.10.2026, umgesetzt): Mixer mit drei Parts je Seite und MASTER auf beiden; die Seite folgt dem gewählten Part (SEL/SELECT 1–6: 1–3 die erste, 4–6 die zweite; zwei Marken in der Tab-Zeile), kein eigener Taster; Züge 62 statt 46 px breit. Hier Seite 4–6, Part 5 PD gewählt |
+| `Looper-6` | 24 Sechs Parts, Variante A (gewählt, umgesetzt): alle sechs Spuren auf einer Seite, je 24 px hoch (statt 37), Glyphe und Name in einer Zeile, ein roter Punkt davor bei Aufnahme |
+| `Looper-6-Pages` | 25 Sechs Parts, Variante B (nicht gewählt): drei Spuren je Seite wie beim Mixer (49 px hoch), die anderen drei sind dann nicht zu sehen |
+| `Step-6` | 26 Sechs Parts (umgesetzt): Step-Sequencer mit sechs Reihen (16 statt 22 px), die Angaben zum gehaltenen Step etwas kleiner |
+| `FX-6` | 27 Sechs Parts (umgesetzt): FX-Seite mit den Sends als 3 × 2 Kacheln (78 × 36 px) |
 
 `png/`: Renderings vom 26.10.2026, ohne die Webfonts des Canvas erstellt (daher breitere Ersatzschrift und vereinzelt
-Umbrüche); `Main.png`, `Edit-DRUMS.png`, `Edit-ACID.png`, `Edit-Reset.png`, `Rack-Parts.png`, `Mixer-Parts.png`, `Looper.png`, `Looper-Rack.png` (27.10.2026), `Step.png`, `Step-DRUMS.png` und `Looper.png` (Tab-Zeile, 28.10.2026), `Mixer-Send.png`, `FX-Delay.png`, `FX-Hall.png` (28.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
+Umbrüche); `Main.png`, `Edit-DRUMS.png`, `Edit-ACID.png`, `Edit-Reset.png`, `Rack-Parts.png`, `Mixer-Parts.png`, `Looper.png`, `Looper-Rack.png` (27.10.2026), `Step.png`, `Step-DRUMS.png` und `Looper.png` (Tab-Zeile, 28.10.2026), `Mixer-Send.png`, `FX-Delay.png`, `FX-Hall.png` (28.10.2026), `Mixer-6-Page1.png`, `Mixer-6.png`, `Looper-6.png`, `Looper-6-Pages.png`, `Step-6.png`, `FX-6.png` (28.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
 
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --hide-scrollbars \
         --user-data-dir=/tmp/chrome-mockups --window-size=480,480 \

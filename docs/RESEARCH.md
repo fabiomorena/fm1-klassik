@@ -309,6 +309,11 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
 - **RAM mit vier Parts** (`tools/device_check.py`): `.data` + `.bss` von 35 052 B auf 53 040 B von 98 304 B. Das
   sind 18 KB für die drei zusätzlichen Parts (Stimmen, Zustände der Engines, je ein Ausgabepuffer). App 207 704 B.
 
+- **Sechs Parts** (28.10.2026, `tools/device_check.py`): RAM `.data` + `.bss` 61 784 → 73 864 B von 98 304 B
+  (+12 080 B für zwei Parts, geschätzt aus den vier Parts: 2 × 6 000 B); Pool 272 900 → 289 284 B von 344 064 B
+  (+2 × 8 192 B Looper-Spuren, 2 048 Ereignisse × 4 B); App 234 128 B. Die Obergrenze (`KL_BUDGET` 240) gilt für alle
+  Parts zusammen: mehr Parts heißt nicht mehr Stimmen.
+
 ## Mixer: Messungen (Stand 27.10.2026, nur Simulator)
 
 - **Pegel:** LEVEL ist eine Tabelle 2048 × 10^(dB/20) (Q11) für −40 … +6 dB. Part 1 (VA, SAW LEAD, MASTER 50 %) misst

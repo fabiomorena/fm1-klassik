@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Looper – six lanes on one page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- Six parts (v0.6, decided 28.10.2026), variant A: all six lanes on one page, each 24 px high on the FM-1 (37 with
+     four): the glyph and the name on one line (a red dot before it while it records, instead of REC), the notes in a
+     flatter strip (DRUMS: its instruments closer together).
+     The point of the looper is the whole loop at a glance: what plays where, against one loop. Everything else as
+     Looper (16). Here: part 2 DRUMS records, part 6 ORGAN has nothing yet -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #E8EAED; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">LOOP</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">REC 2 DRUMS</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-label="Recording"><circle cx="7" cy="7" r="6" fill="#FF5C5C"></circle></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">3.2</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="Looper with six lanes on one page" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">LOOP</text>
+<rect x="10" y="28" width="45" height="3" fill="#B9A2FF"/>
+<text x="71" y="22" font-size="17" font-weight="600" letter-spacing="1" fill="#9AA3B2">STEP</text>
+<text x="470" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">4 BARS</text>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<text x="124.0" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">1</text>
+<rect x="134.4" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="156.8" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="179.1" y="56" width="2" height="6" fill="#2A3242"/>
+<text x="213.5" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">2</text>
+<rect x="223.9" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="246.2" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="268.6" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="292.0" y="40" width="22" height="22" rx="4" fill="#E8EAED"/>
+<text x="303.0" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" font-weight="600" fill="#0B0D11">3</text>
+<rect x="313.4" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="335.8" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="358.1" y="56" width="2" height="6" fill="#2A3242"/>
+<text x="392.5" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">4</text>
+<rect x="402.9" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="425.2" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="447.6" y="56" width="2" height="6" fill="#2A3242"/>
+<rect x="2" y="66" width="474" height="49" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<polygon points="27.0,82.1 31.3,86.2 34.8,90.5 33.6,97.1 27.0,97.1 23.4,94.1 21.0,90.5 24.0,87.5" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="95" font-size="15" font-weight="700" fill="#E8EAED">1 VA</text>
+<rect x="106.0" y="71" width="2" height="39" fill="#2A3242"/>
+<rect x="195.5" y="71" width="2" height="39" fill="#2A3242"/>
+<rect x="285.0" y="71" width="2" height="39" fill="#2A3242"/>
+<rect x="374.5" y="71" width="2" height="39" fill="#2A3242"/>
+<rect x="464.0" y="71" width="2" height="39" fill="#2A3242"/>
+<rect x="114.0" y="78.8" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="114.0" y="88.5" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="114.0" y="98.3" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="203.5" y="81.9" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="203.5" y="91.7" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="203.5" y="101.4" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="293.0" y="78.8" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="293.0" y="88.5" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="293.0" y="98.3" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="382.5" y="81.9" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="382.5" y="91.7" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="382.5" y="101.4" width="83.5" height="3.0" rx="1.5" fill="#FFB454"/>
+<rect x="2" y="119" width="474" height="49" rx="8" fill="#1C2230" stroke="#B9A2FF" stroke-width="4"/>
+<circle cx="11" cy="143" r="5" fill="#FF5C5C"/>
+<polygon points="27.0,137.8 33.6,136.9 33.6,143.5 32.9,149.4 27.0,149.5 21.9,148.6 22.7,143.5 22.1,138.6" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="148" font-size="15" font-weight="700" fill="#B9A2FF">2 DRUMS</text>
+<rect x="106.0" y="124" width="2" height="39" fill="#2A3242"/>
+<rect x="195.5" y="124" width="2" height="39" fill="#2A3242"/>
+<rect x="285.0" y="124" width="2" height="39" fill="#2A3242"/>
+<rect x="374.5" y="124" width="2" height="39" fill="#2A3242"/>
+<rect x="464.0" y="124" width="2" height="39" fill="#2A3242"/>
+<rect x="114.0" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="114.0" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="125.2" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="136.4" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="136.4" y="145.4" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="136.4" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="147.6" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="158.8" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="158.8" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="169.9" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="181.1" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="181.1" y="145.4" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="181.1" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="192.3" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="203.5" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="203.5" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="214.7" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="225.9" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="225.9" y="145.4" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="225.9" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="237.1" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="248.2" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="248.2" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="259.4" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="270.6" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="270.6" y="145.4" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="270.6" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="281.8" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="293.0" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="293.0" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="304.2" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="315.4" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="315.4" y="145.4" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="315.4" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="326.6" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="337.8" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="337.8" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="348.9" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="360.1" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="360.1" y="145.4" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="382.5" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="382.5" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="393.7" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="404.9" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="404.9" y="145.4" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="404.9" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="416.1" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="427.2" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="427.2" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="438.4" y="131.8" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="449.6" y="156.0" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="449.6" y="145.4" width="4.0" height="4.0" rx="1.5" fill="#B9A2FF"/>
+<rect x="2" y="172" width="474" height="49" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<polygon points="27.0,189.3 31.3,192.2 36.3,196.5 32.7,202.2 27.0,203.1 20.4,203.1 21.0,196.5 20.4,189.9" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="201" font-size="15" font-weight="700" fill="#E8EAED">3 ACID</text>
+<rect x="106.0" y="177" width="2" height="39" fill="#2A3242"/>
+<rect x="195.5" y="177" width="2" height="39" fill="#2A3242"/>
+<rect x="285.0" y="177" width="2" height="39" fill="#2A3242"/>
+<rect x="374.5" y="177" width="2" height="39" fill="#2A3242"/>
+<rect x="464.0" y="177" width="2" height="39" fill="#2A3242"/>
+<rect x="114.0" y="209.3" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="125.2" y="187.0" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="136.4" y="204.0" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="147.6" y="190.4" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="158.8" y="209.8" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="169.9" y="187.1" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="181.1" y="207.3" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="192.3" y="202.7" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="203.5" y="206.8" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="214.7" y="210.1" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="225.9" y="192.4" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="237.1" y="194.7" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="248.2" y="203.3" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="259.4" y="193.3" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="270.6" y="192.9" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="281.8" y="192.1" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="293.0" y="206.8" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="304.2" y="207.2" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="315.4" y="205.4" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="326.6" y="192.0" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="337.8" y="208.4" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="348.9" y="198.7" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="360.1" y="192.2" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="371.3" y="197.4" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="382.5" y="196.6" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="393.7" y="188.6" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="404.9" y="200.0" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="416.1" y="195.2" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="427.2" y="200.1" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="438.4" y="208.5" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="449.6" y="201.9" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="460.8" y="196.2" width="8.2" height="4.0" rx="1.5" fill="#E3F45E"/>
+<rect x="2" y="225" width="474" height="49" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<polygon points="27.0,244.9 31.9,244.6 36.3,249.5 31.7,254.2 27.0,259.5 21.9,254.6 21.0,249.5 22.3,244.8" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="254" font-size="15" font-weight="700" fill="#E8EAED">4 FM6</text>
+<rect x="106.0" y="230" width="2" height="39" fill="#2A3242"/>
+<rect x="195.5" y="230" width="2" height="39" fill="#2A3242"/>
+<rect x="285.0" y="230" width="2" height="39" fill="#2A3242"/>
+<rect x="374.5" y="230" width="2" height="39" fill="#2A3242"/>
+<rect x="464.0" y="230" width="2" height="39" fill="#2A3242"/>
+<rect x="114.0" y="243.7" width="161.1" height="4.0" rx="1.5" fill="#5CC8FF"/>
+<rect x="114.0" y="253.4" width="161.1" height="4.0" rx="1.5" fill="#5CC8FF"/>
+<rect x="293.0" y="243.7" width="161.1" height="4.0" rx="1.5" fill="#5CC8FF"/>
+<rect x="293.0" y="253.4" width="161.1" height="4.0" rx="1.5" fill="#5CC8FF"/>
+<rect x="2" y="278" width="474" height="49" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<polygon points="27.0,293.2 30.6,298.9 35.4,302.5 31.3,306.8 27.0,310.3 24.0,305.5 18.3,302.5 23.2,298.7" fill="#FF7AB6" fill-opacity="0.375" stroke="#FF7AB6" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="307" font-size="15" font-weight="700" fill="#E8EAED">5 PD</text>
+<rect x="106.0" y="283" width="2" height="39" fill="#2A3242"/>
+<rect x="195.5" y="283" width="2" height="39" fill="#2A3242"/>
+<rect x="285.0" y="283" width="2" height="39" fill="#2A3242"/>
+<rect x="374.5" y="283" width="2" height="39" fill="#2A3242"/>
+<rect x="464.0" y="283" width="2" height="39" fill="#2A3242"/>
+<rect x="114.0" y="314.2" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="125.2" y="308.4" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="136.4" y="302.5" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="147.6" y="296.6" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="158.8" y="314.2" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="169.9" y="308.4" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="181.1" y="302.5" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="192.3" y="296.6" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="203.5" y="314.2" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="214.7" y="308.4" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="225.9" y="302.5" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="237.1" y="296.6" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="248.2" y="314.2" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="259.4" y="308.4" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="270.6" y="302.5" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="281.8" y="296.6" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="293.0" y="314.2" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="304.2" y="308.4" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="315.4" y="302.5" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="326.6" y="296.6" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="337.8" y="314.2" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="348.9" y="308.4" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="360.1" y="302.5" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="371.3" y="296.6" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="382.5" y="314.2" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="393.7" y="308.4" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="404.9" y="302.5" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="416.1" y="296.6" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="427.2" y="314.2" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="438.4" y="308.4" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="449.6" y="302.5" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="460.8" y="296.6" width="7.2" height="4.0" rx="1.5" fill="#FF7AB6"/>
+<rect x="2" y="331" width="474" height="49" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<polygon points="27.0,348.9 32.9,349.6 33.6,355.5 32.9,361.4 27.0,362.1 21.1,361.4 20.4,355.5 21.1,349.6" fill="#7EE08A" fill-opacity="0.375" stroke="#7EE08A" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="360" font-size="15" font-weight="700" fill="#E8EAED">6 ORGAN</text>
+<rect x="106.0" y="336" width="2" height="39" fill="#2A3242"/>
+<rect x="195.5" y="336" width="2" height="39" fill="#2A3242"/>
+<rect x="285.0" y="336" width="2" height="39" fill="#2A3242"/>
+<rect x="374.5" y="336" width="2" height="39" fill="#2A3242"/>
+<rect x="464.0" y="336" width="2" height="39" fill="#2A3242"/>
+<text x="285" y="360" text-anchor="middle" font-size="15" fill="#9AA3B2">EMPTY</text>
+<rect x="315" y="40" width="3" height="340" fill="#E8EAED"/>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 TEMPO</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">98 BPM</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 29%; background: #B9A2FF"></span><span style="position: absolute; left: calc(40% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 LENGTH</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">4 BARS</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 25%; background: #B9A2FF"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 QUANT</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">1/16</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 50%; background: #B9A2FF"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4 CLICK</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">REC</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 50%; background: #B9A2FF"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>
