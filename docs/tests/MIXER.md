@@ -16,6 +16,9 @@ kommen zum Schluss. Die Sends (Tab `SEND`) prüft `FX.md`.
 
 Wenn du fertig bist: Datei speichern und mir „Protokoll fertig“ schreiben.
 
+**Achtung Pfeiltasten:** Hast du zuletzt einen Regler angeklickt, drehen ↑ / ↓ diesen Regler (im Rack K1 = die
+Engine!) statt SELECT. Für SELECT vorher einen Taster anklicken, oder das Mausrad über SELECT nehmen.
+
 Für Pan Kopfhörer nehmen (ob der Lautsprecher des FM-1 stereo ist, ist unbekannt).
 
 ## 0 Vorbereitung

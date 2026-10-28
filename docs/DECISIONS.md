@@ -82,12 +82,17 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 - Lizenz MPL-2.0 bestätigen oder ändern.
 - Kit-Namen „606“, „707“, „808“, „909“ vor dem ersten Release markenrechtlich prüfen (DPMA, USPTO; Roland hat 2019
   Designs von TR-808 und TB-303 angemeldet, RESEARCH.md).
-- Feinschliff am Ende: Klang nach Gehör (DRUMS-Kits nachstimmen, ACID-Presets), Design-Fragen.
+- Feinschliff am Ende: Klang nach Gehör (DRUMS-Kits nachstimmen, ACID-Presets), Design-Fragen; Looper-Spuren
+  (24 px) bleiben vorerst so (Fabio, 29.10.); im Rack-Kopf wird der Soundname bei laufender Schleife hart gekürzt
+  (`FULL ORGA`).
 - DRUMS-Rechenlast auf dem Gerät messen (Schätzung: 10–22 % von 360 MHz bei sechs Snare-Stimmen, unsicher).
 - FM6-Rechenlast auf dem Gerät messen (Schätzung: 7–13 % von 360 MHz bei sechs Stimmen, unsicher).
 - ACID-Rechenlast auf dem Gerät messen (Schätzung: 12–18 % von 360 MHz für die eine Stimme, unsicher).
 - FM6-Edit-Seite nach dem Mockup `Edit-FM6` (Algorithmus-Grafik, Pegel je Operator).
 - Looper: Loops speichern (Flash-Platz klären), MIDI-Clock senden und empfangen (Sync), Rechenlast auf dem Gerät.
+- Looper-Rückgängig je Part (Fabios Erwartung, LOOPER.md 29.10.): heute nimmt HOME + REC die letzte Aufnahme
+  zurück, egal welcher Part gewählt ist. Je Part kostet 5 × 2 048 × 4 B = 40 960 B Pool (289 284 → 330 244 von
+  344 064 B). Fabios Entscheidung offen.
 - Step-Längen: bleibt vorerst bei 16 Steps je Takt, Länge = LENGTH des Loopers in Takten (32, 64 … Steps); Fabio prüft,
   ob das passt (8 Steps, Länge je Part, Raster 1/8 oder 1/32 wären Erweiterungen), 28.10.
 - Effekte: Rechenlast auf dem Gerät messen (im Simulator Delay ≈ 0,26, Hall ≈ 1,0 FM6-Stimmen); ob `KL_BUDGET` dafür

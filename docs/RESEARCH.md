@@ -97,6 +97,10 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
 - **Browser-Emulator:** rechnet das ganze Gerät im Audio-Thread, je 128 Samples, auch das Neuzeichnen des
   Bildschirms (`base/web/emu/emu_web.c` `web_render`, `worklet.js`). Ob das bei schnellem Spiel Aussetzer macht, ist
   nicht gemessen; die Seite zeigt die mittlere Last („… uses …% of this computer's time“).
+- **Browser-Emulator, Pfeiltasten:** Ein Klick fokussiert den Regler (`hit`, `pointerdown` → `focus`); ein
+  fokussierter Regler nimmt ↑ / ↓ / ← / → selbst und reicht sie nicht weiter (`stopPropagation`), nur sonst drehen ↑ / ↓
+  SELECT (`base/web/emu/index.html`, Zeilen 236–237, 375–381, 449). Nach einem Klick auf K1 im Rack wechseln ↑ / ↓
+  also die Engine. Vermutliche Ursache von LOOPER C4 (29.10.2026, nicht nachgestellt).
 
 ## DRUMS und ACID: Quellen (Stand 26.10.2026)
 

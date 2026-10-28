@@ -19,6 +19,9 @@ Die fünf Protokolle `PARTS.md`, `MIXER.md`, `LOOPER.md`, `STEP.md` und `FX.md` 
 
 Wenn du fertig bist: Datei speichern und mir „Protokoll fertig“ schreiben.
 
+**Achtung Pfeiltasten:** Hast du zuletzt einen Regler angeklickt, drehen ↑ / ↓ diesen Regler (im Rack K1 = die
+Engine!) statt SELECT. Für SELECT vorher einen Taster anklicken, oder das Mausrad über SELECT nehmen.
+
 Im Browser nicht prüfbar: MIDI-In und -Out auf den Kanälen 1–6 (der Emulator hat kein Web-MIDI; das prüft der
 Host-Test), die Rechenlast auf dem Gerät.
 

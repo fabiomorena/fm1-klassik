@@ -16,6 +16,9 @@ wie Delay und Hall klingen, stimmen wir zum Schluss ab (Notizen dazu sind trotzd
 
 Wenn du fertig bist: Datei speichern und mir „Protokoll fertig“ schreiben.
 
+**Achtung Pfeiltasten:** Hast du zuletzt einen Regler angeklickt, drehen ↑ / ↓ diesen Regler (im Rack K1 = die
+Engine!) statt SELECT. Für SELECT vorher einen Taster anklicken, oder das Mausrad über SELECT nehmen.
+
 Für links/rechts Kopfhörer nehmen (ob der Lautsprecher des FM-1 stereo ist, ist unbekannt). HOME im Emulator: `Esc`;
 Taster festhalten: Shift-Klick.
 
