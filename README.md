@@ -4,20 +4,22 @@ Eine eigene Firmware für den M-VAVE FM-1: mehrere klassische Synth-Engines in e
 übersichtlichen Oberfläche, in der jeder Sound ein eigenes Symbol hat (seine **Glyphe**: die acht Parameter des
 Sounds als acht Strahlen).
 
-**Status: v0.5 (Parts, Mixer, Looper), experimentell.** Getestet nur im Host-Simulator und im
+**Status: v0.6 in Arbeit (Step-Sequencer fertig, Effekte folgen), experimentell.** Getestet nur im Host-Simulator und im
 Browser-Emulator, noch nicht auf einem FM-1.
 
 ![Rack im Host-Simulator (240×240)](docs/img/rack-va.png)
 ![DRUMS: die Tasten einer Oktave als Pads (240×240)](docs/img/drums-edit.png)
 ![ACID: die Filterseite mit Live-Glyphe (240×240)](docs/img/acid-edit.png)
 
-## Was es kann (Stand v0.5)
+## Was es kann (Stand v0.6, Teil Step-Sequencer)
 
 - Vier Parts gleichzeitig, jeder mit eigener Engine, eigenem Sound und eigener Oktave; SEL wählt den Part, MIDI-Kanal
   1–4 spielt Part 1–4.
 - Mixer (GLO): je Part Pegel, Pan, Mute, Solo; Ausgang stereo mit Limiter.
 - Noten-Looper (SEQ, PLAY, REC): eine Schleife für alle vier Parts, Overdub, die erste Aufnahme legt die Länge fest,
   Vorzähler und Klick, QUANT, eine Stufe Rückgängig (HOME + REC); die Kopfzeile zeigt Takt und Schlag.
+- Step-Sequencer (Tab STEP der Looper-Seite): 16 Steps je Takt auf denselben Noten, die weißen Tasten als Steps mit
+  Lauflicht, DRUMS je Instrument wie bei einer TR; Note, Anschlag und Länge je Step.
 - Sechs Engines, sechs Stimmen je Part:
   - **FM6**: sechs Operatoren wie ein DX7, 32 Algorithmen, auf dem FM-Kern
     [msfa](https://github.com/google/music-synthesizer-for-android) (Apache-2.0, nach C portiert); acht eigene

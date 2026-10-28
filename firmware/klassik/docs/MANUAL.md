@@ -1,4 +1,4 @@
-# KLASSIK – Bedienung (v0.5: Parts, Mixer, Looper)
+# KLASSIK – Bedienung (v0.6: Parts, Mixer, Looper, Step-Sequencer)
 
 ## Parts
 
@@ -29,7 +29,7 @@ jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt,
 | OCT- / OCT+ | Oktave des Parts −2 … +2 |
 | EDIT | Edit-Seiten der Engine öffnen |
 | GLO | Mixer öffnen und schließen |
-| SEQ | Looper-Seite öffnen und schließen |
+| SEQ | Looper-Seite öffnen (dort wechselt SEQ zwischen LOOP und STEP, OCT− schließt sie) |
 | PLAY, REC | Looper starten und stoppen, aufnehmen (auf jeder Seite, siehe Looper) |
 | HOME + REC, HOME + PLAY | letzte Aufnahme zurücknehmen, Part leeren (siehe Looper) |
 | ENV | bei ACID: gehalten, sind die angeschlagenen Noten akzentuiert (`ACC` in der Kopfzeile) |
@@ -75,7 +75,8 @@ dem Ausschalten weg; Tempo, QUANT und CLICK auch (sie stehen dann wieder auf 120
 (der nächste, 1–16), und die Schleife spielt weiter; PLAY beendet sie und stoppt. Was nach dem Ende gespielt wurde,
 rückt an den Anfang. Nach 16 Takten steht die Länge von selbst fest.
 
-**Die Looper-Seite** (SEQ, OCT− zurück; EDIT und GLO wechseln zu ihren Seiten): je Part eine Spur mit Glyphe, Name
+**Die Looper-Seite** (SEQ öffnet sie auf dem Tab LOOP; SEQ oder OCT+ wechselt zum Tab STEP, wie EDIT und OCT+ auf den
+Edit-Seiten; OCT− zurück; EDIT und GLO wechseln zu ihren Seiten): je Part eine Spur mit Glyphe, Name
 und seinen Noten (höher = weiter oben, DRUMS eine Zeile je Instrument), die Taktstriche, die weiße Linie, wo gerade
 gespielt wird. Die Spur des gewählten Parts ist umrandet, `REC` steht an der, die aufnimmt; ein stummer Part (Mixer)
 ist grau. Oben die Taktnummern, die gerade spielende hell. Die Tasten spielen weiter.
@@ -95,6 +96,30 @@ ist grau. Oben die Taktnummern, die gerade spielende hell. Die Tasten spielen we
 Hinweise: Der Looper beendet beim Abspielen nur Noten, die er selbst begonnen hat; spielt er aber genau die Note, die
 du gerade hältst, endet mit seiner auch deine. Eine Spur
 fasst 1024 Noten; ist sie voll, kommen keine neuen dazu (`FULL 2 DRUMS`).
+
+## Step-Sequencer
+
+Der Tab STEP der Looper-Seite (SEQ oder OCT+) zeigt einen Takt der Schleife als 16 Steps zu 1/16, eine Reihe je Part.
+Es sind dieselben Noten wie im Looper: Ein Step ist gesetzt, wo eine Note des Parts in ihm beginnt (bis 1/32 davor
+oder danach). Live Eingespieltes erscheint also als Steps und lässt sich hier nachbearbeiten. Der Step, der gerade
+spielt, leuchtet in allen Reihen auf, seine Nummer oben auch.
+
+| Bedienelement | Was es tut |
+| --- | --- |
+| weiße Tasten | die 16 Steps des gewählten Parts (F3 = Step 1 … G5 = Step 16). Ein leerer Step wird beim Drücken gesetzt (mit K2–K4), ein gesetzter beim Loslassen gelöscht, außer es wurde dabei gedreht. Ihre Lichter zeigen die gesetzten Steps; das Licht des Steps, der gerade spielt, kippt (Lauflicht) |
+| schwarze Tasten | nichts (auf STEP spielen die Tasten nicht) |
+| K1 BAR | welcher Takt gezeigt wird |
+| K2 NOTE | Note neuer Steps (C1 … C7; am Anfang C4). DRUMS: K2 INST wählt das Instrument (BD, RS, SD, CP, CB, LT, CH, MT, das eigene des Kits auf G#, HT, OH, CY), die Tasten zeigen und schalten dann nur dessen Steps |
+| K3 VEL | Anschlag neuer Steps (1 … 127; am Anfang 100) |
+| K4 LEN | Länge neuer Steps: 1/32, 1/16, 1/8, 3/16, 1/4, 3/8, 1/2, 3/4, 1/1 (am Anfang 1/16). Eine Note endet kurz vor ihrer Länge; länger als bis zur nächsten Note gleitet ACID (Slide) |
+| Taste halten + K2–K4 | Note, Anschlag, Länge dieses Steps (gehalten: weiß umrandet, unten seine Werte); mehrere gehaltene ändern sich zusammen |
+| HOME + K2–K4 | zurück auf C in der Oktave des Parts (DRUMS: BD), 100, 1/16, mit Marke im Balken; mit gehaltener Taste für diesen Step |
+
+Ist die Schleife leer (LENGTH AUTO), macht der erste Step sie einen Takt lang. Während der ersten Aufnahme setzt STEP
+nichts (`STEP AFTER TAKE`). Ein Step auf dem Part der letzten Aufnahme hebt HOME + REC für diese auf (sie ließe sich
+nicht mehr allein zurücknehmen). Unten steht beim gewählten Part der gehaltene Step (`STEP 09 HELD`) oder, was neue
+Steps bekommen (`NEW STEPS`); bei DRUMS die Reihe des Instruments und die Instrumente des Kits (ein Punkt: hat Steps
+in diesem Takt).
 
 ## Edit-Seiten
 

@@ -94,3 +94,11 @@ AFTER TAKE	after the first take
 1/16	sixteenth
 1/8	eighth
 1/4	quarter
+STEP	step
+INST	instrument
+VEL	velocity
+LEN	length
+NEW STEPS	new steps
+HELD	held
+KEYS = ITS STEPS	the keys are its steps
+WHITE KEYS: STEPS. HOLD ONE, TURN K2-K4	the white keys are the steps. Hold one and turn knobs 2 to 4

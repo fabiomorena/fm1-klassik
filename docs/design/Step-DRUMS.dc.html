@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Step sequencer – DRUMS, an instrument at a time</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!--     v0.6's step sequencer: the looper's page has two tabs, LOOP and STEP (SEQ or OCT+ the other, as EDIT and OCT+
+     on the edit pages; OCT- back to the rack). STEP shows one bar of the loop (K1 BAR) as 16 steps of 1/16 for each part; a step is set where
+     the part has a note starting within it (played in or set here: the same notes as the looper's). The play
+     position runs over the columns (the step number lit).
+     The 16 white keys are the chosen part's 16 steps (F3 = step 1 .. G5 = step 16): an empty step is set as its key
+     goes down (K2 NOTE, K3 VEL, K4 LEN), a set one cleared as its key comes up (unless a knob was turned meanwhile);
+     their lights show the steps set, a running light the step playing. A key held and K2..K4 turned: that step's
+     note, velocity, length (framed in white). The black keys do nothing here. HOME + K2..K4: back to C in the part's
+     octave (DRUMS: BD), 100, 1/16 (marked on the bar). The loop empty (LENGTH AUTO): the first step sets 1 bar.
+     DRUMS: K2 picks the instrument (INST: the kit's twelve, in the keys' order C .. B: BD, RS, SD, CP, CB, LT, CH, MT,
+     the kit's own on G#, HT, OH, CY), also while a key is held; the keys show and set that instrument's steps only,
+     as on a TR. The row below: its 16 steps; the chips: the kit's instruments, a dot where one has steps in this bar.
+     HOME + K2: back to BD.
+     Here: part 2 DRUMS chosen, SD on K2 (steps 5 and 13), BD, SD and CH in use -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #E8EAED; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">STEP</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">2 DRUMS · SD</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<svg width="12" height="14" viewBox="0 0 14 16" role="img" aria-label="Playing"><path d="M1 1 L13 8 L1 15 Z" fill="#7EE08A"></path></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">1.2</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="Step sequencer: four parts, sixteen steps" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="600" letter-spacing="1" fill="#9AA3B2">LOOP</text>
+<text x="68" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">STEP</text>
+<rect x="68" y="28" width="44" height="3" fill="#E8EAED"/>
+<text x="470" y="22" text-anchor="end" style="font-family: 'IBM Plex Mono', monospace" font-size="16" fill="#9AA3B2">BAR 1/2</text>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<text x="111.6" y="59" text-anchor="middle" style="font-family: 'IBM Plex Mono', monospace" font-size="14" fill="#9AA3B2">1</text>
+<text x="204.6" y="59" text-anchor="middle" style="font-family: 'IBM Plex Mono', monospace" font-size="14" fill="#9AA3B2">5</text>
+<rect x="217.9" y="44" width="20.0" height="20" rx="3" fill="#E8EAED"/>
+<text x="227.9" y="59" text-anchor="middle" style="font-family: 'IBM Plex Mono', monospace" font-size="14" font-weight="600" fill="#0B0D11">6</text>
+<text x="297.6" y="59" text-anchor="middle" style="font-family: 'IBM Plex Mono', monospace" font-size="14" fill="#9AA3B2">9</text>
+<text x="390.6" y="59" text-anchor="middle" style="font-family: 'IBM Plex Mono', monospace" font-size="14" fill="#9AA3B2">13</text>
+<polygon points="18.0,82.2 21.2,86.8 25.0,90.0 25.4,97.4 18.0,95.3 11.8,96.2 11.8,90.0 12.5,84.5" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="3" stroke-linejoin="round"/>
+<text x="34" y="96" font-size="16" font-weight="700" fill="#E8EAED">1 VA</text>
+<rect x="101.5" y="75" width="20.2" height="30" rx="3" fill="#C28A43"/>
+<rect x="124.8" y="75" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="148.0" y="75" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="171.2" y="75" width="20.2" height="30" rx="3" fill="#C28A43"/>
+<rect x="194.5" y="75" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="217.8" y="75" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="241.0" y="75" width="20.2" height="30" rx="3" fill="#C28A43"/>
+<rect x="264.2" y="75" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="287.5" y="75" width="20.2" height="30" rx="3" fill="#C28A43"/>
+<rect x="310.8" y="75" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="334.0" y="75" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="357.2" y="75" width="20.2" height="30" rx="3" fill="#C28A43"/>
+<rect x="380.5" y="75" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="403.8" y="75" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="427.0" y="75" width="20.2" height="30" rx="3" fill="#C28A43"/>
+<rect x="450.2" y="75" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="2" y="114" width="476" height="40" rx="6" fill="#1C2230" stroke="#B9A2FF" stroke-width="3"/>
+<polygon points="18.0,127.0 24.2,127.8 25.0,134.0 22.6,138.6 18.0,141.0 14.2,137.8 11.0,134.0 16.0,132.0" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="3" stroke-linejoin="round"/>
+<text x="34" y="140" font-size="16" font-weight="700" fill="#B9A2FF">2 DRUMS</text>
+<rect x="101.5" y="119" width="20.2" height="30" rx="3" fill="#B9A2FF"/>
+<rect x="124.8" y="119" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="148.0" y="119" width="20.2" height="30" rx="3" fill="#B9A2FF"/>
+<rect x="171.2" y="119" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="194.5" y="119" width="20.2" height="30" rx="3" fill="#B9A2FF"/>
+<rect x="217.8" y="119" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="241.0" y="119" width="20.2" height="30" rx="3" fill="#B9A2FF"/>
+<rect x="264.2" y="119" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="287.5" y="119" width="20.2" height="30" rx="3" fill="#B9A2FF"/>
+<rect x="310.8" y="119" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="334.0" y="119" width="20.2" height="30" rx="3" fill="#B9A2FF"/>
+<rect x="357.2" y="119" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="380.5" y="119" width="20.2" height="30" rx="3" fill="#B9A2FF"/>
+<rect x="403.8" y="119" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="427.0" y="119" width="20.2" height="30" rx="3" fill="#B9A2FF"/>
+<rect x="450.2" y="119" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<polygon points="18.0,171.0 22.1,173.9 27.2,178.0 23.5,183.5 18.0,184.2 11.8,184.2 15.2,178.0 12.5,172.5" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="3" stroke-linejoin="round"/>
+<text x="34" y="184" font-size="16" font-weight="700" fill="#E8EAED">3 ACID</text>
+<rect x="101.5" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="124.8" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="148.0" y="163" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="171.2" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="194.5" y="163" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="217.8" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="241.0" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="264.2" y="163" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="287.5" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="310.8" y="163" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="334.0" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="357.2" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="380.5" y="163" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="403.8" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<rect x="427.0" y="163" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="450.2" y="163" width="20.2" height="30" rx="3" fill="#ADBA4B"/>
+<polygon points="18.0,217.9 22.3,217.7 27.5,222.0 21.8,225.8 18.0,232.4 13.0,227.0 10.2,222.0 13.7,217.7" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="3" stroke-linejoin="round"/>
+<text x="34" y="228" font-size="16" font-weight="700" fill="#E8EAED">4 FM6</text>
+<rect x="101.5" y="207" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="124.8" y="207" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="148.0" y="207" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="171.2" y="207" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="194.5" y="207" width="20.2" height="30" rx="3" fill="#4899C4"/>
+<rect x="217.8" y="207" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="241.0" y="207" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="264.2" y="207" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="287.5" y="207" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="310.8" y="207" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="334.0" y="207" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="357.2" y="207" width="20.2" height="30" rx="3" fill="#2A303D"/>
+<rect x="380.5" y="207" width="20.2" height="30" rx="3" fill="#4899C4"/>
+<rect x="403.8" y="207" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="427.0" y="207" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="450.2" y="207" width="20.2" height="30" rx="3" fill="#1C2230"/>
+<rect x="216.2" y="68" width="23.2" height="178" rx="3" fill="#E8EAED" fill-opacity="0.10"/>
+<!-- DRUMS: the keys are the steps of one instrument (K2) -->
+<rect x="2" y="252" width="476" height="130" rx="8" fill="#151922"/>
+<text x="16" y="282" font-size="17" font-weight="700" letter-spacing="1" fill="#B9A2FF">SD · 2 DRUMS</text>
+<text x="466" y="282" text-anchor="end" font-size="15" fill="#9AA3B2">KEYS = ITS STEPS</text>
+<rect x="101.5" y="294" width="20.2" height="26" rx="3" fill="#242830"/>
+<rect x="124.8" y="294" width="20.2" height="26" rx="3" fill="#242830"/>
+<rect x="148.0" y="294" width="20.2" height="26" rx="3" fill="#242830"/>
+<rect x="171.2" y="294" width="20.2" height="26" rx="3" fill="#242830"/>
+<rect x="194.5" y="294" width="20.2" height="26" rx="3" fill="#B9A2FF"/>
+<rect x="217.8" y="294" width="20.2" height="26" rx="3" fill="#1C2230"/>
+<rect x="241.0" y="294" width="20.2" height="26" rx="3" fill="#1C2230"/>
+<rect x="264.2" y="294" width="20.2" height="26" rx="3" fill="#1C2230"/>
+<rect x="287.5" y="294" width="20.2" height="26" rx="3" fill="#242830"/>
+<rect x="310.8" y="294" width="20.2" height="26" rx="3" fill="#242830"/>
+<rect x="334.0" y="294" width="20.2" height="26" rx="3" fill="#242830"/>
+<rect x="357.2" y="294" width="20.2" height="26" rx="3" fill="#242830"/>
+<rect x="380.5" y="294" width="20.2" height="26" rx="3" fill="#B9A2FF"/>
+<rect x="403.8" y="294" width="20.2" height="26" rx="3" fill="#1C2230"/>
+<rect x="427.0" y="294" width="20.2" height="26" rx="3" fill="#1C2230"/>
+<rect x="450.2" y="294" width="20.2" height="26" rx="3" fill="#1C2230"/>
+<text x="16" y="313" font-size="15" font-weight="700" fill="#B9A2FF">SD</text>
+<rect x="17" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="33" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#E8EAED">BD</text>
+<circle cx="44" cy="339" r="3" fill="#B9A2FF"/>
+<rect x="54" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="70" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">RS</text>
+<rect x="90" y="334" width="34" height="30" rx="5" fill="#B9A2FF"/>
+<text x="107" y="355" text-anchor="middle" font-size="14" font-weight="700" fill="#0B0D11">SD</text>
+<circle cx="118" cy="339" r="3" fill="#0B0D11"/>
+<rect x="128" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="144" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">CP</text>
+<rect x="165" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="181" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">CB</text>
+<rect x="202" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="218" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">LT</text>
+<rect x="239" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="255" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#E8EAED">CH</text>
+<circle cx="266" cy="339" r="3" fill="#B9A2FF"/>
+<rect x="276" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="292" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">MT</text>
+<rect x="313" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="329" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">RD</text>
+<rect x="350" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="366" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">HT</text>
+<rect x="387" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="403" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">OH</text>
+<rect x="424" y="334" width="32" height="30" rx="5" fill="none" stroke="#2A3242" stroke-width="2"/>
+<text x="440" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#9AA3B2">CY</text>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 BAR</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">1/2</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: #B9A2FF"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 INST</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">SD</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 18%; background: #B9A2FF"></span><span style="position: absolute; left: calc(0% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 VEL</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">100</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 78%; background: #B9A2FF"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4 LEN</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">1/16</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 6%; background: #B9A2FF"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

@@ -81,6 +81,9 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   Läuft im Audio-Interrupt: `app_render` in Schritten zu 32 Frames (`lp_step` vor jedem `kl_render`); die
   Hauptschleife fragt über `lp_ask` (Befehle) und `lp_key` (Tasten), MIDI nimmt `midi_in` direkt auf. Klick im
   Render, Loops nur im RAM.
+- Step-Sequencer (Tab STEP der Looper-Seite, `stp` und `step_*` in `app.c`): dieselben Ereignisse wie der Looper,
+  ein Step = 1/16 = 48 Ticks (±24); die 16 weißen Tasten (`PLAT_WHITE_KEYS`) sind die Steps des gewählten Parts,
+  DRUMS je Instrument (= Halbton); Änderungen über `lp_ask_step` (`LC_SSET`, `LC_SCLR`, `LC_SEDIT`) im Render.
 - Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL, FM6 = msfa (`KL_FM6`, im Rack links von VA; K1 folgt der
   Rack-Reihenfolge), DRUMS (`KL_DRUMS` = 4, Kachel der früheren STRINGS). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
   `engine_t.edit[8]`, `page_title[2]`, `presets`). Festkomma, keine Allokation.
@@ -135,7 +138,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
 | v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | erledigt (Simulator) |
-| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte | offen |
+| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall) | Step-Sequencer erledigt (Simulator), Effekte offen |
 | v0.7 | Preset-Liste, Glyphen-Browser (früher v0.4) | offen |
 | v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |
 | am Ende | Feinschliff: Klang nach Gehör, Design-Fragen | offen |

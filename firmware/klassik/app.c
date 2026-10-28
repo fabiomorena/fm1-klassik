@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0.5 (parts, mixer, looper): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
+/* KLASSIK v0.6 (parts, mixer, looper, step sequencer): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
  * Felucca-Engines (ANALOG, PHASE, WHEEL), DRUMS (four kits on Plaits' drum models) and ACID (Open303's TB-303), on
  * four parts that play at once, each its own sound and octave: SEL, or SELECT turned, goes to the next part (SELECT
  * to the left: the one before), and the keys, K1 (the engine, in the rack's order), PRESET (its sound), OCT- / OCT+
@@ -18,7 +18,9 @@
  * The looper records notes (not sound) on one loop for all four parts: PLAY starts and stops it, REC records the
  * chosen part on top of what it has (stopped: after a bar's count-in), the first take sets the length; HOME + REC
  * takes the last take back, HOME + PLAY empties a part. SEQ opens its page: a lane a part, TEMPO, LENGTH, QUANT and
- * CLICK on K1..K4; the header shows it on every page.
+ * CLICK on K1..K4; the header shows it on every page. SEQ or OCT+ there: the step sequencer (STEP), a bar of the same
+ * notes as 16 steps a part, the white keys the chosen part's steps (DRUMS: one instrument's), K1 BAR, K2 NOTE (INST),
+ * K3 VEL, K4 LEN, a key held and K2..K4 turned: that step's.
  * The screen: the header (the part and its engine, the sound's glyph and name, the octave, the battery), then the
  * six engine tiles (each with the parts that play it) or an edit page (its tabs, the sound's glyph large, its
  * spokes named; DRUMS: the octave's keys as pads, each with its instrument), and a row of what the knobs hold.
@@ -235,7 +237,12 @@ static void mix_update(void)
 #define LP_STEP16(bpm) ((uint32_t)(bpm) * 152174u / 1000u)   /* ticks a step, Q16: bpm / 60 * 192 * 32 / 44100 *
                                                              * 65536 = bpm * 152.174 */
 enum { LP_STOP, LP_COUNT, LP_PLAY };                 /* stopped, counting in (a bar), playing */
-enum { LC_PLAY, LC_STOP, LC_REC, LC_UNREC, LC_PART, LC_UNDO, LC_CLEAR, LC_BARS };   /* the main loop's asks */
+enum { LC_PLAY, LC_STOP, LC_REC, LC_UNREC, LC_PART, LC_UNDO, LC_CLEAR, LC_BARS,   /* the main loop's asks */
+       LC_SSET, LC_SCLR, LC_SEDIT };                 /* the step sequencer's: a step set, cleared, changed */
+enum { SE_NOTE, SE_VEL, SE_GATE };                   /* LC_SEDIT: what */
+#define LP_STEP (LP_PPQN / 4)                        /* a step: 1/16 */
+#define LP_ANY 0xFFu                                 /* a step's notes, all of them (else those of one semitone: a
+                                                     * DRUMS instrument) */
 static const uint8_t QUANT_TICKS[5] = {0, 24, 48, 96, 192};   /* QUANT OFF, 1/32, 1/16, 1/8, 1/4 */
 typedef struct {
     uint16_t tick;
@@ -268,7 +275,11 @@ static struct {
 } lp;
 #define LC_N 16u
 static volatile uint32_t lc_w, lc_r;                 /* main loop writes lc_w, the render lc_r */
-static uint8_t lc_cmd[LC_N], lc_arg[LC_N];
+static struct {
+    uint8_t cmd, arg, a, b;                          /* the ask, its part (or value); a step's: a, b, t, c */
+    uint16_t t;
+    int16_t c;
+} lc_q[LC_N];
 #define LK_N 64u
 static volatile uint32_t lk_w, lk_r;                 /* the keys played, for the recording */
 static uint8_t lk_part[LK_N], lk_on[LK_N], lk_note[LK_N], lk_vel[LK_N];
@@ -289,15 +300,23 @@ static void loop_init(void)
     lk_r = lk_w;
 }
 
-static void lp_ask(int cmd, int arg)                 /* main loop: an ask for the render, in order */
+/* main loop: an ask for the render, in order; a step's: its part, its tick t, and a, b, c (LC_SSET: note, velocity,
+ * gate in ticks; LC_SCLR: the semitone or LP_ANY; LC_SEDIT: the semitone or LP_ANY, SE_*, the value) */
+static void lp_ask_step(int cmd, int arg, uint32_t t, int a, int b, int c)
 {
     uint32_t w = lc_w;
     if (w - lc_r >= LC_N)
         return;
-    lc_cmd[w % LC_N] = (uint8_t)cmd;
-    lc_arg[w % LC_N] = (uint8_t)arg;
+    lc_q[w % LC_N].cmd = (uint8_t)cmd;
+    lc_q[w % LC_N].arg = (uint8_t)arg;
+    lc_q[w % LC_N].t = (uint16_t)t;
+    lc_q[w % LC_N].a = (uint8_t)a;
+    lc_q[w % LC_N].b = (uint8_t)b;
+    lc_q[w % LC_N].c = (int16_t)c;
     lc_w = w + 1u;
 }
+
+static void lp_ask(int cmd, int arg) { lp_ask_step(cmd, arg, 0, 0, 0, 0); }
 
 static void lp_key(int part, int on, int note, int vel)   /* main loop: a key played, for the recording */
 {
@@ -341,9 +360,9 @@ static void lp_notes_off(int p)                      /* the part's notes the loo
             }
 }
 
-/* an event into its place in a part: after those at its tick; ahead of the play line it is passed over once (it has
- * sounded live), behind it the next to play stays the same */
-static void lp_insert(int p, uint32_t tick, int note, int vel)
+/* an event into its place in a part: after those at its tick. Recorded live, ahead of the play line it is passed over
+ * once (it has sounded); behind the line the next to play stays the same */
+static void lp_insert(int p, uint32_t tick, int note, int vel, int live)
 {
     lp_ev_t *e = lp_ev[p];
     uint32_t n = lp.n[p], i = n;
@@ -354,11 +373,24 @@ static void lp_insert(int p, uint32_t tick, int note, int vel)
     e[i].tick = (uint16_t)tick;
     e[i].note = (uint8_t)note;
     e[i].vel = (uint8_t)vel;
-    if (lp.state == LP_COUNT || (lp.state == LP_PLAY && (tick << 16) >= lp.pos16))
+    if (live && (lp.state == LP_COUNT || (lp.state == LP_PLAY && (tick << 16) >= lp.pos16)))
         e[i].vel |= 0x80u;
-    else if (i <= lp.cur[p])
+    else if (live ? i <= lp.cur[p] : i < lp.cur[p] || (i == lp.cur[p] && (tick << 16) < lp.pos16))
         lp.cur[p]++;
     lp.n[p] = (uint16_t)(n + 1u);
+}
+
+static void lp_remove(int p, uint32_t i)             /* an event out (the next to play stays the same) */
+{
+    lp_ev_t *e = lp_ev[p];
+    uint32_t n = lp.n[p], k;
+    if (i >= n)
+        return;
+    for (k = i; k + 1u < n; k++)
+        e[k] = e[k + 1u];
+    if (i < lp.cur[p])
+        lp.cur[p]--;
+    lp.n[p] = (uint16_t)(n - 1u);
 }
 
 /* a note into the part recording: its start moved to QUANT's grid, its end as far; counting in, a note just before
@@ -401,7 +433,7 @@ static void lp_record(int p, int on, int note, int vel)
         lp.nheld--;
     }
     t = (t % len + len) % len;
-    lp_insert(p, (uint32_t)t, note, on ? clamp(vel, 1, 127) : 0);
+    lp_insert(p, (uint32_t)t, note, on ? clamp(vel, 1, 127) : 0, 1);
 }
 
 /* the first take ends (LENGTH AUTO): the length in whole bars, the nearest; what is past its end moves to its start */
@@ -551,12 +583,136 @@ static void lp_set_bars(uint32_t bars)               /* K2: shorter hides the ba
         lp.cur[p] = (uint16_t)lp_lower(p, lp.pos16);
 }
 
+/* ------------------------------------------------- the step sequencer's steps --- */
+/* a step is 1/16 of the loop at tick t; a note starting within half a step of it (either side, round the loop's end)
+ * is the step's. sel: LP_ANY, or a semitone (DRUMS: one instrument) */
+static int lp_in_step(uint32_t tick, uint32_t t, uint32_t len)
+{
+    return (tick + len + LP_STEP / 2u - t) % len < LP_STEP;
+}
+
+static int lp_step_note(const lp_ev_t *e, uint32_t t, uint32_t len, uint32_t sel)
+{
+    return (e->vel & 0x7Fu) && e->tick < len && lp_in_step(e->tick, t, len) && (sel == LP_ANY || e->note % 12u == sel);
+}
+
+static int32_t lp_end_of(int p, uint32_t i)          /* the index of note i's end: the next off of its note, round the
+                                                     * loop (-1: none) */
+{
+    const lp_ev_t *e = lp_ev[p];
+    uint32_t n = lp.n[p], k, j;
+    for (k = 1; k < n; k++) {
+        j = (i + k) % n;
+        if (e[j].note == e[i].note && !(e[j].vel & 0x7Fu))
+            return (int32_t)j;
+    }
+    return -1;
+}
+
+static void lp_unsound(int p, int note)              /* the note off now, if the looper has it sounding */
+{
+    uint32_t w = (uint32_t)note >> 5, bit = 1u << (note & 31);
+    if (lp.on[p][w] & bit) {
+        kl_key_now(p, 0, note, 0);
+        lp.on[p][w] &= ~bit;
+    }
+}
+
+/* a step's notes changed: the last take's part can no longer be taken back on its own (HOME + REC would undo these
+ * too) */
+static void lp_stepped(int p)
+{
+    if (lp.undo_part == p)
+        lp.undo_part = -1;
+}
+
+static void lp_step_set(int p, uint32_t t, int note, int vel, int gate)   /* a note on the step, as long as gate */
+{
+    uint32_t len;
+    if (lp.first || (lp.rec && lp.state == LP_COUNT))
+        return;
+    if (!lp.bars) {                                  /* empty: the first step makes a bar */
+        if (!lp_empty())
+            return;
+        lp_set_bars(1);
+        lp.first_bars = 1;
+    }
+    len = lp_len();
+    if (t >= len || lp.n[p] + 2u + lp.nheld > LP_EV) {
+        lp.full++;
+        return;
+    }
+    lp_insert(p, t, note, vel, 0);
+    lp_insert(p, (t + (uint32_t)gate) % len, note, 0, 0);
+    lp_stepped(p);
+}
+
+static void lp_step_clear(int p, uint32_t t, uint32_t sel)   /* the step's notes out, with their ends */
+{
+    uint32_t len = lp_len(), i;
+    for (;;) {
+        int32_t j;
+        for (i = 0; i < lp.n[p] && !lp_step_note(&lp_ev[p][i], t, len, sel); i++)
+            ;
+        if (i >= lp.n[p])
+            break;
+        lp_unsound(p, lp_ev[p][i].note);
+        j = lp_end_of(p, i);
+        if (j > (int32_t)i) {
+            lp_remove(p, (uint32_t)j);
+            lp_remove(p, i);
+        } else {
+            lp_remove(p, i);
+            if (j >= 0)
+                lp_remove(p, (uint32_t)j);
+        }
+        lp_stepped(p);
+    }
+}
+
+/* a step's notes changed: SE_NOTE by v semitones, SE_VEL to v, SE_GATE to v ticks (the end moved) */
+static void lp_step_edit(int p, uint32_t t, uint32_t sel, int what, int v)
+{
+    uint32_t len = lp_len(), i, k, m = 0;
+    uint16_t at[16];
+    uint8_t nt[16];
+    for (i = 0; i < lp.n[p] && m < 16u; i++)        /* the step's notes, as they are */
+        if (lp_step_note(&lp_ev[p][i], t, len, sel)) {
+            at[m] = lp_ev[p][i].tick;
+            nt[m++] = lp_ev[p][i].note;
+        }
+    for (k = 0; k < m; k++) {
+        int32_t j;
+        for (i = 0; i < lp.n[p] && !(lp_ev[p][i].tick == at[k] && lp_ev[p][i].note == nt[k] &&
+                                     (lp_ev[p][i].vel & 0x7Fu)); i++)
+            ;
+        if (i >= lp.n[p])
+            continue;
+        j = lp_end_of(p, i);
+        if (what == SE_VEL) {
+            lp_ev[p][i].vel = (uint8_t)((lp_ev[p][i].vel & 0x80u) | (uint32_t)clamp(v, 1, 127));
+        } else if (what == SE_NOTE) {
+            int to = clamp(nt[k] + v, 0, 127);
+            lp_unsound(p, nt[k]);
+            lp_ev[p][i].note = (uint8_t)to;
+            if (j >= 0)
+                lp_ev[p][j].note = (uint8_t)to;
+        } else if (j >= 0) {                         /* the end out, and in again where the gate ends */
+            lp_unsound(p, nt[k]);
+            lp_remove(p, (uint32_t)j);
+            lp_insert(p, (at[k] + (uint32_t)v) % len, nt[k], 0, 0);
+        }
+    }
+    if (m)
+        lp_stepped(p);
+}
+
 static void lp_asks(void)                            /* render: the main loop's asks, then the keys it played */
 {
     while (lc_r != lc_w) {
         uint32_t j = lc_r % LC_N;
-        int a = lc_arg[j];
-        switch (lc_cmd[j]) {
+        int a = lc_q[j].arg;
+        switch (lc_q[j].cmd) {
         case LC_PLAY:
             if (lp.state == LP_STOP && lp.bars)
                 lp_restart();
@@ -598,6 +754,15 @@ static void lp_asks(void)                            /* render: the main loop's 
             break;
         case LC_BARS:
             lp_set_bars((uint32_t)a);
+            break;
+        case LC_SSET:
+            lp_step_set(a, lc_q[j].t, lc_q[j].a, lc_q[j].b, lc_q[j].c);
+            break;
+        case LC_SCLR:
+            lp_step_clear(a, lc_q[j].t, lc_q[j].a);
+            break;
+        case LC_SEDIT:
+            lp_step_edit(a, lc_q[j].t, lc_q[j].a, lc_q[j].b, lc_q[j].c);
             break;
         default:
             break;
@@ -801,6 +966,10 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
 
 void app_panic(void) { kl_silence(); }
 
+static void step_init(void);                         /* the step sequencer's (below) */
+static uint32_t step_sel(void);
+static uint32_t step_mask(int p, uint32_t sel);
+
 void app_init(void)
 {
     int e, p;
@@ -814,11 +983,13 @@ void app_init(void)
     }
     mix_update();
     loop_init();
+    step_init();
 }
 
 /* --------------------------------------------------------------------- UI --- */
 static const char *const BTN_NAME[NB] = {"FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ",
                                          "PLAY", "REC", "OCT-", "OCT+"};
+static const char *const KEY_NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 static struct {
     char msg[2][24];                                 /* a short message over the header */
     uint32_t msg_until;
@@ -830,6 +1001,10 @@ static struct {
     uint8_t loop, redraw_loop, redraw_head;          /* the looper's page is open; its lanes again (the play line
                                                      * moved); the header alone (its bar and beat) */
     uint8_t ask, ask_part;                           /* HOME + PLAY asks before a part is emptied (OCT+ yes) */
+    uint8_t tab, bar, turned;                        /* the looper's page: LOOP (0) or STEP (1); STEP's bar shown; a
+                                                     * knob turned while a step was held */
+    uint16_t held, held_new;                         /* the steps held (white keys), those set as they went down */
+    uint32_t kstep;                                  /* the keys that went down as steps (their release is a step's) */
     uint32_t loop_at, lp_sig;                        /* the lanes last drawn; what the looper did, as last seen */
     uint8_t full_seen;                               /* lp.full as last said */
     char ind[8];                                     /* the header's bar and beat, as last drawn */
@@ -1067,7 +1242,20 @@ static void speak(void)
                 text_cat(t, v);
             }
         }
-        if (ui.loop) {                               /* the looper: what it does, what its knobs hold */
+        if (ui.loop && ui.tab) {                     /* the step sequencer: the bar, the steps set */
+            char v[8];
+            uint32_t m = step_mask(set.part, step_sel());
+            text_cat(t, ". STEP. BAR ");
+            int_text(ui.bar + 1, v);
+            text_cat(t, v);
+            text_cat(t, ". STEPS");
+            for (k = 0; k < 16; k++)
+                if (m >> k & 1u) {
+                    text_cat(t, " ");
+                    int_text(k + 1, v);
+                    text_cat(t, v);
+                }
+        } else if (ui.loop) {                        /* the looper: what it does, what its knobs hold */
             char v[24];
             loop_state_text(v);
             text_cat(t, ". LOOP ");
@@ -1271,10 +1459,12 @@ static void loop_said(int32_t k)                     /* "TEMPO 98 BPM" */
     announce(t);
 }
 
-static void loop_show(int on)                        /* SEQ: the looper's page open (another closes), or shut */
+static void loop_show(int on)                        /* SEQ: the looper's page open on LOOP (another closes), or
+                                                     * shut (OCT-) */
 {
     ui.loop = (uint8_t)(on != 0);
-    ui.edit = ui.mix = 0;
+    ui.edit = ui.mix = ui.tab = 0;
+    ui.held = ui.held_new = 0;
     ui.redraw = 1;
     announce(on ? "LOOP" : "RACK");
 }
@@ -1415,6 +1605,273 @@ static uint32_t loop_sig(void)                       /* what the looper did, for
     return h;
 }
 
+/* ---------------------------------------------------- the step sequencer's tab --- */
+/* STEP: one bar of the loop as 16 steps a part; the white keys are the chosen part's steps (DRUMS: those of one
+ * instrument, K2). A step is set as its key goes down, cleared as it comes up (unless a knob turned meanwhile); a key
+ * held, K2..K4 change its notes (the render does it: LC_SSET, LC_SCLR, LC_SEDIT) */
+static const uint8_t WHITE_KEY[16] = PLAT_WHITE_KEYS;
+static const uint16_t LEN_TICKS[9] = {24, 48, 96, 144, 192, 288, 384, 576, 768};
+static const char *const LEN_NAME[9] = {"1/32", "1/16", "1/8", "3/16", "1/4", "3/8", "1/2", "3/4", "1/1"};
+#define STEP_GAP 4                                   /* a step's note ends this many ticks before its length: the
+                                                     * next one starts anew (longer, ACID slides) */
+static struct {
+    uint8_t note[KL_NPART], inst[KL_NPART], vel[KL_NPART], len[KL_NPART];   /* a new step's: its note (DRUMS: the
+                                                     * instrument's semitone), velocity, LEN_TICKS' index */
+} stp;
+
+static void step_init(void)
+{
+    int p;
+    for (p = 0; p < KL_NPART; p++) {
+        stp.note[p] = 60;                            /* C4 */
+        stp.inst[p] = 0;                             /* BD */
+        stp.vel[p] = 100;
+        stp.len[p] = 1;                              /* 1/16 */
+    }
+}
+
+static int step_home_note(void) { return clamp(60 + 12 * part_cur()->octave, 24, 96); }   /* C in the octave */
+static uint32_t step_sel(void) { return eng_cur() == KL_DRUMS ? stp.inst[set.part] : LP_ANY; }
+static uint32_t step_bars(void) { return lp.bars ? lp.bars : 1u; }
+static uint32_t step_tick(int s) { return (uint32_t)ui.bar * LP_BAR + (uint32_t)s * LP_STEP; }
+
+static int step_of_key(uint32_t k)                   /* the step a key is (0..15), -1 a black key */
+{
+    int s;
+    for (s = 0; s < 16; s++)
+        if (WHITE_KEY[s] == k)
+            return s;
+    return -1;
+}
+
+static uint32_t step_mask(int p, uint32_t sel)       /* the steps of the bar shown with a note (sel: LP_ANY or one
+                                                     * semitone) */
+{
+    uint32_t len = lp_len(), m = 0, i, t0 = (uint32_t)ui.bar * LP_BAR;
+    const lp_ev_t *e = lp_ev[p];
+    if (!lp.bars)
+        return 0;
+    for (i = 0; i < lp.n[p]; i++)
+        if ((e[i].vel & 0x7Fu) && e[i].tick < len && (sel == LP_ANY || e[i].note % 12u == sel)) {
+            uint32_t rel = (e[i].tick + len + LP_STEP / 2u - t0) % len;
+            if (rel < 16u * LP_STEP)
+                m |= 1u << (rel / LP_STEP);
+        }
+    return m;
+}
+
+static int step_len_index(uint32_t gate)             /* the LEN nearest a gate in ticks */
+{
+    int i, best = 0;
+    int32_t bd = 1 << 30;
+    for (i = 0; i < 9; i++) {
+        int32_t d = (int32_t)LEN_TICKS[i] - STEP_GAP - (int32_t)gate;
+        d = d < 0 ? -d : d;
+        if (d < bd) {
+            bd = d;
+            best = i;
+        }
+    }
+    return best;
+}
+
+/* a step's first note (sel's): its note, velocity and LEN; 0 = the step is empty */
+static int step_get(int s, int *note, int *vel, int *len)
+{
+    uint32_t p = set.part, i, l = lp_len(), sel = step_sel();
+    for (i = 0; lp.bars && i < lp.n[p]; i++)
+        if (lp_step_note(&lp_ev[p][i], step_tick(s), l, sel)) {
+            int32_t j = lp_end_of((int)p, i);
+            *note = lp_ev[p][i].note;
+            *vel = lp_ev[p][i].vel & 0x7F;
+            *len = j < 0 ? 1 : step_len_index((lp_ev[p][j].tick + l - lp_ev[p][i].tick) % l);
+            return 1;
+        }
+    return 0;
+}
+
+static int step_first_held(void)                     /* the lowest step held, -1 none */
+{
+    int s;
+    for (s = 0; s < 16; s++)
+        if (ui.held & 1u << s)
+            return s;
+    return -1;
+}
+
+static void note_text(int n, char *b)                /* "C4", "F#2" (MIDI 60 = C4) */
+{
+    char o[4];
+    b[0] = 0;
+    text_cat(b, KEY_NAME[n % 12]);
+    int_text(n / 12 - 1, o);
+    text_cat(b, o);
+}
+
+static void inst_text(int pc, char *b)               /* DRUMS: the chosen part's kit's instrument on a semitone */
+{
+    b[0] = 0;
+    text_cat(b, kl_drum_name(sound_base(set.part, KL_DRUMS), pc));
+}
+
+static void step_said(int s, const char *what)       /* "STEP 9 C4", "STEP 9 OFF" */
+{
+    char t[32] = "STEP ", v[8];
+    int_text(s + 1, v);
+    text_cat(t, v);
+    text_cat(t, " ");
+    text_cat(t, what);
+    announce(t);
+}
+
+static void step_key(int s, int down)                /* a white key on STEP: its step set (down) or cleared (up) */
+{
+    uint32_t bit = 1u << s, sel = step_sel();
+    int p = set.part, drums = eng_cur() == KL_DRUMS;
+    char v[8];
+    ui.redraw = 1;
+    if (down) {
+        ui.held |= (uint16_t)bit;
+        if (step_mask(p, sel) & bit)
+            return;
+        if (lp.first) {
+            app_say("STEP", "AFTER TAKE");
+            return;
+        }
+        lp_ask_step(LC_SSET, p, step_tick(s), drums ? 36 + (int)sel : stp.note[p], stp.vel[p],
+                    LEN_TICKS[stp.len[p]] - STEP_GAP);
+        ui.held_new |= (uint16_t)bit;
+        if (drums)
+            inst_text((int)sel, v);
+        else
+            note_text(stp.note[p], v);
+        step_said(s, v);
+        return;
+    }
+    if ((ui.held & bit) && !(ui.held_new & bit) && !ui.turned) {
+        lp_ask_step(LC_SCLR, p, step_tick(s), (int)sel, 0, 0);
+        step_said(s, "OFF");
+    }
+    ui.held &= (uint16_t)~bit;
+    ui.held_new &= (uint16_t)~bit;
+    if (!ui.held)
+        ui.turned = 0;
+}
+
+static void step_tab(int t)                          /* the looper's page: LOOP or STEP */
+{
+    ui.tab = (uint8_t)t;
+    ui.held = ui.held_new = 0;
+    ui.turned = 0;
+    ui.redraw = 1;
+    announce(t ? "STEP" : "LOOP");
+}
+
+/* K1..K4 on STEP: K1 the bar shown; K2 NOTE (DRUMS: the instrument), K3 VEL, K4 LEN, a new step's, or the held
+ * steps' own */
+static void step_knob(int32_t k, int32_t d)
+{
+    int p = set.part, drums = eng_cur() == KL_DRUMS, s;
+    char t[24] = "", v[8];
+    ui.redraw = 1;
+    if (k == 0) {
+        ui.bar = (uint8_t)clamp(ui.bar + d, 0, (int32_t)step_bars() - 1);
+        text_cat(t, "BAR ");
+        int_text(ui.bar + 1, v);
+        text_cat(t, v);
+        announce(t);
+        return;
+    }
+    if (k == 1 && drums) {                           /* the instrument, held or not */
+        stp.inst[p] = (uint8_t)(((stp.inst[p] + d) % 12 + 12) % 12);
+        inst_text(stp.inst[p], v);
+        announce(v);
+        return;
+    }
+    if (ui.held) {
+        for (s = 0; s < 16; s++) {
+            int note, vel, len;
+            if (!(ui.held & 1u << s) || !step_get(s, &note, &vel, &len))
+                continue;
+            if (k == 1)
+                lp_ask_step(LC_SEDIT, p, step_tick(s), LP_ANY, SE_NOTE, clamp(note + d, 24, 96) - note);
+            else if (k == 2)
+                lp_ask_step(LC_SEDIT, p, step_tick(s), (int)step_sel(), SE_VEL, clamp(vel + d, 1, 127));
+            else
+                lp_ask_step(LC_SEDIT, p, step_tick(s), (int)step_sel(), SE_GATE,
+                            LEN_TICKS[clamp(len + d, 0, 8)] - STEP_GAP);
+        }
+        ui.turned = 1;
+        announce(k == 1 ? "NOTE" : k == 2 ? "VEL" : "LEN");
+        return;
+    }
+    if (k == 1) {
+        stp.note[p] = (uint8_t)clamp(stp.note[p] + d, 24, 96);
+        note_text(stp.note[p], v);
+    } else if (k == 2) {
+        stp.vel[p] = (uint8_t)clamp(stp.vel[p] + d, 1, 127);
+        int_text(stp.vel[p], v);
+    } else {
+        stp.len[p] = (uint8_t)clamp(stp.len[p] + d, 0, 8);
+        v[0] = 0;
+        text_cat(v, LEN_NAME[stp.len[p]]);
+    }
+    text_cat(t, k == 1 ? "NOTE " : k == 2 ? "VEL " : "LEN ");
+    text_cat(t, v);
+    announce(t);
+}
+
+/* HOME + K2..K4 on STEP: C in the part's octave (DRUMS: BD), 100, 1/16; a held step's too. K1 (a place, not a
+ * value): none */
+static void step_reset(int32_t k)
+{
+    int p = set.part, s, note, vel, len;
+    if (k == 0)
+        return;
+    if (k == 1 && eng_cur() == KL_DRUMS) {
+        step_knob(1, -(int32_t)stp.inst[p]);
+        return;
+    }
+    if (ui.held) {
+        for (s = 0; s < 16; s++)
+            if ((ui.held & 1u << s) && step_get(s, &note, &vel, &len)) {
+                if (k == 1)
+                    lp_ask_step(LC_SEDIT, p, step_tick(s), LP_ANY, SE_NOTE, step_home_note() - note);
+                else if (k == 2)
+                    lp_ask_step(LC_SEDIT, p, step_tick(s), (int)step_sel(), SE_VEL, 100);
+                else
+                    lp_ask_step(LC_SEDIT, p, step_tick(s), (int)step_sel(), SE_GATE, LEN_TICKS[1] - STEP_GAP);
+            }
+        ui.turned = 1;
+        ui.redraw = 1;
+        return;
+    }
+    if (k == 1)
+        step_knob(1, step_home_note() - stp.note[p]);
+    else if (k == 2)
+        step_knob(2, 100 - stp.vel[p]);
+    else
+        step_knob(3, 1 - stp.len[p]);
+}
+
+static uint32_t step_play(void)                      /* the step playing in the bar shown: its bit, 0 none */
+{
+    uint32_t pos = lp.pos16 >> 16;
+    if (lp.state != LP_PLAY || !lp.bars || pos / LP_BAR != ui.bar)
+        return 0;
+    return 1u << (pos % LP_BAR / LP_STEP);
+}
+
+static uint32_t step_lights(void)                    /* STEP's keys: the steps set lit, the one playing flips */
+{
+    uint32_t m = step_mask(set.part, step_sel()) ^ step_play(), k = 0;
+    int s;
+    for (s = 0; s < 16; s++)
+        if ((m | ui.held) & 1u << s)
+            k |= 1u << WHITE_KEY[s];
+    return k;
+}
+
 /* each edited sound becomes its engine's USER sound (two parts with the same engine edited: the chosen part's, else
  * the higher's); a part that plays that USER sound unedited plays the new one */
 static void save(void)
@@ -1473,7 +1930,16 @@ static void input(void)
     keys = touch_keys();
     for (k = 0; k < NKEYS; k++) {                    /* key 0 is F3 (MIDI 53) */
         uint32_t bit = 1u << k;
-        if ((keys & bit) && !(ui.keys & bit)) {
+        if ((keys & bit) && !(ui.keys & bit) && ui.loop && ui.tab) {   /* STEP: a white key is a step, a black one
+                                                                       * nothing */
+            ui.kstep |= bit;
+            if (step_of_key(k) >= 0)
+                step_key(step_of_key(k), 1);
+        } else if (!(keys & bit) && (ui.kstep & bit)) {
+            ui.kstep &= ~bit;
+            if (step_of_key(k) >= 0)
+                step_key(step_of_key(k), 0);
+        } else if ((keys & bit) && !(ui.keys & bit)) {
             int32_t note = clamp(53 + (int32_t)k + 12 * part_cur()->octave, 0, 127);
             uint32_t v = touch_vel(k);
             if (eng_cur() == KL_ACID)                /* its accent is ENV held, as Open303's: velocity 100 or more */
@@ -1499,8 +1965,12 @@ static void input(void)
             loop_answer(k == B_OCTUP);               /* HOME + PLAY's question */
         else if (k == B_OCTDN && ui.edit)
             edit_close();                            /* back, as on Felucca's pages */
-        else if ((k == B_OCTDN && ui.loop) || k == B_SEQ)
-            loop_show(!ui.loop);                     /* the looper's page, open and shut */
+        else if (k == B_OCTDN && ui.loop)
+            loop_show(0);                            /* back */
+        else if ((k == B_SEQ || k == B_OCTUP) && ui.loop)
+            step_tab(!ui.tab);                       /* the other tab, as EDIT and OCT+ on the edit pages */
+        else if (k == B_SEQ)
+            loop_show(1);
         else if ((k == B_OCTDN && ui.mix) || k == B_GLO)
             mix_show(!ui.mix);                       /* the mixer, open and shut */
         else if (k == B_PLAY && (btn & 1u << B_HOME))
@@ -1537,6 +2007,10 @@ static void input(void)
             preset_step(e);
         else if (k == EN_SELECT)
             part_step(e);                            /* the part, as SEL: to the right the next */
+        else if (ui.loop && ui.tab && k >= EN_K1 && (btn & 1u << B_HOME))
+            step_reset((int32_t)(k - EN_K1));
+        else if (ui.loop && ui.tab && k >= EN_K1)
+            step_knob((int32_t)(k - EN_K1), e);
         else if (ui.loop && k >= EN_K1 && (btn & 1u << B_HOME))
             loop_reset((int32_t)(k - EN_K1));
         else if (ui.loop && k >= EN_K1)
@@ -1560,7 +2034,7 @@ static void input(void)
     plat_play_red(lp.rec);                           /* PLAY green while it plays, red while it records */
     plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u) | (ui.mix ? 1u << B_GLO : 0u) | (ui.loop ? 1u << B_SEQ : 0u) |
                   (lp.state != LP_STOP ? 1u << B_PLAY : 0u) | (lp.rec ? 1u << B_REC : 0u),
-              keys);
+              ui.loop && ui.tab ? step_lights() : keys);   /* STEP: the steps set, a running light */
 }
 
 void app_input_only(void) { input(); }
@@ -1683,13 +2157,23 @@ static void draw_header(void)
         int32_t x = cv_text(8, 3, &FONT_B, ui.msg[0], K_TEXT);
         cv_text(x + 6, 3, &FONT_B, ui.msg[1], tl->col);
     } else if (ui.mix || ui.loop) {                  /* the mixer, the looper: all four parts */
-        const char *c = ui.mix ? "MIX" : "LOOP";
+        const char *c = ui.mix ? "MIX" : ui.tab ? "STEP" : "LOOP";
         char st[24] = "";
         int32_t w = text_w(&FONT_XS, c) + 8;
-        if (ui.mix)
+        if (ui.mix) {
             text_cat(st, "PARTS 1-4");
-        else
+        } else if (ui.tab) {                         /* STEP: the part whose steps the keys are (DRUMS: and the
+                                                     * instrument) */
+            part_name(set.part, st);
+            if (eng_cur() == KL_DRUMS) {
+                char v[8];
+                inst_text(stp.inst[set.part], v);
+                text_cat(st, " - ");
+                text_cat(st, v);
+            }
+        } else {
             loop_state_text(st);
+        }
         cv_rect(6, 4, w, 15, K_TEXT);
         cv_text(10, 4, &FONT_XS, c, K_GROUND);
         text_fit(6 + w + 8, 3, 192 - w - iw, &FONT_B, st, K_TEXT);
@@ -1905,6 +2389,44 @@ static void footer_loop(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
     mark[3] = lp.click != 1 ? 128 : -1;
 }
 
+/* K1 BAR, K2 NOTE (DRUMS: INST), K3 VEL, K4 LEN: a new step's, or the held step's; marked where HOME takes them (C in
+ * the part's octave or BD, 100, 1/16) */
+static void footer_step(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
+{
+    static const char *const LAB[4] = {"K1 BAR", "K2 NOTE", "K3 VEL", "K4 LEN"};
+    int p = set.part, drums = eng_cur() == KL_DRUMS, s0 = step_first_held();
+    int note = stp.note[p], vel = stp.vel[p], len = stp.len[p], home = step_home_note();
+    int32_t i, bars = (int32_t)step_bars();
+    char t[8];
+    if (s0 >= 0)
+        step_get(s0, &note, &vel, &len);
+    for (i = 0; i < 4; i++) {
+        lab[i][0] = v[i][0] = 0;
+        text_cat(lab[i], i == 1 && drums ? "K2 INST" : LAB[i]);
+    }
+    int_text(ui.bar + 1, v[0]);
+    text_cat(v[0], "/");
+    int_text(bars, t);
+    text_cat(v[0], t);
+    frac[0] = bars > 1 ? ui.bar * 256 / (bars - 1) : 256;
+    mark[0] = -1;
+    if (drums) {
+        inst_text(stp.inst[p], v[1]);
+        frac[1] = stp.inst[p] * 256 / 11;
+        mark[1] = stp.inst[p] ? 0 : -1;
+    } else {
+        note_text(note, v[1]);
+        frac[1] = (note - 24) * 256 / 72;
+        mark[1] = note != home ? (home - 24) * 256 / 72 : -1;
+    }
+    int_text(vel, v[2]);
+    frac[2] = vel * 256 / 127;
+    mark[2] = vel != 100 ? 100 * 256 / 127 : -1;
+    text_cat(v[3], LEN_NAME[len]);
+    frac[3] = len * 32;
+    mark[3] = len != 1 ? 32 : -1;
+}
+
 static void draw_footer(void)                        /* what the controls hold, each with a bar of where it is */
 {
     const tile_t *tl = &TILES[TILE_OF[eng_cur()]];
@@ -1912,6 +2434,8 @@ static void draw_footer(void)                        /* what the controls hold, 
     int32_t frac[4], mark[4], i;
     if (ui.mix)
         footer_mix(lab, v, frac, mark);
+    else if (ui.loop && ui.tab)
+        footer_step(lab, v, frac, mark);
     else if (ui.loop)
         footer_loop(lab, v, frac, mark);
     else if (ui.edit)
@@ -1962,7 +2486,6 @@ static void ring_draw(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* a circ
 
 /* DRUMS: one octave as the keys lie, each key with its instrument; those the page's knobs change are outlined in the
  * engine's colour, the one just played is filled (the same on every octave) */
-static const char *const KEY_NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 static void draw_pad(int32_t x, int32_t y, int32_t w, int32_t h, int pc, uint16_t col, int lit)
 {
     const char *name = kl_drum_name(sound_base(set.part, KL_DRUMS), pc);
@@ -2148,6 +2671,25 @@ static void draw_mix(int32_t y0)                     /* the mixer's strips, the 
 /* ------------------------------------------------------- the looper's lanes --- */
 #define LT_X 50                                      /* the lanes' time line: from x, this wide */
 #define LT_W 186
+#define LANE_Y 54                                    /* the first lane's row, each this high (and a row apart) */
+#define LANE_H 37
+
+/* the looper's page's tabs, LOOP and STEP, this one lit (as the edit pages'), and a note on the right */
+static void draw_tabs(int32_t y0, const char *right)
+{
+    static const char *const TAB[2] = {"LOOP", "STEP"};
+    const tile_t *tl = &TILES[TILE_OF[eng_cur()]];
+    int32_t i, x = 8;
+    for (i = 0; i < 2; i++) {
+        int32_t w = text_w(&FONT_XS, TAB[i]);
+        cv_text(x, 23 - y0, &FONT_XS, TAB[i], i == ui.tab ? K_TEXT : K_MUTED);
+        if (i == ui.tab)
+            cv_rect(x, 38 - y0, w, 2, tl->col);
+        x += w + 14;
+    }
+    cv_text(232 - text_w(&FONT_XS, right), 23 - y0, &FONT_XS, right, K_MUTED);
+    cv_rect(0, 40 - y0, 240, 1, K_LINE);
+}
 
 static uint32_t loop_view(void)                      /* the ticks the lanes show: the length, or as far as the first
                                                      * take has come (a bar at least) */
@@ -2170,35 +2712,35 @@ static void draw_lane(int p, int32_t y, uint32_t len, int32_t bars)
     int sel = p == set.part, recp = lp.rec && lp.rpart == p, solo = 0, q;
     uint16_t bg = sel ? K_SURF2 : K_SURF, col;
     uint32_t n = lp.n[p], i;
-    int32_t b, lo = 127, hi = 0, top = y + 5, h = 32;
+    int32_t b, lo = 127, hi = 0, top = y + 4, h = 29;
     uint8_t sh[8];
     char t[12] = "";
     for (q = 0; q < KL_NPART; q++)
         solo |= set.parts[q].solo;
     col = ps->mute || (solo && !ps->solo) ? K_MUTED : tl->col;
-    cv_rect(1, y, 238, 42, bg);
+    cv_rect(1, y, 238, LANE_H, bg);
     if (sel)
-        box_edge(1, y, 238, 42, 2, tl->col);
+        box_edge(1, y, 238, LANE_H, 2, tl->col);
     kl_shape(ps->engine, work[p][ps->engine], sh);
-    glyph_draw(13, y + 13, 8, sh, tl->col, bg);
+    glyph_draw(12, y + 11, 7, sh, tl->col, bg);
     part_name(p, t);
-    text_fit(5, y + 27, 44, &FONT_T, t, sel ? tl->col : K_TEXT);
+    text_fit(5, y + 22, 44, &FONT_T, t, sel ? tl->col : K_TEXT);
     if (recp) {
-        cv_rect(26, y + 7, text_w(&FONT_T, "REC") + 6, 12, K_REC);
-        cv_text(29, y + 8, &FONT_T, "REC", K_GROUND);
+        cv_rect(24, y + 5, text_w(&FONT_T, "REC") + 6, 12, K_REC);
+        cv_text(27, y + 5, &FONT_T, "REC", K_GROUND);
     }
     if (LT_W / (bars * 4) >= 6)                      /* the beats, where there is room */
         for (b = 1; b < bars * 4; b++)
-            cv_rect(LT_X + b * LT_W / (bars * 4), y + 3, 1, 36, mix565(K_LINE, bg, 110));
+            cv_rect(LT_X + b * LT_W / (bars * 4), y + 3, 1, LANE_H - 6, mix565(K_LINE, bg, 110));
     for (b = 1; b < bars; b++)
-        cv_rect(LT_X + b * LT_W / bars, y + 3, 1, 36, K_LINE);
+        cv_rect(LT_X + b * LT_W / bars, y + 3, 1, LANE_H - 6, K_LINE);
     for (i = 0; i < n && e[i].tick < len; i++) {
         lo = e[i].note < lo ? e[i].note : lo;
         hi = e[i].note > hi ? e[i].note : hi;
     }
     if (lo > hi) {
         if (!recp)
-            cv_text(LT_X + (LT_W - text_w(&FONT_T, "EMPTY")) / 2, y + 16, &FONT_T, "EMPTY", K_MUTED);
+            cv_text(LT_X + (LT_W - text_w(&FONT_T, "EMPTY")) / 2, y + 12, &FONT_T, "EMPTY", K_MUTED);
         return;
     }
 #define NOTE_Y(nt) (hi == lo ? top + h / 2 - 1 : top + h - 3 - ((nt) - lo) * (h - 3) / (hi - lo))
@@ -2231,22 +2773,152 @@ static void draw_loop(int32_t y0)
 {
     uint32_t len = loop_view(), pos = lp.pos16 >> 16;
     int32_t bars = (int32_t)(len / LP_BAR), b, p, cur = lp.state == LP_PLAY ? (int32_t)(pos / LP_BAR) : -1;
+    char v[12];
     cv_begin(240, 93, K_GROUND);
+    bars_text(lp.bars, v);
+    draw_tabs(y0, v);
     for (b = 0; b < bars; b++) {
         int32_t x = LT_X + b * LT_W / bars;
         char t[4];
         int_text(b + 1, t);
         if (b == cur) {
-            cv_rect(x + 1, 23 - y0, text_w(&FONT_T, t) + 4, 11, K_TEXT);
-            cv_text(x + 3, 23 - y0, &FONT_T, t, K_GROUND);
+            cv_rect(x + 1, 42 - y0, text_w(&FONT_T, t) + 4, 11, K_TEXT);
+            cv_text(x + 3, 42 - y0, &FONT_T, t, K_GROUND);
         } else if (bars <= 8 || b % 4 == 0) {
-            cv_text(x + 3, 23 - y0, &FONT_T, t, K_MUTED);
+            cv_text(x + 3, 42 - y0, &FONT_T, t, K_MUTED);
         }
     }
     for (p = 0; p < KL_NPART; p++)
-        draw_lane((int)p, 34 + p * 44 - y0, len, bars);
+        draw_lane((int)p, LANE_Y + p * (LANE_H + 1) - y0, len, bars);
     if (lp.state == LP_PLAY)
-        cv_rect(LT_X + (int32_t)(pos * (uint32_t)LT_W / len), 34 - y0, 2, 174, K_TEXT);
+        cv_rect(LT_X + (int32_t)(pos * (uint32_t)LT_W / len), LANE_Y - y0, 2, 4 * LANE_H + 3, K_TEXT);
+    cv_blit(0, (uint32_t)y0);
+}
+
+/* the step sequencer's tab, the rows y0 .. y0 + 92 of the screen: the bar's 16 step numbers (the one playing lit), a
+ * row a part (a step with a note filled; the chosen part's framed, its held steps outlined), and below the chosen
+ * part's: the held step's note, velocity and length, or a new step's (DRUMS: the instrument's row and the kit) */
+#define SX0 54                                       /* the steps: from x, 16 in this width */
+#define SXW 182
+static void draw_step_cell(int32_t x, int32_t y, int32_t h, int on, int play, int i, uint16_t col, uint16_t bg)
+{
+    uint16_t c = on ? (play ? K_TEXT : col) : mix565(K_TEXT, bg, play ? 70 : (i / 4) % 2 ? 12 : 24);   /* empty: a beat's
+                                                                                                     * four alike */
+    cv_rect(x + 1, y, SXW / 16 - 2, h, c);
+}
+
+static void draw_step(int32_t y0)
+{
+    const tile_t *ct = &TILES[TILE_OF[eng_cur()]];
+    uint32_t play = step_play(), sel = step_sel();
+    int drums = eng_cur() == KL_DRUMS, s0 = step_first_held();
+    int32_t p, i;
+    char t[24] = "", v[12];
+    cv_begin(240, 93, K_GROUND);
+    t[0] = 0;
+    text_cat(t, "BAR ");
+    int_text(ui.bar + 1, v);
+    text_cat(t, v);
+    text_cat(t, "/");
+    int_text((int32_t)step_bars(), v);
+    text_cat(t, v);
+    draw_tabs(y0, t);
+    for (i = 0; i < 16; i++) {                       /* the step numbers: 1, 5, 9, 13, and the one playing */
+        int32_t cx = SX0 + i * SXW / 16 + SXW / 32;
+        int_text(i + 1, v);
+        if (play & 1u << i) {
+            cv_rect(cx - text_w(&FONT_T, v) / 2 - 2, 42 - y0, text_w(&FONT_T, v) + 4, 11, K_TEXT);
+            cv_text(cx - text_w(&FONT_T, v) / 2, 42 - y0, &FONT_T, v, K_GROUND);
+        } else if (i % 4 == 0) {
+            cv_text(cx - text_w(&FONT_T, v) / 2, 42 - y0, &FONT_T, v, K_MUTED);
+        }
+    }
+    for (p = 0; p < KL_NPART; p++) {                 /* a row a part */
+        const part_set_t *ps = &set.parts[p];
+        const tile_t *tl = &TILES[TILE_OF[ps->engine]];
+        int32_t y = 54 + p * 21 - y0;
+        int chosen = p == set.part;
+        uint16_t bg = chosen ? K_SURF2 : K_GROUND, col = chosen ? tl->col : mix565(tl->col, K_GROUND, 190);
+        uint32_t m = step_mask((int)p, LP_ANY);
+        uint8_t sh[8];
+        t[0] = 0;
+        part_name((int)p, t);
+        if (chosen) {
+            cv_rect(1, y, 238, 20, bg);
+            box_edge(1, y, 238, 20, 1, tl->col);
+        }
+        kl_shape(ps->engine, work[p][ps->engine], sh);
+        glyph_draw(10, y + 10, 6, sh, tl->col, bg);
+        text_fit(19, y + 4, 34, &FONT_T, t, chosen ? tl->col : K_TEXT);
+        for (i = 0; i < 16; i++) {
+            int32_t x = SX0 + i * SXW / 16;
+            draw_step_cell(x, y + 3, 14, (int)(m >> i & 1u), (int)(play >> i & 1u), (int)i, col, chosen ? bg : K_SURF);
+            if (chosen && (ui.held & 1u << i))
+                box_edge(x, y + 1, SXW / 16, 18, 1, K_TEXT);
+        }
+    }
+    cv_rect(1, 140 - y0, 238, 67, K_SURF);           /* the chosen part's */
+    if (drums) {                                     /* the instrument on K2: its row; the kit, those with steps
+                                                     * dotted */
+        uint32_t m = step_mask(set.part, sel), any = 0;
+        inst_text((int)sel, v);
+        t[0] = 0;
+        text_cat(t, v);
+        text_cat(t, " - ");
+        part_name(set.part, t);
+        text_fit(8, 143 - y0, 150, &FONT_XS, t, ct->col);
+        cv_text(232 - text_w(&FONT_T, "KEYS = ITS STEPS"), 145 - y0, &FONT_T, "KEYS = ITS STEPS", K_MUTED);
+        cv_text(8, 163 - y0, &FONT_T, v, ct->col);
+        for (i = 0; i < 16; i++)
+            draw_step_cell(SX0 + i * SXW / 16, 162 - y0, 12, (int)(m >> i & 1u), (int)(play >> i & 1u), (int)i,
+                           ct->col, K_SURF);
+        for (i = 0; i < 12; i++)                     /* which instruments the bar has */
+            if (step_mask(set.part, (uint32_t)i))
+                any |= 1u << i;
+        for (i = 0; i < 12; i++) {
+            int32_t x = 4 + i * 19;
+            inst_text((int)i, v);
+            if ((uint32_t)i == sel)
+                cv_rect(x, 182 - y0, 18, 16, ct->col);
+            else
+                box_edge(x, 182 - y0, 18, 16, 1, K_LINE);
+            cv_text(x + (18 - text_w(&FONT_T, v)) / 2, 184 - y0, &FONT_T, v,
+                    (uint32_t)i == sel ? K_GROUND : any >> i & 1u ? K_TEXT : K_MUTED);
+            if (any >> i & 1u)
+                cv_rect(x + 14, 184 - y0, 2, 2, (uint32_t)i == sel ? K_GROUND : ct->col);
+        }
+    } else {                                         /* the held step's notes, or a new step's */
+        int note = stp.note[set.part], vel = stp.vel[set.part], len = stp.len[set.part], held = 0;
+        static const char *const LAB[3] = {"NOTE", "VEL", "LEN"};
+        if (s0 >= 0)
+            held = step_get(s0, &note, &vel, &len);
+        t[0] = 0;
+        if (held) {
+            text_cat(t, "STEP ");
+            two_digits(s0 + 1, v);
+            text_cat(t, v);
+        } else {
+            text_cat(t, "NEW STEPS");
+        }
+        text_fit(8, 143 - y0, 150, &FONT_XS, t, ct->col);
+        t[0] = 0;
+        part_name(set.part, t);
+        cv_text(232 - text_w(&FONT_T, held ? "HELD" : t), 145 - y0, &FONT_T, held ? "HELD" : t, K_MUTED);
+        for (i = 0; i < 3; i++) {
+            int32_t x = 8 + i * 75;
+            if (i == 0)
+                note_text(note, v);
+            else if (i == 1)
+                int_text(vel, v);
+            else {
+                v[0] = 0;
+                text_cat(v, LEN_NAME[len]);
+            }
+            cv_text(x, 161 - y0, &FONT_T, LAB[i], K_MUTED);
+            cv_text(x, 173 - y0, &FONT_B, v, K_TEXT);
+        }
+        cv_text(8, 192 - y0, &FONT_T, "WHITE KEYS: STEPS. HOLD ONE, TURN K2-K4", K_MUTED);
+    }
     cv_blit(0, (uint32_t)y0);
 }
 
@@ -2256,6 +2928,9 @@ static void draw(void)
     if (ui.mix) {
         draw_mix(22);
         draw_mix(115);
+    } else if (ui.loop && ui.tab) {
+        draw_step(22);
+        draw_step(115);
     } else if (ui.loop) {
         draw_loop(22);
         draw_loop(115);
@@ -2303,6 +2978,8 @@ void app_frame(void)
         meters_read(now);
     if (ui.ask && now >= ui.msg_until)               /* HOME + PLAY's question unanswered: nothing emptied */
         ui.ask = 0;
+    if (ui.bar >= step_bars())                       /* the loop got shorter: STEP shows its last bar */
+        ui.bar = (uint8_t)(step_bars() - 1u);
     {
         uint32_t sig = loop_sig();
         char it[8];
@@ -2336,7 +3013,11 @@ void app_frame(void)
         ui.redraw_head = 0;
         draw_header();
     }
-    if (ui.redraw_loop) {
+    if (ui.redraw_loop && ui.tab) {
+        ui.redraw_loop = 0;
+        draw_step(22);
+        draw_step(115);
+    } else if (ui.redraw_loop) {
         ui.redraw_loop = 0;
         draw_loop(22);
         draw_loop(115);
@@ -2442,6 +3123,23 @@ int app_expect(const char *what, int *got)
         *got = (int)kl_hits(set.part, &k);
     else if (!strcmp(what, "ask"))                   /* HOME + PLAY's question stands */
         *got = ui.ask;
+    else if (!strcmp(what, "tab"))                   /* the looper's page: 1 LOOP, 2 STEP */
+        *got = ui.tab + 1;
+    else if (!strcmp(what, "sbar"))                  /* STEP: the bar shown, 1.. */
+        *got = ui.bar + 1;
+    else if (!strcmp(what, "smask"))                 /* the chosen part's steps with a note in the bar shown (DRUMS:
+                                                     * the instrument's), bit 0 step 1 */
+        *got = (int)step_mask(set.part, step_sel());
+    else if (!strcmp(what, "sall"))                  /* the same, every note */
+        *got = (int)step_mask(set.part, LP_ANY);
+    else if (!strcmp(what, "slights"))               /* the white keys lit, bit 0 step 1 */
+        *got = (int)(step_mask(set.part, step_sel()) ^ step_play());
+    else if (!strcmp(what, "snote"))                 /* a new step's note (DRUMS: the instrument's semitone) */
+        *got = eng_cur() == KL_DRUMS ? stp.inst[set.part] : stp.note[set.part];
+    else if (!strcmp(what, "svel"))
+        *got = stp.vel[set.part];
+    else if (!strcmp(what, "slen"))                  /* LEN: 0 1/32, 1 1/16, 2 1/8 .. 8 1/1 */
+        *got = stp.len[set.part];
     else if ((k = expect_k(what, "lt")) >= 0)        /* the chosen part's event k: its tick (-1 none) */
         *got = (uint32_t)k < lp.n[set.part] ? lp_ev[set.part][k].tick : -1;
     else if ((k = expect_k(what, "lv")) >= 0)        /* its velocity (0: a note's end) */

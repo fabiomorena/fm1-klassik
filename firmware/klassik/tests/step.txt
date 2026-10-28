@@ -1,0 +1,231 @@
+# KLASSIK's step sequencer (v0.6) in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/step.txt firmware/klassik/build/host
+# A step is 1/16 = 48 ticks (192 a beat): step 9 of bar 1 is tick 384; a 1/16 note ends 4 ticks early (44), 1/8 at 92.
+wait 600
+listen
+# SEQ opens the looper's page on LOOP; SEQ again (as EDIT on the edit pages) or OCT+: STEP, and back
+tap SEQ
+wait 30
+expect loop 1
+expect tab 1
+tap SEQ
+wait 30
+expect tab 2
+said STEP
+tap OCT+
+wait 30
+expect tab 1
+said LOOP
+tap OCT+
+wait 30
+expect tab 2
+expect bars 0
+expect smask 0
+expect snote 60
+expect svel 100
+expect slen 1
+shot step-empty.png
+# part 1 VA: a white key on an empty loop sets its step (C4, 100, 1/16) and makes the loop a bar
+key w0 down
+wait 30
+key w0 up
+wait 30
+said STEP 1 C4
+expect bars 1
+expect events 2
+expect smask 1
+expect lt0 0
+expect ln0 60
+expect lv0 100
+expect lt1 44
+expect lv1 0
+# K2 NOTE up two semitones: the next steps are D4
+spin K2 2
+wait 30
+expect snote 62
+said NOTE D4
+key w4 down
+wait 30
+key w4 up
+wait 30
+key w8 down
+wait 30
+key w8 up
+wait 30
+expect smask 273
+expect events 6
+# a tap on a step set clears it (as its key comes up)
+key w4 down
+wait 30
+key w4 up
+wait 30
+said STEP 5 OFF
+expect smask 257
+expect events 4
+# a key held and K2..K4 turned: that step's note (D4 -> C4), velocity, length (1/8); it stays set
+key w8 down
+wait 30
+spin K2 -2
+wait 30
+spin K3 -10
+wait 30
+spin K4 1
+wait 30
+shot step-held.png
+key w8 up
+wait 30
+expect smask 257
+expect lt2 384
+expect ln2 60
+expect lv2 90
+expect lt3 476
+expect ln3 60
+# the new steps' settings stay as they were
+expect snote 62
+expect svel 100
+expect slen 1
+# HOME + K3 on a held step: back to 100
+key w8 down
+wait 30
+press HOME
+wait 30
+spin K3 1
+wait 30
+release HOME
+wait 30
+key w8 up
+wait 30
+expect lv2 100
+expect smask 257
+# HOME + K2 without a key held: a new step's note back to C in the part's octave
+press HOME
+wait 30
+spin K2 1
+wait 30
+release HOME
+wait 30
+expect snote 60
+# the black keys do nothing here
+key b0 down
+wait 30
+key b0 up
+wait 30
+expect events 4
+expect voices 0
+# PLAY at 40 BPM (a step is 375 ms): the steps sound; the key lights are the steps set, the one playing flipped
+tap OCT+
+wait 30
+spin K1 -80
+wait 30
+expect tempo 40
+tap OCT+
+wait 30
+expect tab 2
+tap PLAY
+wait 30
+expect lstate 2
+expect slights 256
+expect hits 1
+wait 3000
+expect hits 2
+shot step-play.png
+tap PLAY
+wait 30
+expect lstate 0
+# DRUMS (part 2): K2 picks the instrument (BD, the keys' C, first); the keys show and set only its steps
+tap SEL
+wait 30
+expect part 2
+expect tab 2
+expect snote 0
+key w0 down
+wait 30
+key w0 up
+wait 30
+expect smask 1
+expect ln0 36
+spin K2 2
+wait 30
+expect snote 2
+said SD
+expect smask 0
+expect sall 1
+key w4 down
+wait 30
+key w4 up
+wait 30
+said STEP 5 SD
+expect smask 16
+expect sall 17
+shot step-drums.png
+press HOME
+wait 30
+spin K2 1
+wait 30
+release HOME
+wait 30
+expect snote 0
+expect smask 1
+# HOME + PLAY empties the part (OCT+ yes); HOME + REC could bring it back, but not once a step is set after it
+press HOME
+wait 30
+tap PLAY
+wait 30
+release HOME
+wait 30
+tap OCT+
+wait 30
+said CLEARED 2 DRUMS
+expect events 0
+expect tab 2
+key w0 down
+wait 30
+key w0 up
+wait 30
+expect events 2
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+said UNDO NOTHING
+expect events 2
+# LENGTH 2 bars: K1 BAR shows bar 2, empty; a step there is at tick 768 + 48 * 2
+tap OCT+
+wait 30
+spin K2 1
+wait 30
+expect bars 2
+tap OCT+
+wait 30
+spin K1 1
+wait 30
+expect sbar 2
+said BAR 2
+expect smask 0
+key w2 down
+wait 30
+key w2 up
+wait 30
+expect smask 4
+expect lt2 864
+# LENGTH back to 1 bar: STEP shows the last bar there is
+tap OCT+
+wait 30
+spin K2 -1
+wait 30
+expect bars 1
+tap OCT+
+wait 30
+expect sbar 1
+# OCT- back to the rack: the keys play again
+tap OCT-
+wait 30
+expect loop 0
+key w0 down
+wait 100
+expect pvoices >0
+key w0 up
+wait 30

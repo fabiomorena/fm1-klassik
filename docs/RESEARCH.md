@@ -345,6 +345,49 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   für eine Note kurz vor dem Ende des Vorzählers, die auf Tick 0 rückt (innerhalb einer halben QUANT-Stufe, bei OFF
   24 Ticks).
 
+## Step-Sequencer (Stand 28.10.2026, nur Simulator)
+
+- Kein eigener Speicher für Steps: Sie sind die Ereignisse des Loopers (Step = 1/16 = 48 Ticks, eine Note gehört zu
+  dem Step, dessen Mitte sie auf ±24 Ticks trifft). `tools/device_check.py`: App 219 364 → 226 936 B, RAM
+  55 200 → 55 328 B, Pool unverändert 110 344 B.
+- Tastenbelegung: `PLAT_WHITE_KEYS` = {0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26} (`base/include/plat.h:28`),
+  F3 = Taste 0; die Tasten haben Lichter (`plat_leds(buttons, keys)`, ebd.).
+- Die Schriften enthalten nur ASCII bis Zeichen 126 (`base/tools/gen_font.py:126`): „·“ der Mockups ist auf dem Gerät
+  „ - “.
+
+## Effekte: Quellen und Speicher (Stand 28.10.2026, Recherche, noch nichts übernommen)
+
+- **Mutable Instruments (github.com/pichenettes/eurorack, Commit `f4cfa76`, 12.10.2026):** README, Abschnitt
+  „License“: „Code (STM32F projects): MIT license“, „Code (AVR projects): GPL3.0“. Rings, Clouds, Elements, Beads und
+  Plaits sind STM32-Module; die Dateiköpfe tragen den MIT-Text („Copyright 2014 Emilie Gillet. Permission is hereby
+  granted …“, z. B. `rings/dsp/fx/reverb.h`). Plaits nutzen wir schon für DRUMS (LICENSING.md).
+- **Hall:** `rings/dsp/fx/reverb.h` und `clouds/dsp/fx/reverb.h` sind derselbe Aufbau: vier Allpässe zur Diffusion,
+  dann zwei Schleifen mit je zwei Allpässen, Tiefpass und einer von einem LFO bewegten Verzögerung (Griesinger/
+  Dattorro-Art). Gerechnet in `float`, gespeichert in 16 bzw. 12 Bit (`fx_engine.h`). Abhängigkeiten: `stmlib`
+  (`Clip16`, `Interpolate`, `CosineOscillator`, MIT), ein Port nach C wie bei Plaits und Open303 nötig.
+
+  | Quelle | Puffer | Speicher | Verzögerungen | gebaut für | bei 44,1 kHz |
+  | --- | --- | --- | --- | --- | --- |
+  | Rings | `FxEngine<32768, FORMAT_16_BIT>` | 65 536 B | 21 617 Samples | 48 kHz (`rings/dsp/dsp.h:39`) | Zeiten × 48 000 / 44 100 = × 1,088 |
+  | Clouds | `FxEngine<16384, FORMAT_12_BIT>` | 32 768 B | 16 375 Samples | 32 kHz (`clouds/clouds.cc:115`) | Zeiten × 32 000 / 44 100 = × 0,726 (Raum kleiner); auf 44,1 kHz umgerechnet 22 567 Samples, passt nur in 32 768 |
+
+- **Chorus:** `plaits/dsp/fx/ensemble.h` (`FxEngine<1024, FORMAT_32_BIT>`, 4 096 B) oder `rings/dsp/fx/chorus.h`
+  (2 048 × 2 B). **Verzerrung:** `plaits/dsp/fx/overdrive.h` (ohne Puffer).
+- **Delay:** einfach genug für eigenen Code (MPL-2.0), im Takt des Loopers. Speicher bei 44,1 kHz, 16 Bit, zwei Linien
+  (Ping-Pong): 2 × Sekunden × 44 100 × 2 B.
+- **Pool-Budget:** 344 064 − 110 344 (belegt mit Looper) − 8 192 (Reserve) = 225 528 B frei.
+
+  | Delay je Seite | Delay | + Hall Rings (65 536) | bleibt | + Hall Clouds-Größe (32 768) | bleibt |
+  | --- | --- | --- | --- | --- | --- |
+  | 0,5 s | 88 200 B | 153 736 B | 71 792 B | 120 968 B | 104 560 B |
+  | 0,75 s | 132 300 B | 197 836 B | 27 692 B | 165 068 B | 60 460 B |
+  | 1,0 s | 176 400 B | 241 936 B | passt nicht | 209 168 B | 16 360 B |
+
+  Ein Delay mit halber Rate (22,05 kHz, dunkler wie Band) bräuchte die Hälfte.
+- **Rechenlast:** nicht gemessen. Der Hall rechnet je Sample etwa 14 Lese- und 12 Schreibzugriffe mit
+  16-Bit-Umwandlung und rund 40 Gleitkomma-Operationen; wie viel das auf dem FM-1 ist, ist **unsicher**. Messen wie
+  bei den Engines: erst relativ zu einer FM6-Stimme im Simulator, dann auf dem Gerät.
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).
