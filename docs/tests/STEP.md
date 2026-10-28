@@ -1,6 +1,6 @@
 # Step-Sequencer – Testprotokoll (Browser-Emulator)
 
-Stand v0.6 (Teil Step-Sequencer). Die erwarteten Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`) und dem
+Stand v0.6 (sechs Parts). Die erwarteten Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`) und dem
 Host-Test (`firmware/klassik/tests/step.txt`). Es geht um Funktion und Stabilität; Klang und Design kommen zum
 Schluss.
 
@@ -31,13 +31,15 @@ siehst), Anschlagdynamik.
 
 Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerät klicken.
 
-- [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Switch on“. (Falls die Seite nicht lädt, im Terminal:
+- [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Factory reset“ zweimal klicken (der zweite Klick
+  bestätigt), dann „Switch on“. (Falls die Seite nicht lädt, im Terminal:
   `python3 -m http.server 8000 -d firmware/klassik/build/emu`)
 
 ## A Tabs
 
 - [ ] A1 SEQ: Looper-Seite, oben die Tabs `LOOP` (hell) und `STEP`. Noch einmal SEQ: Tab STEP, Kopfzeile `STEP 1 VA`;
-  vier Reihen mit je 16 leeren Steps, unten `NEW STEPS` mit NOTE C4, VEL 100, LEN 1/16.
+  sechs Reihen (`1 VA` bis `6 ORGAN`) mit je 16 leeren Steps, unten `NEW STEPS` mit NOTE C4, VEL 100, LEN 1/16
+  nebeneinander.
 - [ ] A2 OCT+ wechselt ebenso zwischen LOOP und STEP; OCT− schließt die Seite (zurück zum Rack).
 
 ## B Steps setzen (Part 1 VA, gestoppt)
@@ -60,6 +62,7 @@ Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerä
 - [ ] C3 Tab LOOP: die gesetzten Steps erscheinen dort als Noten in Spur 1.
 - [ ] C4 Auf LOOP etwas live aufnehmen (REC), dann STEP: die aufgenommenen Noten erscheinen als Steps.
 - [ ] C5 Ein ACID-Part (SEL bis Part 3): zwei benachbarte Steps, beim ersten LEN 1/8: ACID gleitet zum zweiten.
+- [ ] C6 SEL zu Part 5 (PD) und 6 (ORGAN): dort Steps setzen, sie erscheinen in ihren Reihen und klingen.
 
 ## D DRUMS
 
@@ -75,6 +78,8 @@ Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerä
 - [ ] E1 Auf LOOP K2 LENGTH 2 Takte, dann STEP und K1 BAR auf 2: leerer Takt 2; dort Steps setzen, sie klingen im
   zweiten Takt.
 - [ ] E2 LENGTH zurück auf 1: STEP zeigt Takt 1.
+- [ ] E2b Frage: Passt es so (16 Steps je Takt, die Länge = LENGTH des Loopers in Takten)? Oder fehlt dir etwas, z. B.
+  8 Steps, eine eigene Länge je Part, ein Raster von 1/8 oder 1/32? (bitte notieren)
 - [ ] E3 Fünf Minuten: Steps setzen, löschen, gehalten ändern, zwischen Parts und Tabs wechseln, dabei spielen:
   keine Aussetzer, kein Absturz, kein hängender Ton.
   (Der Browser rechnet anders als das Gerät; Aussetzer hier sagen wenig über das Gerät.)

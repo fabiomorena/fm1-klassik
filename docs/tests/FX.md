@@ -1,6 +1,6 @@
 # Effekte – Testprotokoll (Browser-Emulator)
 
-Stand v0.6 (Teil Effekte). Die erwarteten Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`,
+Stand v0.6 (sechs Parts). Die erwarteten Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`,
 `firmware/klassik/dsp/fx.c`) und dem Host-Test (`firmware/klassik/tests/fx.txt`). Es geht um Funktion und Stabilität;
 wie Delay und Hall klingen, stimmen wir zum Schluss ab (Notizen dazu sind trotzdem willkommen).
 
@@ -21,19 +21,19 @@ Taster festhalten: Shift-Klick.
 
 ## 0 Vorbereitung
 
-- [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, **ohne** „Factory reset“, dann „Switch on“. Hattest du
-  vorher etwas gespeichert (Parts, Mixer), ist es noch da (das alte Speicherformat `KLS7` wird übernommen); die Sends
-  stehen auf 0.
+- [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Factory reset“ zweimal klicken (der zweite Klick
+  bestätigt), dann „Switch on“. Alle Sends stehen auf 0.
 
 ## A Seiten und Tabs
 
 - [ ] A1 FX: Kopfzeile `FX DELAY + HALL`, FX leuchtet; Tabs `DELAY` (hell) und `HALL`, rechts das Tempo
-  (`120 BPM`). Oben ein Bild mit `PING-PONG` und `1/8. = 375 MS`, darunter vier Kacheln, eine je Part, alle mit `0`.
+  (`120 BPM`). Oben ein Bild mit `PING-PONG` und `1/8. = 375 MS`, darunter sechs Kacheln (drei nebeneinander, zwei
+  Reihen), eine je Part, alle mit `0`.
   Fußzeile `K1 TIME 1/8.`, `K2 FDBK 35%`, `K3 TONE 70%`, `K4 LEVEL 0 dB`.
 - [ ] A2 FX oder OCT+ wechselt zu `HALL` (Bild `STEREO`, `PRE 20 MS`; Fußzeile `K1 PRE 20 MS`, `K2 DECAY 50%`,
   `K3 TONE 60%`, `K4 LEVEL 0 dB`) und wieder zurück; OCT− schließt die Seite (zurück zum Rack).
-- [ ] A3 GLO: der Mixer auf dem Tab `MIX` (neu: Tab-Zeile `MIX SEND`, die Züge etwas kürzer, mit `DLY` und `HALL`).
-  GLO oder OCT+ wechselt zu `SEND` und zurück, **GLO schließt den Mixer nicht mehr**; OCT− schließt ihn.
+- [ ] A3 GLO: der Mixer auf dem Tab `MIX` (Tab-Zeile `MIX SEND`, in den Zügen `DLY` und `HALL`). GLO oder OCT+
+  wechselt zu `SEND` und zurück; OCT− schließt ihn.
 - [ ] A4 Von jeder dieser Seiten springen EDIT, GLO, SEQ und FX direkt zu ihrer Seite. Die Tasten spielen überall.
 
 ## B Sends im Mixer (Tab SEND)
@@ -41,7 +41,8 @@ Taster festhalten: Shift-Klick.
 - [ ] B1 Auf `SEND`: Fußzeile `K1 DELAY 0`, `K2 HALL 0`, `K3 -`, `K4 -`. K1 und K2 drehen: der Wert (0–100) und die
   Balken `DLY` / `HALL` im Zug des umrandeten Parts folgen (farbig; die Fader sind auf diesem Tab grau). K3 und K4
   tun nichts.
-- [ ] B2 SEL: der Rahmen wandert, die Fußzeile zeigt die Sends des nächsten Parts.
+- [ ] B2 SEL: der Rahmen wandert, die Fußzeile zeigt die Sends des nächsten Parts; ab Part 4 die Seite `PARTS 4-6`.
+  Die Sends von Part 5 und 6 stehen danach auch auf ihren Kacheln der FX-Seite.
 - [ ] B3 Ein Send nicht auf 0: eine helle Marke am Anfang des Balkens in der Fußzeile. HOME (`Esc`) halten und K1/K2
   drehen: zurück auf 0, die Marke ist weg.
 - [ ] B4 Im Zug `MASTER` zeigen `DLY` und `HALL`, wie laut die Effekte zurückkommen (LEVEL der FX-Seite).
@@ -82,6 +83,7 @@ Im Mixer auf `SEND` bei Part 1 K1 DELAY auf 0, K2 HALL auf 100.
   Aufnahme: alles klingt zusammen, nichts bricht ab, keine Aussetzer.
 - [ ] E2 Laut: alle Sends auf 100, MASTER voll: `LIM` leuchtet, es verzerrt nicht hart (unsicher: wie es klingt,
   bitte notieren).
+- [ ] E3 Part 5 (PD) mit DELAY, Part 6 (ORGAN) mit HALL: beide Effekte klingen.
 
 ## F Speichern und Stabilität
 

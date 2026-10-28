@@ -1,8 +1,11 @@
 # Parts – Testprotokoll (Browser-Emulator)
 
-Stand v0.5 (Teil Parts). Die erwarteten Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`,
+Stand v0.6 (sechs Parts). Die erwarteten Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`,
 `firmware/klassik/dsp/engines.c`) und dem Host-Test (`firmware/klassik/tests/parts.txt`). Es geht um Funktion und
 Stabilität; Klang und Design kommen zum Schluss.
+
+Die fünf Protokolle `PARTS.md`, `MIXER.md`, `LOOPER.md`, `STEP.md` und `FX.md` gelten alle für denselben Emulator
+(Stand `befb64b`, sechs Parts). Jedes beginnt mit den Werkseinstellungen, die Reihenfolge ist also egal.
 
 | Getestet am | Browser | Dauer |
 | --- | --- | --- |
@@ -16,7 +19,8 @@ Stabilität; Klang und Design kommen zum Schluss.
 
 Wenn du fertig bist: Datei speichern und mir „Protokoll fertig“ schreiben.
 
-Im Browser nicht prüfbar: MIDI-In und -Out auf den Kanälen 1–4, die Rechenlast auf dem Gerät.
+Im Browser nicht prüfbar: MIDI-In und -Out auf den Kanälen 1–6 (der Emulator hat kein Web-MIDI; das prüft der
+Host-Test), die Rechenlast auf dem Gerät.
 
 ## 0 Vorbereitung
 
@@ -28,19 +32,20 @@ Im Browser nicht prüfbar: MIDI-In und -Out auf den Kanälen 1–4, die Rechenla
 | OCT− / OCT+ | `Y` / `X` |
 | SEL | Taster SEL (obere Tasterreihe, der zweite) anklicken, oder den Drehregler SELECT drehen (Pfeiltasten ↑ / ↓) |
 
-- [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Factory reset“ zweimal, dann „Switch on“ (neues
-  Speicherformat `KLS7`: alte Einstellungen sind verworfen). Falls die Seite nicht lädt:
-  `python3 -m http.server 8000 -d firmware/klassik/build/emu`.
+- [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Factory reset“ zweimal klicken (der zweite Klick
+  bestätigt), dann „Switch on“. Falls die Seite nicht lädt: `python3 -m http.server 8000 -d firmware/klassik/build/emu`.
 
 ## A Parts wählen
 
-- [ ] A1 Nach dem Start: Kopfzeile `1 VA` (orange), Sound `SAW LEAD`. Auf den Kacheln: VA `1` (gefüllt), DRUMS `2`,
-  ACID `3`, FM6 `4` (umrandet).
-- [ ] A2 SEL: `2 DRUMS` (lila), DRUMS umrandet und mit gefüllter `2`. Weiter mit SEL: `3 ACID`, `4 FM6`, wieder
-  `1 VA`.
+- [ ] A1 Nach dem Start: Kopfzeile `1 VA` (orange), Sound `SAW LEAD`. Jede Kachel hat eine Part-Nummer: VA `1`
+  (gefüllt), DRUMS `2`, ACID `3`, FM6 `4`, PD `5`, ORGAN `6` (umrandet).
+- [ ] A2 SEL: `2 DRUMS` (lila), DRUMS umrandet und mit gefüllter `2`. Weiter mit SEL: `3 ACID`, `4 FM6`, `5 PD`,
+  `6 ORGAN`, wieder `1 VA`.
 - [ ] A2b Drehregler SELECT (oder Pfeiltasten ↑ / ↓): nach rechts der nächste Part, nach links der vorige, von 1 nach
-  links zu 4.
+  links zu 6.
 - [ ] A3 Die Tasten spielen immer den Part in der Kopfzeile (auf Part 2 also Drums, auf Part 3 den ACID-Bass).
+- [ ] A4 Auf Part 5 (PD) und 6 (ORGAN) spielen; Engine (K1), Sound (PRESET), Oktave und Edit-Seiten gehen wie bei den
+  anderen Parts.
 
 ## B Jeder Part für sich
 
@@ -65,8 +70,8 @@ Im Browser nicht prüfbar: MIDI-In und -Out auf den Kanälen 1–4, die Rechenla
 
 ## D Speichern
 
-- [ ] D1 Parts einstellen (Engines, Sounds, Oktaven), einen Part wählen, SAVE. Seite neu laden und „Switch on“:
-  derselbe Part ist gewählt, alle Parts wie eingestellt.
+- [ ] D1 Parts einstellen (Engines, Sounds, Oktaven, auch Part 5 und 6), einen Part wählen, SAVE. Seite neu laden und
+  „Switch on“: derselbe Part ist gewählt, alle sechs Parts wie eingestellt.
 
 ## E Stabilität
 

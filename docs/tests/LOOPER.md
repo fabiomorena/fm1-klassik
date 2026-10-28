@@ -1,6 +1,6 @@
 # Looper – Testprotokoll (Browser-Emulator)
 
-Stand v0.5 (Teil Looper). Die erwarteten Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`) und dem
+Stand v0.6 (sechs Parts). Die erwarteten Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`) und dem
 Host-Test (`firmware/klassik/tests/looper.txt`). Es geht um Funktion und Stabilität; Klang und Design kommen zum
 Schluss.
 
@@ -33,13 +33,15 @@ die Noten auf dem Gerät sitzen, die Rechenlast.
 
 Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerät klicken.
 
-- [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Switch on“. (Falls die Seite nicht lädt, im Terminal:
+- [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Factory reset“ zweimal klicken (der zweite Klick
+  bestätigt), dann „Switch on“. (Falls die Seite nicht lädt, im Terminal:
   `python3 -m http.server 8000 -d firmware/klassik/build/emu`)
 
 ## A Seite und Regler
 
-- [ ] A1 SEQ: Kopfzeile `LOOP EMPTY`, SEQ leuchtet; vier Spuren `1 VA`, `2 DRUMS`, `3 ACID`, `4 FM6`, jede `EMPTY`;
-  Fußzeile `K1 TEMPO 120 BPM`, `K2 LENGTH AUTO`, `K3 QUANT 1/16`, `K4 CLICK REC`.
+- [ ] A1 SEQ: Kopfzeile `LOOP EMPTY`, SEQ leuchtet; sechs Spuren untereinander, je Glyphe und Name in einer Zeile:
+  `1 VA`, `2 DRUMS`, `3 ACID`, `4 FM6`, `5 PD`, `6 ORGAN`, jede `EMPTY`; Fußzeile `K1 TEMPO 120 BPM`,
+  `K2 LENGTH AUTO`, `K3 QUANT 1/16`, `K4 CLICK REC`.
 - [ ] A2 PLAY auf der leeren Schleife: Meldung `EMPTY REC FIRST`, nichts startet.
 - [ ] A3 K1 drehen: das Tempo ändert sich (40 … 240), im Balken erscheint eine helle Marke bei 120. HOME halten und K1
   drehen: zurück auf 120, die Marke ist weg. Das Gleiche mit K3 (Marke bei 1/16) und K4 (Marke bei REC).
@@ -49,7 +51,7 @@ Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerä
 ## B Die erste Aufnahme
 
 - [ ] B1 Part 1 (VA) gewählt, gestoppt, REC: Kopfzeile `LOOP COUNT-IN`, rechts ein roter Punkt und `4`, `3`, `2`, `1`;
-  vier Klicks (der erste höher). REC und PLAY leuchten (PLAY rot). An der Spur 1 steht `REC`.
+  vier Klicks (der erste höher). REC und PLAY leuchten (PLAY rot). Vor der Spur 1 ein roter Punkt.
 - [ ] B2 Nach dem Vorzähler: `REC 1 VA`, rechts roter Punkt und Takt.Schlag (`1.1`, `1.2`, …). Zwei Takte lang
   etwas spielen, kurz nach Beginn von Takt 3 REC: `PLAY`, die Länge ist 2 Takte (`K2 LENGTH 2 BARS`), rechts ein
   grünes Dreieck. Die Schleife wiederholt, was du gespielt hast; die Noten erscheinen als Striche in Spur 1.
@@ -69,6 +71,9 @@ Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerä
   gewandert.
 - [ ] C5 Während die Schleife spielt, eine andere Note festhalten: Sie klingt weiter, bis du loslässt. (Spielt die
   Schleife genau die Note, die du hältst, beendet ihr Ende auch deine; das ist bekannt.)
+- [ ] C6 SEL zu Part 5 (PD), REC, etwas dazuspielen, REC; dann Part 6 (ORGAN) genauso. Die Noten erscheinen in ihren
+  Spuren; der rote Punkt steht immer vor der Spur, die gerade aufnimmt.
+- [ ] C7 Die Spuren sind flach (24 px): Sind die Noten, vor allem die DRUMS, noch gut zu erkennen? (bitte notieren)
 
 ## D Länge, Takt, Kopfzeile
 
@@ -84,6 +89,8 @@ Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerä
 
 ## E Stabilität
 
+- [ ] E0 Auf allen sechs Parts etwas aufnehmen und zusammen spielen lassen: nichts bricht ab, keine Aussetzer. Werden
+  es zu viele Stimmen, endet die älteste (wie bisher).
 - [ ] E1 Fünf Minuten: Parts aufnehmen, zurücknehmen, leeren, Tempo und Länge ändern, dabei spielen: keine Aussetzer,
   kein Absturz, kein hängender Ton.
 - [ ] E2 Seite neu laden und „Switch on“: die Loops sind weg, TEMPO 120, QUANT 1/16, CLICK REC (Loops liegen nur im

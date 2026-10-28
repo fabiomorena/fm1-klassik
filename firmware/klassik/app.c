@@ -1029,8 +1029,8 @@ static __attribute__((noinline)) int32_t mul_q16(int32_t a, int32_t g) { return 
 
 static int32_t clamp30(int64_t v) { return v > (1 << 30) ? 1 << 30 : v < -(1 << 30) ? -(1 << 30) : (int32_t)v; }
 
-static void midi_in(void)                            /* audio interrupt: the packets that came in, channel 1..4 to part
-                                                     * 1..4, the others to the part chosen (and to the looper) */
+static void midi_in(void)                            /* audio interrupt: the packets that came in, channel 1..6 to part
+                                                     * 1..6, the others to the part chosen (and to the looper) */
 {
     uint32_t pkt;
     int port;
