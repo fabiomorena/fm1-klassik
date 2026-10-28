@@ -86,7 +86,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
   PRE bis 100 ms. Ohne Send schläft ein Effekt, sobald er verklungen ist. Pool: 88 200 + 8 820 + 65 536 B.
 - Looper (SEQ, PLAY, REC; `lp` in `app.c`): Noten, kein Klang; eine Schleife für alle Parts, je Part `lp_ev[p]`
-  (2048 Ereignisse, Tick 16 Bit bei 192 je Viertel, höchstens 16 Takte), Rückgängig über `lp_undo` (eine Stufe).
+  (2048 Ereignisse, Tick 16 Bit bei 192 je Viertel, höchstens 16 Takte), Rückgängig über `lp_undo` (eine Stufe je Part).
   Läuft im Audio-Interrupt: `app_render` in Schritten zu 32 Frames (`lp_step` vor jedem `kl_render`); die
   Hauptschleife fragt über `lp_ask` (Befehle) und `lp_key` (Tasten), MIDI nimmt `midi_in` direkt auf. Klick im
   Render, Loops nur im RAM.

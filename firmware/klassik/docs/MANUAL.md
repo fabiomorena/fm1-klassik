@@ -32,7 +32,7 @@ jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt,
 | FX | Effekt-Seite öffnen (dort wechselt FX zwischen DELAY und HALL, OCT− schließt sie) |
 | SEQ | Looper-Seite öffnen (dort wechselt SEQ zwischen LOOP und STEP, OCT− schließt sie) |
 | PLAY, REC | Looper starten und stoppen, aufnehmen (auf jeder Seite, siehe Looper) |
-| HOME + REC, HOME + PLAY | letzte Aufnahme zurücknehmen, Part leeren (siehe Looper) |
+| HOME + REC, HOME + PLAY | letzte Aufnahme des gewählten Parts zurücknehmen, Part leeren (siehe Looper) |
 | ENV | bei ACID: gehalten, sind die angeschlagenen Noten akzentuiert (`ACC` in der Kopfzeile) |
 | SAVE | die Parts speichern: den gewählten, je Part Engine, Sounds und Oktave, Mixer und Effekte (leuchtet, solange etwas ungespeichert ist) |
 | MASTER | Lautstärke |
@@ -126,7 +126,7 @@ dem Ausschalten weg; Tempo, QUANT und CLICK auch (sie stehen dann wieder auf 120
 | PLAY | Schleife von vorn starten, noch einmal: stoppen (auf jeder Seite); leuchtet grün, beim Aufnehmen rot. Leer und LENGTH AUTO: `EMPTY REC FIRST` |
 | REC | den gewählten Part aufnehmen, über das, was er schon hat (Overdub), bis REC noch einmal; leuchtet dabei. Gestoppt: erst ein Takt Vorzähler mit Klick (CLICK OFF: sofort) |
 | SEL, SELECT | beim Aufnehmen wandert die Aufnahme mit zum nächsten Part |
-| HOME + REC | die letzte Aufnahme zurücknehmen, egal welcher Part sie gemacht hat (die Meldung nennt ihn: `UNDO 2 DRUMS`); noch einmal: wieder da (`REDO`). Eine Stufe |
+| HOME + REC | die letzte Aufnahme des gewählten Parts zurücknehmen (`UNDO 2 DRUMS`), auch wenn danach andere Parts aufgenommen haben; noch einmal: wieder da (`REDO`). Eine Stufe je Part. War es die erste Aufnahme und hat sonst kein Part Noten, geht die Länge mit (LENGTH AUTO, gestoppt) |
 | HOME + PLAY | den gewählten Part leeren; fragt erst (`CLEAR 2 DRUMS? OCT+`): OCT+ leert, OCT− behält. HOME + REC holt ihn zurück |
 
 **Die erste Aufnahme** (alle Spuren leer, LENGTH AUTO) legt die Länge fest: REC beendet sie, auf ganze Takte gerundet
@@ -176,7 +176,7 @@ spielt, leuchtet in allen Reihen auf, seine Nummer oben auch.
 | HOME + K2–K4 | zurück auf C in der Oktave des Parts (DRUMS: BD), 100, 1/16, mit Marke im Balken; mit gehaltener Taste für diesen Step |
 
 Ist die Schleife leer (LENGTH AUTO), macht der erste Step sie einen Takt lang. Während der ersten Aufnahme setzt STEP
-nichts (`STEP AFTER TAKE`). Ein Step auf dem Part der letzten Aufnahme hebt HOME + REC für diese auf (sie ließe sich
+nichts (`STEP AFTER TAKE`). Ein Step hebt HOME + REC für die letzte Aufnahme seines Parts auf (sie ließe sich
 nicht mehr allein zurücknehmen). Unten steht beim gewählten Part der gehaltene Step (`STEP 09 HELD`) oder, was neue
 Steps bekommen (`NEW STEPS`); bei DRUMS die Reihe des Instruments und die Instrumente des Kits (ein Punkt: hat Steps
 in diesem Takt).

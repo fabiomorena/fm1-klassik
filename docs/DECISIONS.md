@@ -71,6 +71,7 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 | 28.10. | Speicherformat `KLS8` (Sends, Effekte); `KLS7` (v0.5) wird übernommen: Parts, Sounds und Mixer bleiben, Sends 0, Effekte auf ihren Grundwerten | Fabios Einstellungen sollen den Wechsel überstehen (bisher setzte ein neues Format alles zurück) | Claudes Entscheidung; im Simulator getestet (`kls7` in `tests/fx.txt`) |
 | 28.10. | v0.6 Teil 3, sechs Parts (Mockups 23–27): am Anfang 1 VA, 2 DRUMS, 3 ACID, 4 FM6, 5 PD, 6 ORGAN (jede Engine einmal); MIDI-Kanal 1–6; der Mixer zeigt drei Parts je Seite (die des gewählten, 1–3 oder 4–6, kein eigener Taster) und MASTER; Looper, Step-Sequencer und FX-Seite zeigen alle sechs (Looper-Spuren 24 statt 37 px, Step-Reihen 16 statt 21 px, Sends 3 × 2); die Rechenzeit-Obergrenze bleibt für alle zusammen (240); Speicherformat `KLS9`, `KLS8` und `KLS7` werden übernommen (Parts 5 und 6 wie am Anfang) | Fabio: alle sechs Engines zugleich; die Idee „zwei Seiten zu je drei“ von Fabio, für den Looper Variante A (alle sechs auf einer Seite), weil man beim Aufnehmen alle Spuren sehen soll; 4 war nur eine Annahme der Mockups (26.10.) | Fabios Entscheidung (Claudes Vorschläge zu Seitenwahl und Parts 5/6); umgesetzt, im Simulator getestet (`tests/parts.txt`, `tests/fx.txt`) |
 | 28.10. | Step-Einzelheiten beim Umsetzen: eine Note endet 4 Ticks vor ihrer Länge (die nächste beginnt neu, länger gleitet ACID); LEN 1/32 … 1/1 in neun Stufen; NOTE C1 … C7, Grundwert C in der Oktave des Parts; DRUMS-Instrument = Halbton (C … B), wie die Tasten; K2 bleibt bei DRUMS die Instrumentwahl, auch mit gehaltener Taste; ein Step auf dem Part der letzten Aufnahme hebt HOME + REC auf; leere Schleife: der erste Step macht einen Takt | ein Step-Ende genau auf dem nächsten Anfang würde eine gleiche Note sofort wieder beenden; HOME + REC würde sonst auch die Steps zurücknehmen | Claudes Entscheidung |
+| 29.10. | Looper: HOME + REC nimmt die letzte Aufnahme des **gewählten** Parts zurück, eine Stufe je Part (bisher: die letzte Aufnahme überhaupt, gleich welcher Part); die erste Aufnahme nimmt ihre Länge nur mit, wenn danach kein anderer Part Noten hat; ein Step hebt nur das Rückgängig seines Parts auf | Fabios Erwartung im LOOPER-Protokoll (eine ältere Spur gezielt zurücknehmen); Pool 289 284 → 330 244 B von 344 064 B (+5 × 2 048 × 4 B = 40 960 B), frei 13 820 B | Fabios Entscheidung (Claudes Empfehlung A); umgesetzt, im Simulator getestet (`tests/looper.txt`) |
 
 ## Offene Punkte
 
@@ -90,9 +91,6 @@ Neueste unten. Format: Datum · Entscheidung · Begründung · Status.
 - ACID-Rechenlast auf dem Gerät messen (Schätzung: 12–18 % von 360 MHz für die eine Stimme, unsicher).
 - FM6-Edit-Seite nach dem Mockup `Edit-FM6` (Algorithmus-Grafik, Pegel je Operator).
 - Looper: Loops speichern (Flash-Platz klären), MIDI-Clock senden und empfangen (Sync), Rechenlast auf dem Gerät.
-- Looper-Rückgängig je Part (Fabios Erwartung, LOOPER.md 29.10.): heute nimmt HOME + REC die letzte Aufnahme
-  zurück, egal welcher Part gewählt ist. Je Part kostet 5 × 2 048 × 4 B = 40 960 B Pool (289 284 → 330 244 von
-  344 064 B). Fabios Entscheidung offen.
 - Step-Längen: bleibt vorerst bei 16 Steps je Takt, Länge = LENGTH des Loopers in Takten (32, 64 … Steps); Fabio prüft,
   ob das passt (8 Steps, Länge je Part, Raster 1/8 oder 1/32 wären Erweiterungen), 28.10.
 - Effekte: Rechenlast auf dem Gerät messen (im Simulator Delay ≈ 0,26, Hall ≈ 1,0 FM6-Stimmen); ob `KL_BUDGET` dafür

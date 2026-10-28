@@ -19,7 +19,7 @@ Browser-Emulator, noch nicht auf einem FM-1.
 - Effekte (FX): ein Ping-Pong-Delay im Takt des Loopers (bis 0,5 s je Seite) und der Hall von
   [Rings](https://github.com/pichenettes/eurorack) (MIT, nach C portiert) mit Vorverzögerung.
 - Noten-Looper (SEQ, PLAY, REC): eine Schleife für alle sechs Parts, Overdub, die erste Aufnahme legt die Länge fest,
-  Vorzähler und Klick, QUANT, eine Stufe Rückgängig (HOME + REC); die Kopfzeile zeigt Takt und Schlag.
+  Vorzähler und Klick, QUANT, eine Stufe Rückgängig je Part (HOME + REC); die Kopfzeile zeigt Takt und Schlag.
 - Step-Sequencer (Tab STEP der Looper-Seite): 16 Steps je Takt auf denselben Noten, die weißen Tasten als Steps mit
   Lauflicht, DRUMS je Instrument wie bei einer TR; Note, Anschlag und Länge je Step.
 - Sechs Engines, sechs Stimmen je Part:

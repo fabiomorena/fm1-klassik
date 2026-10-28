@@ -136,7 +136,8 @@ tap REC
 wait 30
 expect rec 0
 expect events 4
-# HOME + REC takes the last take back, whichever part made it: part 2's
+# HOME + REC takes the chosen part's last take back: on part 1 its first take, though part 2's came later; the
+# length stays (part 2 has notes), it plays on; again: back
 spin SELECT -1
 wait 30
 expect part 1
@@ -146,13 +147,36 @@ tap REC
 wait 30
 release HOME
 wait 30
-said UNDO 2 DRUMS
+said UNDO 1 VA
+expect events 0
+expect bars 2
+expect lstate 2
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+said REDO 1 VA
 expect events 6
+expect bars 2
+# on part 2 its own take; part 1 keeps its notes
 tap SEL
 wait 30
+expect part 2
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+said UNDO 2 DRUMS
 expect events 0
 spin SELECT -1
 wait 30
+expect events 6
+# back in step: these 348 ms more than one undo, plus 1652, are a time round (2 bars at 240 BPM: 2000 ms)
+wait 1652
 # HOME + PLAY empties the chosen part, once OCT+ says so: OCT- keeps it, HOME + REC brings it back
 press HOME
 wait 30
@@ -216,8 +240,8 @@ wait 30
 tap REC
 wait 30
 expect events 8
-# where it was played: tick 75, off the 1/16 grid (a multiple of 48); first in the part, the events in tick order
-expect lt0 75
+# where it was played: tick 77, off the 1/16 grid (a multiple of 48); first in the part, the events in tick order
+expect lt0 77
 expect ln0 72
 expect lt1 96
 # SEL while recording: the recording goes along to the next part

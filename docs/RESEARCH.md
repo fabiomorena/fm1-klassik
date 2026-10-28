@@ -317,6 +317,9 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   (+12 080 B für zwei Parts, geschätzt aus den vier Parts: 2 × 6 000 B); Pool 272 900 → 289 284 B von 344 064 B
   (+2 × 8 192 B Looper-Spuren, 2 048 Ereignisse × 4 B); App 234 128 B. Die Obergrenze (`KL_BUDGET` 240) gilt für alle
   Parts zusammen: mehr Parts heißt nicht mehr Stimmen.
+- **Rückgängig je Part** (29.10.2026, `tools/device_check.py`): `lp_undo` je Part statt einmal, +5 × 2 048 × 4 B =
+  40 960 B; Pool 289 284 → 330 244 B von 344 064 B (gemessen wie gerechnet), frei 13 820 B; RAM 73 864 → 73 880 B
+  (Zähler und Länge je Part im Zustand des Loopers); App 234 128 → 234 220 B.
 
 ## Mixer: Messungen (Stand 27.10.2026, nur Simulator)
 

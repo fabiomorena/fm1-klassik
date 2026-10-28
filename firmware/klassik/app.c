@@ -349,7 +349,8 @@ typedef struct {
                                                      * sounded live), passed over once */
 } lp_ev_t;
 static lp_ev_t lp_ev[KL_NPART][LP_EV] PLAT_POOL;     /* each part's, in tick order */
-static lp_ev_t lp_undo[LP_EV] PLAT_POOL;             /* the last take's part as it was before (after, once undone) */
+static lp_ev_t lp_undo[KL_NPART][LP_EV] PLAT_POOL;   /* each part as it was before its last take (after, once
+                                                     * undone) */
 static struct {
     volatile uint16_t n[KL_NPART];                   /* each part's events */
     uint16_t cur[KL_NPART];                          /* each one's next to play */
@@ -364,10 +365,11 @@ static struct {
     uint32_t held[4];                                /* the notes recorded on and not off yet */
     uint16_t nheld;
     int16_t shift[128];                              /* how far QUANT moved each one's start (its end moves alike) */
-    volatile int8_t undo_part;                       /* the last take's part (-1: none) */
-    volatile uint8_t undone;                         /* 1: it is taken back (lp_undo holds the take) */
-    uint16_t undo_n;
-    uint8_t undo_first, undo_bars, undo_first_bars;  /* it was the first take: the length goes with it */
+    volatile uint8_t undo_has, undone;               /* a bit a part: a take to take back; taken back (lp_undo
+                                                     * holds the take) */
+    uint16_t undo_n[KL_NPART];
+    uint8_t undo_first[KL_NPART], undo_bars[KL_NPART], undo_first_bars[KL_NPART];   /* the first take: the length
+                                                     * goes with it, while no other part has notes */
     uint8_t click_now;                               /* a click due at the next step (the loop starts) */
     volatile uint8_t full;                           /* notes left out, the part full: a count (the main loop says so) */
 } lp;
@@ -393,7 +395,6 @@ static void loop_init(void)
     lp.tempo = 120;
     lp.quant = 2;                                    /* 1/16 */
     lp.click = 1;                                    /* REC */
-    lp.undo_part = -1;
     lc_r = lc_w;
     lk_r = lk_w;
 }
@@ -585,17 +586,17 @@ static void lp_take_end(void)                        /* the recording stops: eac
     lp.rec = 0;
 }
 
-static void lp_keep(int p)                           /* a part as it is now, for HOME + REC */
+static void lp_keep(int p)                           /* a part as it is now, for HOME + REC on it */
 {
     uint32_t i;
     for (i = 0; i < lp.n[p]; i++)
-        lp_undo[i] = lp_ev[p][i];
-    lp.undo_n = lp.n[p];
-    lp.undo_part = (int8_t)p;
-    lp.undo_first = lp_empty();
-    lp.undo_bars = lp.bars;
-    lp.undo_first_bars = lp.first_bars;
-    lp.undone = 0;
+        lp_undo[p][i] = lp_ev[p][i];
+    lp.undo_n[p] = lp.n[p];
+    lp.undo_first[p] = (uint8_t)lp_empty();
+    lp.undo_bars[p] = lp.bars;
+    lp.undo_first_bars[p] = lp.first_bars;
+    lp.undo_has |= (uint8_t)(1u << p);
+    lp.undone &= (uint8_t)~(1u << p);
 }
 
 static void lp_take_start(int p)                     /* the recording starts on a part (a take) */
@@ -635,31 +636,33 @@ static void lp_stop(void)
     lp.pos16 = lp.count16 = 0;
 }
 
-static void lp_swap(void)                            /* HOME + REC: the last take out, or back in */
+static void lp_swap(int p)                           /* HOME + REC: a part's last take out, or back in */
 {
     uint32_t i, m;
-    int p = lp.undo_part;
-    if (p < 0)
+    int was_empty;
+    if (!(lp.undo_has & 1u << p))
         return;
     lp_take_end();
     lp_notes_off(p);
-    m = lp.n[p] > lp.undo_n ? lp.n[p] : lp.undo_n;
+    was_empty = lp_empty();
+    m = lp.n[p] > lp.undo_n[p] ? lp.n[p] : lp.undo_n[p];
     for (i = 0; i < m; i++) {
         lp_ev_t x = lp_ev[p][i];
-        lp_ev[p][i] = lp_undo[i];
-        lp_undo[i] = x;
+        lp_ev[p][i] = lp_undo[p][i];
+        lp_undo[p][i] = x;
     }
     i = lp.n[p];
-    lp.n[p] = lp.undo_n;
-    lp.undo_n = (uint16_t)i;
-    if (lp.undo_first) {                             /* the first take: its length goes with it */
+    lp.n[p] = lp.undo_n[p];
+    lp.undo_n[p] = (uint16_t)i;
+    if (lp.undo_first[p] && (was_empty || lp_empty())) {   /* the first take: its length goes with it, unless
+                                                     * another part has notes meanwhile */
         uint8_t b = lp.bars, f = lp.first_bars;
-        lp.bars = lp.undo_bars;
-        lp.first_bars = lp.undo_first_bars;
-        lp.undo_bars = b;
-        lp.undo_first_bars = f;
+        lp.bars = lp.undo_bars[p];
+        lp.first_bars = lp.undo_first_bars[p];
+        lp.undo_bars[p] = b;
+        lp.undo_first_bars[p] = f;
     }
-    lp.undone ^= 1u;
+    lp.undone ^= (uint8_t)(1u << p);
     if (lp.bars == 0)
         lp_stop();
     lp.cur[p] = (uint16_t)lp_lower(p, lp.pos16);
@@ -716,12 +719,11 @@ static void lp_unsound(int p, int note)              /* the note off now, if the
     }
 }
 
-/* a step's notes changed: the last take's part can no longer be taken back on its own (HOME + REC would undo these
+/* a step's notes changed: the part's last take can no longer be taken back on its own (HOME + REC would undo these
  * too) */
 static void lp_stepped(int p)
 {
-    if (lp.undo_part == p)
-        lp.undo_part = -1;
+    lp.undo_has &= (uint8_t)~(1u << p);
 }
 
 static void lp_step_set(int p, uint32_t t, int note, int vel, int gate)   /* a note on the step, as long as gate */
@@ -841,7 +843,7 @@ static void lp_asks(void)                            /* render: the main loop's 
             }
             break;
         case LC_UNDO:
-            lp_swap();
+            lp_swap(a);
             break;
         case LC_CLEAR:
             if (lp.rec && lp.rpart == a)
@@ -1817,16 +1819,16 @@ static void loop_rec(void)                           /* REC: the chosen part rec
     announce(t);
 }
 
-static void loop_undo(void)                          /* HOME + REC: the last take out, or back in */
+static void loop_undo(void)                          /* HOME + REC: the chosen part's last take out, or back in */
 {
     char t[24] = "";
-    if (lp.undo_part < 0) {
+    if (!(lp.undo_has & 1u << set.part)) {
         app_say("UNDO", "NOTHING");
         return;
     }
-    part_name(lp.undo_part, t);
-    app_say(lp.undone ? "REDO" : "UNDO", t);
-    lp_ask(LC_UNDO, 0);
+    part_name(set.part, t);
+    app_say(lp.undone & 1u << set.part ? "REDO" : "UNDO", t);
+    lp_ask(LC_UNDO, set.part);
 }
 
 static void loop_clear_ask(void)                     /* HOME + PLAY: the chosen part emptied, once OCT+ says so */

@@ -142,3 +142,13 @@ Nachtest:
   Drums.
 - [ ] N3 Schleife mit PLAY starten (grünes Dreieck auf der Looper-Seite), dann OCT−: Im Rack steht rechts das grüne
   Dreieck mit Takt.Schlag. Falls nicht: Screenshot und notieren, auf welcher Seite du PLAY gedrückt hast.
+
+Nachtest Rückgängig je Part (neu seit 29.10., deine Entscheidung zu Frage 1; Emulator vorher mit Cmd+Shift+R neu
+laden):
+
+- [ ] N4 Part 1 (VA) aufnehmen, dann Part 2 (DRUMS) dazu. SEL zurück zu Part 1, HOME + REC: Meldung `UNDO 1 VA`, Spur
+  1 ist leer, die Drums spielen weiter, die Länge bleibt. Noch einmal HOME + REC: `REDO 1 VA`, Spur 1 wieder da.
+- [ ] N5 SEL zu Part 2, HOME + REC: `UNDO 2 DRUMS`, nur die Drums sind weg. Auf einem Part ohne Aufnahme (z. B. 3):
+  `UNDO NOTHING`.
+- [ ] N6 Nur ein Part mit Aufnahme (die erste), HOME + REC: Spur leer, LENGTH wieder AUTO, die Schleife steht (wie
+  bisher).
