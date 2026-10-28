@@ -1,4 +1,4 @@
-# KLASSIK – Bedienung (v0.6: Parts, Mixer, Looper, Step-Sequencer)
+# KLASSIK – Bedienung (v0.6: Parts, Mixer, Looper, Step-Sequencer, Effekte)
 
 ## Parts
 
@@ -28,21 +28,26 @@ jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt,
 | PRESET | Sound der Engine wählen; nach den Presets folgt USER, sobald die Engine einen eigenen Sound hat |
 | OCT- / OCT+ | Oktave des Parts −2 … +2 |
 | EDIT | Edit-Seiten der Engine öffnen |
-| GLO | Mixer öffnen und schließen |
+| GLO | Mixer öffnen (dort wechselt GLO zwischen MIX und SEND, OCT− schließt ihn) |
+| FX | Effekt-Seite öffnen (dort wechselt FX zwischen DELAY und HALL, OCT− schließt sie) |
 | SEQ | Looper-Seite öffnen (dort wechselt SEQ zwischen LOOP und STEP, OCT− schließt sie) |
 | PLAY, REC | Looper starten und stoppen, aufnehmen (auf jeder Seite, siehe Looper) |
 | HOME + REC, HOME + PLAY | letzte Aufnahme zurücknehmen, Part leeren (siehe Looper) |
 | ENV | bei ACID: gehalten, sind die angeschlagenen Noten akzentuiert (`ACC` in der Kopfzeile) |
-| SAVE | die Parts speichern: den gewählten, je Part Engine, Sounds und Oktave (leuchtet, solange etwas ungespeichert ist) |
+| SAVE | die Parts speichern: den gewählten, je Part Engine, Sounds und Oktave, Mixer und Effekte (leuchtet, solange etwas ungespeichert ist) |
 | MASTER | Lautstärke |
 
 MIDI-In über USB und TRS spielt ebenfalls.
 
 ## Mixer
 
-GLO öffnet den Mixer (GLO leuchtet), GLO oder OCT− schließt ihn, EDIT wechselt zu den Edit-Seiten. Für jeden Part
-gibt es einen Kanalzug: Glyphe, Part und Engine, Fader, Pegel, Pan, M (Mute) und S (Solo). Der Zug des gewählten
-Parts ist umrandet, SEL wählt den nächsten. Die Tasten spielen weiter.
+GLO öffnet den Mixer auf dem Tab MIX (GLO leuchtet); GLO oder OCT+ wechselt zum Tab SEND und zurück (wie SEQ auf
+der Looper-Seite), OCT− schließt ihn, EDIT, SEQ und FX wechseln zu ihren Seiten. Für jeden Part gibt es einen
+Kanalzug: Glyphe, Part und Engine, Fader, Pegel, Pan, die Sends DLY und HALL als Balken, M (Mute) und S (Solo). Der
+Zug des gewählten Parts ist umrandet, SEL wählt den nächsten. Farbig ist, was die Regler des Tabs gerade drehen (MIX:
+die Fader, SEND: die Sends). Die Tasten spielen weiter.
+
+**Tab MIX:**
 
 | Regler | Was er tut |
 | --- | --- |
@@ -52,10 +57,61 @@ Parts ist umrandet, SEL wählt den nächsten. Die Tasten spielen weiter.
 | K4 SOLO | nach rechts an, nach links aus; ist ein Part auf Solo, sind alle anderen stumm (außer weiteren Solo-Parts) |
 | HOME + K1–K4 | zurück auf 0 dB, Mitte, aus; steht LEVEL oder PAN woanders, zeigt eine helle Marke im Balken, wo 0 dB bzw. die Mitte ist |
 
-Ein stummer Part erscheint grau. MASTER zeigt den MASTER-Regler, den Pegel des Ausgangs für links und rechts und
-`LIM`. Der Limiter hält den Ausgang unter −0,5 dBFS: Er greift sofort ein, wenn es lauter würde, und lässt in etwa
+**Tab SEND:**
+
+| Regler | Was er tut |
+| --- | --- |
+| K1 DELAY | wie viel der Part ans Delay schickt, 0–100; am Anfang 0 |
+| K2 HALL | wie viel er an den Hall schickt, 0–100; am Anfang 0 |
+| K3, K4 | frei (später für weitere Effekte) |
+| HOME + K1, K2 | zurück auf 0; eine helle Marke am Anfang des Balkens, solange der Send woanders steht |
+
+Die Sends kommen nach LEVEL, MUTE und SOLO, aber vor PAN: Die Effekte bekommen die Parts mono. Ein stummer Part
+schickt also auch nichts an die Effekte; sein Hall und seine Echos klingen aus. 50 ist etwa −12 dB, 100 der volle
+Pegel des Parts.
+
+Ein stummer Part erscheint grau. MASTER zeigt den MASTER-Regler, den Pegel des Ausgangs für links und rechts, wie
+laut die Effekte zurückkommen (DLY, HALL: LEVEL der Effekt-Seite) und `LIM`. Der Limiter hält den Ausgang unter −0,5 dBFS: Er greift sofort ein, wenn es lauter würde, und lässt in etwa
 50 ms wieder los. Solange er arbeitet, leuchtet `LIM`. Änderungen gleiten in wenigen Millisekunden, ohne Knacken.
 SAVE speichert den Mixer mit.
+
+## Effekte
+
+Zwei Send-Effekte für alle Parts: **DELAY**, ein Ping-Pong-Delay im Takt, und **HALL**, der Hall von Mutable
+Instruments Rings. Was jeder Part an sie schickt, steht im Mixer (Tab SEND); ihr Ausgang geht stereo in den Master,
+vor den Limiter.
+
+FX öffnet die Effekt-Seite auf dem Tab DELAY (FX leuchtet); FX oder OCT+ wechselt zu HALL und zurück, OCT− schließt
+sie, EDIT, GLO und SEQ wechseln zu ihren Seiten. Oben ein Bild des Effekts, darunter für jeden Part, wie viel er an
+diesen Effekt schickt (der gewählte umrandet, ein stummer grau mit `M`). Die Tasten spielen weiter.
+
+**DELAY:** Das erste Echo kommt links, das nächste rechts, dann wieder links, jedes um FDBK leiser und mit TONE
+dunkler. Das Bild zeigt die Note und ihre Echos (links nach oben, rechts nach unten), darüber steht, was gespielt wird
+(`1/8. = 375 MS`), rechts in der Tab-Zeile das Tempo. Die Zeit folgt dem TEMPO des Loopers, auch wenn er nicht läuft.
+
+| Regler | Was er tut |
+| --- | --- |
+| K1 TIME | Notenwert: 1/32, 1/16T, 1/16, 1/8T, 1/16., 1/8, 1/4T, 1/8., 1/4 (T = triolisch, Punkt = punktiert); am Anfang 1/8. Länger als 0,5 s (langsames Tempo): die halbe Zeit, wenn nötig noch einmal halbiert, so bleibt es im Takt (bei 40 BPM wird aus 1/4 ein 1/16) |
+| K2 FDBK | Rückkopplung 0–100 % (wie viele Echos); am Anfang 35 % |
+| K3 TONE | 0–100 %: wie dunkel die Echos werden (100 = offen); am Anfang 70 % |
+| K4 LEVEL | wie laut das Delay zurückkommt, −40 … +6 dB, darunter aus; am Anfang 0 dB (bei Send 100 so laut wie der Part) |
+| HOME + K1–K4 | zurück auf 1/8., 35 %, 70 %, 0 dB, mit Marke im Balken |
+
+Eine neue Zeit blendet in 23 ms über. Das Delay hält höchstens 0,5 s je Seite.
+
+**HALL:** Rings' Hall mit festen Räumen (keine Raumgröße), stereo. Das Bild zeigt die Note, die Lücke von PRE und den
+Nachhall.
+
+| Regler | Was er tut |
+| --- | --- |
+| K1 PRE | Verzögerung vor dem Hall, 0–100 ms; am Anfang 20 ms |
+| K2 DECAY | wie lange er nachklingt, 0–100 %; am Anfang 50 % (etwa 2 s) |
+| K3 TONE | 0–100 %: dunkel bis hell; am Anfang 60 % |
+| K4 LEVEL | wie laut der Hall zurückkommt, −40 … +6 dB, darunter aus; am Anfang 0 dB |
+| HOME + K1–K4 | zurück auf 20 ms, 50 %, 60 %, 0 dB, mit Marke im Balken |
+
+Schickt kein Part an einen Effekt, schaltet er sich ab, sobald seine Echos oder sein Nachhall verklungen sind (er
+kostet dann keine Rechenzeit). SAVE speichert die Effekte und die Sends mit.
 
 ## Looper
 
@@ -76,7 +132,7 @@ dem Ausschalten weg; Tempo, QUANT und CLICK auch (sie stehen dann wieder auf 120
 rückt an den Anfang. Nach 16 Takten steht die Länge von selbst fest.
 
 **Die Looper-Seite** (SEQ öffnet sie auf dem Tab LOOP; SEQ oder OCT+ wechselt zum Tab STEP, wie EDIT und OCT+ auf den
-Edit-Seiten; OCT− zurück; EDIT und GLO wechseln zu ihren Seiten): je Part eine Spur mit Glyphe, Name
+Edit-Seiten; OCT− zurück; EDIT, GLO und FX wechseln zu ihren Seiten): je Part eine Spur mit Glyphe, Name
 und seinen Noten (höher = weiter oben, DRUMS eine Zeile je Instrument), die Taktstriche, die weiße Linie, wo gerade
 gespielt wird. Die Spur des gewählten Parts ist umrandet, `REC` steht an der, die aufnimmt; ein stummer Part (Mixer)
 ist grau. Oben die Taktnummern, die gerade spielende hell. Die Tasten spielen weiter.

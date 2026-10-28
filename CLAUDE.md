@@ -33,7 +33,9 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `firmware/klassik/tools/device_check.py` | Geräte-Build bis zu den Prüfungen von fm1-base (Größe, RAM, Pool, kein double), ohne Paket (MPL-2.0) |
 | `firmware/klassik/tools/gen_acid_tables.py` | rechnet Open303s Wellenform-Tabellen (int16), das elliptische Filter als Biquads und feste Koeffizienten beim Build (`acid_tables.h`, MIT) |
 | `firmware/klassik/dsp/klassik_dsp.h` | Schnittstelle App ↔ DSP |
-| `firmware/klassik/fm1.toml` | Build-Einstellungen (o2: `engines.c`, `msfa.c`, `drums.c`, `acid.c`; include; gen für `fe_tables.h`, `fm6_tables.h` und `acid_tables.h`) |
+| `firmware/klassik/dsp/fx.c` | Send-Effekte (o2-Einheit, MPL-2.0): Ping-Pong-Delay (in float gerechnet, Leitungen 16 Bit), PRE vor dem Hall, Schlafen ohne Send; Puffer gibt die App (Pool) |
+| `firmware/klassik/dsp/hall/` | Rings' Hall nach C portiert (o2-Einheit, MIT, `float`, `FxEngine<32768, 16 Bit>`); Änderungen im Dateikopf von `hall.c` |
+| `firmware/klassik/fm1.toml` | Build-Einstellungen (o2: `engines.c`, `msfa.c`, `drums.c`, `acid.c`, `fx.c`, `hall.c`; include; gen für `fe_tables.h`, `fm6_tables.h` und `acid_tables.h`) |
 | `firmware/klassik/tests/*.txt` | Host-Tests (Syntax: Kopfkommentar von `base/host/plat_host.c`; eigene Prüfungen über `app_expect`) |
 | `docs/CONCEPT.md` | Konzept und Fahrplan |
 | `docs/design/` | Mockups aller Screens (HTML + PNG, Übersicht `index.html`, siehe `docs/design/README.md`), **maßgebliche Design-Quelle** |
@@ -70,12 +72,18 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (`base/bsp/docs/CPU.md`). Stattdessen 32 Bit mit Rechenweg, oder eine `noinline`-Hilfsfunktion. Kein `double`.
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
-## Klang (Stand v0.5)
+## Klang (Stand v0.6)
 - Parts: vier gleichzeitig (am Anfang VA, DRUMS, ACID, FM6), SEL (Taster) oder SELECT (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem
   gewählten (`set.part`, `part_cur()`, `eng_cur()` in `app.c`); MIDI-Kanal 1–4 = Part 1–4; `work`/`orig`/`edited`
   je Part und Engine. Obergrenze: alle Parts zusammen ≤ 240 Zehntel FM6-Stimmen.
-- Mixer (GLO): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance), MUTE, SOLO in `part_set_t`; `mix_update()` setzt
-  `mix_tgt`, `app_render` gleitet, mischt stereo, Limiter (−0,5 dBFS) vor dem harten Begrenzen. Speicherformat `KLS7`.
+- Mixer (GLO; GLO/OCT+ wechselt MIX/SEND, OCT− schließt): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance),
+  MUTE, SOLO, `send[2]` in `part_set_t`; `mix_update()` setzt `mix_tgt`, `snd_tgt` (nach LEVEL/MUTE/SOLO, vor PAN,
+  quadratisch) und `ret_tgt`; `app_render` gleitet, mischt stereo, Limiter (−0,5 dBFS) vor dem harten Begrenzen.
+  Speicherformat `KLS8` (`KLS7` wird in `settings_load` übernommen).
+- Effekte (FX; FX/OCT+ wechselt DELAY/HALL; `set.fx[2][4]`, `fx_*` in `app.c`, `dsp/fx.c`): Send-Effekte, die Sends
+  mono summiert, die Rückwege stereo vor dem Limiter. DELAY Ping-Pong (erstes Echo links), höchstens 0,5 s je Seite
+  (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
+  PRE bis 100 ms. Ohne Send schläft ein Effekt, sobald er verklungen ist. Pool: 88 200 + 8 820 + 65 536 B.
 - Looper (SEQ, PLAY, REC; `lp` in `app.c`): Noten, kein Klang; eine Schleife für alle Parts, je Part `lp_ev[p]`
   (2048 Ereignisse, Tick 16 Bit bei 192 je Viertel, höchstens 16 Takte), Rückgängig über `lp_undo` (eine Stufe).
   Läuft im Audio-Interrupt: `app_render` in Schritten zu 32 Frames (`lp_step` vor jedem `kl_render`); die
@@ -104,10 +112,10 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   0,5² = 0,25 ≈ −12 dB), also etwa −19,5 dBFS bei vollem MASTER. Feinabstimmung erst mit Gerät.
 
 ## Lizenz-Regeln
-- Eigene Dateien MPL-2.0, `dsp/engines.c`, `dsp/drums/`, `dsp/acid/` und `tools/gen_acid_tables.py` MIT, `dsp/fm6/` und
+- Eigene Dateien MPL-2.0, `dsp/engines.c`, `dsp/drums/`, `dsp/acid/`, `dsp/hall/` und `tools/gen_acid_tables.py` MIT, `dsp/fm6/` und
   `tools/gen_fm6_tables.py` Apache-2.0.
   **Keine GPL-Quellen** übernehmen (z. B. Dexed, Felucca-App-Code, KR-106, Shine On). Übernommen: Felucca-Engines (MIT), msfa (Apache-2.0) für FM6, Plaits-Drums (MIT) für DRUMS,
-  Open303 (MIT, aus dem Original-Repo) für ACID. Keine Samples aus Rolands Geräten.
+  Open303 (MIT, aus dem Original-Repo) für ACID, Rings' Hall (MIT) für HALL. Keine Samples aus Rolands Geräten.
 - Jede neue Quelle vor der Übernahme in `LICENSING.md` eintragen.
 - `id_prefix = "FM-1_77"` ist noch nicht auf Kollisionen geprüft.
 
@@ -126,8 +134,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - Bestätigen / Zurück auf Unterseiten: OCT+ / OCT− (wie in Felucca).
 - Regler zurücksetzen (Fabios Vorgabe): **überall, wo ein Regler einen Grundwert hat**, setzt HOME halten + K1–K4 ihn
   darauf zurück, und eine Marke im Balken der Fußzeile zeigt den Grundwert, solange der Regler woanders steht. Edit:
-  Wert des Sounds (`orig` in `app.c`); Mixer: 0 dB, Mitte, aus (Marke nur LEVEL und PAN); Looper: 120 BPM,
-  Länge der ersten Aufnahme, 1/16, REC. Neue Screens bekommen das gleich mit.
+  Wert des Sounds (`orig` in `app.c`); Mixer: 0 dB, Mitte, aus (Marke nur LEVEL und PAN), Sends 0; Looper: 120 BPM,
+  Länge der ersten Aufnahme, 1/16, REC; Effekte: `FX_DEF`. Neue Screens bekommen das gleich mit.
 - Signatur-Ideen (Klang-Atlas, Glyphen-Browser, Klang-Stammbaum): `docs/CONCEPT.md`, Mockups 08–10.
 
 ## Fahrplan
@@ -138,7 +146,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
 | v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | erledigt (Simulator) |
-| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall) | Step-Sequencer erledigt (Simulator), Effekte offen |
+| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall) | erledigt (Simulator) |
 | v0.7 | Preset-Liste, Glyphen-Browser (früher v0.4) | offen |
 | v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |
 | am Ende | Feinschliff: Klang nach Gehör, Design-Fragen | offen |

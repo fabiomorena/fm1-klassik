@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0.6 (parts, mixer, looper, step sequencer): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
+/* KLASSIK v0.6 (parts, mixer, looper, step sequencer, effects): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
  * Felucca-Engines (ANALOG, PHASE, WHEEL), DRUMS (four kits on Plaits' drum models) and ACID (Open303's TB-303), on
  * four parts that play at once, each its own sound and octave: SEL, or SELECT turned, goes to the next part (SELECT
  * to the left: the one before), and the keys, K1 (the engine, in the rack's order), PRESET (its sound), OCT- / OCT+
@@ -14,7 +14,11 @@
  * SAVE keeps the parts (the one chosen, each one's engine, sounds and octave) across a power cycle, an edited sound
  * as its engine's USER sound (every part's).
  * GLO opens the mixer: a strip a part (LEVEL, PAN, MUTE, SOLO on K1..K4 for the chosen part) and the master's
- * meters; the output is stereo, through a limiter.
+ * meters; GLO or OCT+ there: its tab SEND, the chosen part's sends to the effects (K1 DELAY, K2 HALL). The output is
+ * stereo, through a limiter.
+ * FX opens the effects' page: DELAY (a ping-pong delay in time with the looper's TEMPO: TIME, FDBK, TONE, LEVEL),
+ * FX or OCT+ HALL (Rings' reverb: PRE, DECAY, TONE, LEVEL). Both are send effects: the parts' sends feed them (after
+ * LEVEL, MUTE and SOLO, before PAN), their returns go into the master before the limiter.
  * The looper records notes (not sound) on one loop for all four parts: PLAY starts and stops it, REC records the
  * chosen part on top of what it has (stopped: after a bar's count-in), the first take sets the length; HOME + REC
  * takes the last take back, HOME + PLAY empties a part. SEQ opens its page: a lane a part, TEMPO, LENGTH, QUANT and
@@ -75,8 +79,11 @@ static int engine_at(int pos)                        /* the engine at that place
 }
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5337u                        /* "KLS7": another magic (the parts' KLS6, v0.3's KLS5, DRUMS'
-                                                     * KLS4, v0.2's KLS3, v0.1's KLS2, v0's KLS1) loads defaults */
+#define SET_MAGIC 0x4B4C5338u                        /* "KLS8": the mixer's KLS7 is taken over (no sends, the effects
+                                                     * at their values); another magic (the parts' KLS6, v0.3's KLS5,
+                                                     * DRUMS' KLS4, v0.2's KLS3, v0.1's KLS2, v0's KLS1) loads
+                                                     * defaults */
+#define SET_MAGIC7 0x4B4C5337u
 typedef struct {
     int8_t v[8];                                     /* the eight parameters */
     uint8_t base;                                    /* the preset it was made from: its envelopes and MONO */
@@ -90,19 +97,41 @@ typedef struct {
     int8_t level;                                    /* the mixer: dB, -40 .. +6, LEVEL_OFF below */
     int8_t pan;                                      /* -50 (left) .. 50 (right) */
     uint8_t mute, solo;
+    uint8_t send[2];                                 /* to DELAY and HALL: 0..100 */
 } part_set_t;
+enum { FX_DELAY, FX_HALL };
+enum { FK_TIME, FK_FDBK, FK_TONE, FK_LEVEL };        /* DELAY's knobs (HALL's: PRE, DECAY, TONE, LEVEL) */
 typedef struct {
     uint32_t magic;
     uint8_t part;                                    /* the part chosen: the keys, K1, PRESET, OCT and EDIT are its */
     uint8_t rsv[3];
     part_set_t parts[KL_NPART];
     user_t user[KL_NENG];                            /* each engine's own sound (SAVE after an edit), every part's */
+    int8_t fx[2][4];                                 /* the effects' knobs: DELAY TIME (DLY_K's index), FDBK %, TONE
+                                                     * %, LEVEL (dB, -40 .. +6, LEVEL_OFF below); HALL PRE (ms),
+                                                     * DECAY %, TONE %, LEVEL */
 } settings_t;
 _Static_assert(sizeof(settings_t) <= PLAT_STORE_MAX, "the settings are one store object");
+typedef struct {                                     /* KLS7's, without the sends */
+    uint8_t engine, preset[KL_NENG];
+    int8_t octave, level, pan;
+    uint8_t mute, solo;
+} part_set7_t;
+typedef struct {
+    uint32_t magic;
+    uint8_t part, rsv[3];
+    part_set7_t parts[KL_NPART];
+    user_t user[KL_NENG];
+} settings7_t;
+_Static_assert(sizeof(settings7_t) != sizeof(settings_t), "KLS7 tells itself by its size");
 static settings_t set, set_kept;                     /* as it is, and as the store has it (or the defaults at boot) */
 static uint8_t set_dirty;
 static const uint8_t PART_ENGINE[KL_NPART] = {KL_ANALOG, KL_DRUMS, KL_ACID, KL_FM6};   /* the parts at first */
 #define LEVEL_OFF (-41)                              /* the mixer's LEVEL below -40 dB: off */
+static const int8_t FX_MIN[2][4] = {{0, 0, 0, LEVEL_OFF}, {0, 0, 0, LEVEL_OFF}};
+static const int8_t FX_MAX[2][4] = {{8, 100, 100, 6}, {100, 100, 100, 6}};
+static const int8_t FX_DEF[2][4] = {{7, 35, 70, 0}, {20, 50, 60, 0}};   /* 1/8., 35 %, 70 %, 0 dB; 20 ms, 50 %, 60 %,
+                                                                         * 0 dB: where HOME takes them */
 
 /* each part's sound of each engine as it plays: its preset's values or its USER sound's (orig), and whether EDIT has
  * any of them elsewhere (not saved) */
@@ -121,6 +150,8 @@ static void settings_defaults(void)
     set.magic = SET_MAGIC;
     for (i = 0; i < KL_NPART; i++)
         set.parts[i].engine = PART_ENGINE[i];
+    for (i = 0; i < 8u; i++)
+        set.fx[i / 4u][i % 4u] = FX_DEF[i / 4u][i % 4u];
 }
 
 static int values_ok(int e, const int8_t v[8])
@@ -143,18 +174,53 @@ static int settings_ok(void)
     for (p = 0; p < KL_NPART; p++) {
         const part_set_t *ps = &set.parts[p];
         if (ps->engine >= KL_NENG || ps->octave < -2 || ps->octave > 2 || ps->level < LEVEL_OFF || ps->level > 6 ||
-            ps->pan < -50 || ps->pan > 50 || ps->mute > 1 || ps->solo > 1)
+            ps->pan < -50 || ps->pan > 50 || ps->mute > 1 || ps->solo > 1 || ps->send[0] > 100 || ps->send[1] > 100)
             return 0;
         for (i = 0; i < KL_NENG; i++)
             if (ps->preset[i] >= kl_presets((int)i) + set.user[i].saved)
                 return 0;
     }
+    for (i = 0; i < 8u; i++)
+        if (set.fx[i / 4u][i % 4u] < FX_MIN[i / 4u][i % 4u] || set.fx[i / 4u][i % 4u] > FX_MAX[i / 4u][i % 4u])
+            return 0;
     for (i = 0; i < KL_NENG; i++) {
         const user_t *u = &set.user[i];
         if (u->saved > 1 || (u->saved && (u->base >= kl_presets((int)i) || !values_ok((int)i, u->v))))
             return 0;
     }
     return 1;
+}
+
+static void settings_load(void)                      /* the store's, KLS7's taken over, or the defaults */
+{
+    int n = plat_store_load(OBJ_SETTINGS, &set, sizeof set);
+    if (n == (int)sizeof(settings7_t) && set.magic == SET_MAGIC7) {   /* v0.5's: its parts and sounds, no sends */
+        settings7_t old;
+        uint32_t i, e;
+        const uint8_t *s = (const uint8_t *)&set;
+        uint8_t *d = (uint8_t *)&old;
+        for (i = 0; i < sizeof old; i++)
+            d[i] = s[i];
+        settings_defaults();
+        set.part = old.part;
+        for (i = 0; i < KL_NPART; i++) {
+            part_set_t *ps = &set.parts[i];
+            const part_set7_t *o = &old.parts[i];
+            ps->engine = o->engine;
+            for (e = 0; e < KL_NENG; e++)
+                ps->preset[e] = o->preset[e];
+            ps->octave = o->octave;
+            ps->level = o->level;
+            ps->pan = o->pan;
+            ps->mute = o->mute;
+            ps->solo = o->solo;
+        }
+        for (e = 0; e < KL_NENG; e++)
+            set.user[e] = old.user[e];
+        n = (int)sizeof set;
+    }
+    if (n != (int)sizeof set || !settings_ok())
+        settings_defaults();
 }
 
 static int is_user(int p, int e) { return set.parts[p].preset[e] >= kl_presets(e); }
@@ -209,20 +275,30 @@ static const int16_t LEVEL_Q11[47] = {               /* 2048 * 10^(dB / 20), rou
     325, 364, 409, 458, 514, 577, 648, 727, 815, 915, 1026, 1152,
     1292, 1450, 1627, 1825, 2048, 2298, 2578, 2893, 3246, 3642, 4086};
 static volatile int32_t mix_tgt[KL_NPART][2];        /* each part's gain to L and R, Q11: the main loop sets them */
+static volatile int32_t snd_tgt[KL_NPART][2];        /* each part's sends to DELAY and HALL, Q11 */
+static volatile int32_t ret_tgt[2];                  /* the effects' returns, Q11 */
+
+static int32_t level_q11(int32_t db) { return db < -40 ? 0 : LEVEL_Q11[db + 40]; }
 
 /* the gains from LEVEL, PAN, MUTE and SOLO: a soloed part mutes every part not soloed; PAN keeps the near side and
- * turns the far one down (the middle: both at LEVEL, as without a mixer) */
+ * turns the far one down (the middle: both at LEVEL, as without a mixer). The sends follow LEVEL, MUTE and SOLO, not
+ * PAN (the effects take them mono), each send squared (50: -12 dB, as an audio taper); the returns the effects'
+ * LEVEL */
 static void mix_update(void)
 {
-    int p, solo = 0;
+    int p, c, solo = 0;
     for (p = 0; p < KL_NPART; p++)
         solo |= set.parts[p].solo;
     for (p = 0; p < KL_NPART; p++) {
         const part_set_t *ps = &set.parts[p];
-        int32_t g = ps->level < -40 || ps->mute || (solo && !ps->solo) ? 0 : LEVEL_Q11[ps->level + 40];
+        int32_t g = ps->mute || (solo && !ps->solo) ? 0 : level_q11(ps->level);
         mix_tgt[p][0] = g * (ps->pan > 0 ? 50 - ps->pan : 50) / 50;
         mix_tgt[p][1] = g * (ps->pan < 0 ? 50 + ps->pan : 50) / 50;
+        for (c = 0; c < 2; c++)
+            snd_tgt[p][c] = g * ps->send[c] * ps->send[c] / 10000;
     }
+    for (c = 0; c < 2; c++)
+        ret_tgt[c] = level_q11(set.fx[c][FK_LEVEL]);
 }
 
 /* ------------------------------------------------------------- the looper --- */
@@ -861,10 +937,60 @@ static void lp_step(int32_t *ck)                     /* render: one step of 32 f
     }
 }
 
+/* ------------------------------------------------------------ the effects --- */
+/* DELAY's TIME: a note value of the looper's TEMPO, in 24ths of a quarter (1/32, 1/16T, 1/16, 1/8T, 1/16., 1/8,
+ * 1/4T, 1/8., 1/4); longer than its line (0.5 s: a slow tempo), half of it, until it fits (still in time) */
+static const uint8_t DLY_K[9] = {3, 4, 6, 8, 9, 12, 16, 18, 24};
+static const char *const DLY_NAME[9] = {"1/32", "1/16T", "1/16", "1/8T", "1/16.", "1/8", "1/4T", "1/8.", "1/4"};
+static uint8_t fx_tempo;                             /* the TEMPO DELAY's time was last set at */
+
+static uint32_t dly_samples(int *halved)             /* 44100 * 60 / bpm * k / 24 = 110250 * k / bpm samples */
+{
+    uint32_t d = 110250u * DLY_K[set.fx[FX_DELAY][FK_TIME]] / lp.tempo;
+    int h = 0;
+    while (d > FX_DLY_N) {
+        d /= 2u;
+        h++;
+    }
+    if (halved)
+        *halved = h;
+    return d;
+}
+
+static const char *dly_played(void)                  /* the note value it plays: TIME's, or a half or quarter of it
+                                                     * (48ths of a quarter; 40 BPM halves twice at most) */
+{
+    static const uint8_t K48[10] = {6, 8, 9, 12, 16, 18, 24, 32, 36, 48};
+    static const char *const N48[10] = {"1/32", "1/16T", "1/32.", "1/16", "1/8T", "1/16.", "1/8", "1/4T", "1/8.",
+                                        "1/4"};
+    int h, i;
+    uint32_t k;
+    dly_samples(&h);
+    k = 2u * DLY_K[set.fx[FX_DELAY][FK_TIME]] >> h;
+    for (i = 0; i < 10; i++)
+        if (K48[i] == k)
+            return N48[i];
+    return "?";
+}
+
+static void fx_apply(void)                           /* the effects' knobs (and TEMPO) to the DSP */
+{
+    const int8_t *d = set.fx[FX_DELAY], *h = set.fx[FX_HALL];
+    fx_tempo = lp.tempo;
+    fx_delay_set(dly_samples(0), d[FK_FDBK], d[FK_TONE]);
+    fx_hall_set((uint32_t)h[0] * 441u / 10u, h[1], h[2]);   /* PRE: ms * 44.1 */
+}
+
 /* ------------------------------------------------------------------ audio --- */
 static int32_t part_buf[KL_NPART][APP_BLOCK];
 static int32_t gain_q8;                              /* MASTER's gain, gliding: no step at a block's edge */
 static int32_t mix_q19[KL_NPART][2];                 /* the parts' gains as they glide, Q19 (Q11 << 8) */
+static int32_t snd_q19[KL_NPART][2], ret_q19[2];     /* the sends and returns, alike */
+static int32_t snd_buf[2][APP_BLOCK];                /* the sends mixed, mono: DELAY's, HALL's */
+static int32_t ret_buf[2][2 * APP_BLOCK];            /* the effects' outputs, L and R */
+static int16_t fx_dly_buf[2 * FX_DLY_N] PLAT_POOL;   /* DELAY's lines, L then R: 88 200 B */
+static int16_t fx_pre_buf[FX_PRE_N] PLAT_POOL;       /* PRE's: 8 820 B */
+static uint16_t fx_hall_buf[FX_HALL_N] PLAT_POOL;    /* HALL's: 65 536 B */
 static int32_t lim_q24 = 1 << 24;                    /* the limiter's gain, Q24 */
 static volatile int32_t out_peak[2];                 /* the output's peak, L and R, since the screen last looked */
 static volatile int32_t lim_low = 1 << 16;           /* the limiter's lowest gain (Q16) since the screen last looked */
@@ -919,14 +1045,39 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         lp_step(ck_buf + b);
         kl_render(out, 32u);
     }
+    {   /* the sends mixed mono (after LEVEL, MUTE and SOLO), then the effects */
+        int32_t c, on[2] = {0, 0};
+        for (p = 0; p < KL_NPART; p++)
+            for (c = 0; c < 2; c++)
+                on[c] |= snd_tgt[p][c] != 0 || snd_q19[p][c] != 0;
+        for (i = 0; i < n; i++) {
+            int32_t s[2] = {0, 0};
+            if (on[0] || on[1])
+                for (p = 0; p < KL_NPART; p++) {
+                    int32_t x = clamp(part_buf[p][i], -524287, 524287);
+                    for (c = 0; c < 2; c++) {
+                        snd_q19[p][c] += ((snd_tgt[p][c] << 8) - snd_q19[p][c]) >> 8;   /* ~6 ms */
+                        s[c] += x * (snd_q19[p][c] >> 8) >> 11;
+                    }
+                }
+            snd_buf[0][i] = s[0];
+            snd_buf[1][i] = s[1];
+        }
+        fx_render(snd_buf[0], snd_buf[1], ret_buf[0], ret_buf[1], n, on[0], on[1]);
+    }
     for (i = 0; i < n; i++) {
-        int32_t c, sum[2] = {0, 0}, y[2], pk, lim;
+        int32_t c, e, sum[2] = {0, 0}, y[2], pk, lim;
         for (p = 0; p < KL_NPART; p++) {             /* each part at its gains: L and R */
             int32_t x = clamp(part_buf[p][i], -524287, 524287);   /* 2^19 * the most gain, 4086, fits 32 bits */
             for (c = 0; c < 2; c++) {
                 mix_q19[p][c] += ((mix_tgt[p][c] << 8) - mix_q19[p][c]) >> 8;   /* ~6 ms */
                 sum[c] += x * (mix_q19[p][c] >> 8) >> 11;
             }
+        }
+        for (e = 0; e < 2; e++) {                    /* the effects' returns */
+            ret_q19[e] += ((ret_tgt[e] << 8) - ret_q19[e]) >> 8;
+            for (c = 0; c < 2; c++)
+                sum[c] += clamp(ret_buf[e][2 * i + (uint32_t)c], -524287, 524287) * (ret_q19[e] >> 8) >> 11;
         }
         sum[0] += ck_buf[i];                         /* the looper's click, in the middle */
         sum[1] += ck_buf[i];
@@ -973,8 +1124,7 @@ static uint32_t step_mask(int p, uint32_t sel);
 void app_init(void)
 {
     int e, p;
-    if (plat_store_load(OBJ_SETTINGS, &set, sizeof set) != (int)sizeof set || !settings_ok())
-        settings_defaults();
+    settings_load();
     set_kept = set;
     for (p = 0; p < KL_NPART; p++) {
         for (e = 0; e < KL_NENG; e++)
@@ -984,6 +1134,8 @@ void app_init(void)
     mix_update();
     loop_init();
     step_init();
+    fx_init(fx_dly_buf, fx_pre_buf, fx_hall_buf);
+    fx_apply();
 }
 
 /* --------------------------------------------------------------------- UI --- */
@@ -1001,8 +1153,10 @@ static struct {
     uint8_t loop, redraw_loop, redraw_head;          /* the looper's page is open; its lanes again (the play line
                                                      * moved); the header alone (its bar and beat) */
     uint8_t ask, ask_part;                           /* HOME + PLAY asks before a part is emptied (OCT+ yes) */
-    uint8_t tab, bar, turned;                        /* the looper's page: LOOP (0) or STEP (1); STEP's bar shown; a
-                                                     * knob turned while a step was held */
+    uint8_t fx;                                      /* the effects' page is open */
+    uint8_t tab, bar, turned;                        /* the tab of the page open: the looper's LOOP (0) or STEP (1),
+                                                     * the mixer's MIX or SEND, the effects' DELAY or HALL; STEP's bar
+                                                     * shown; a knob turned while a step was held */
     uint16_t held, held_new;                         /* the steps held (white keys), those set as they went down */
     uint32_t kstep;                                  /* the keys that went down as steps (their release is a step's) */
     uint32_t loop_at, lp_sig;                        /* the lanes last drawn; what the looper did, as last seen */
@@ -1134,21 +1288,32 @@ void app_say(const char *a, const char *b)
     announce(t);
 }
 
+static void db_text(int32_t db, char *b, int short_form)   /* a LEVEL: "-6 dB", "+3 dB", "OFF"; short: "-6" */
+{
+    char t[8];
+    b[0] = 0;
+    if (db < -40) {
+        text_cat(b, "OFF");
+        return;
+    }
+    if (db > 0)
+        text_cat(b, "+");
+    int_text(db, t);
+    text_cat(b, t);
+    if (!short_form)
+        text_cat(b, " dB");
+}
+
 /* a mixer knob's value as the screen shows it: K1 LEVEL "-6 dB" / "OFF", K2 PAN "C" / "L10" / "R25", K3 MUTE and
- * K4 SOLO "ON" / "OFF"; short: as under a strip ("-6", "OFF") */
+ * K4 SOLO "ON" / "OFF"; short: as under a strip ("-6", "OFF"). The tab SEND's (k 4, 5): DELAY and HALL, "30" */
 static void mix_text(const part_set_t *ps, int32_t k, char *b, int short_form)
 {
     char t[8];
     b[0] = 0;
-    if (k == 0 && ps->level < -40) {
-        text_cat(b, "OFF");
-    } else if (k == 0) {
-        if (ps->level > 0)
-            text_cat(b, "+");
-        int_text(ps->level, t);
-        text_cat(b, t);
-        if (!short_form)
-            text_cat(b, " dB");
+    if (k == 0) {
+        db_text(ps->level, b, short_form);
+    } else if (k >= 4) {
+        int_text(ps->send[k - 4], b);
     } else if (k == 1) {
         text_cat(b, ps->pan < 0 ? "L" : ps->pan > 0 ? "R" : "C");
         if (ps->pan) {
@@ -1160,7 +1325,22 @@ static void mix_text(const part_set_t *ps, int32_t k, char *b, int short_form)
     }
 }
 
-static const char *const MIX_LABEL[4] = {"LEVEL", "PAN", "MUTE", "SOLO"};
+static const char *const MIX_LABEL[6] = {"LEVEL", "PAN", "MUTE", "SOLO", "DELAY", "HALL"};   /* MIX's, SEND's */
+static const char *const FX_LABEL[2][4] = {{"TIME", "FDBK", "TONE", "LEVEL"}, {"PRE", "DECAY", "TONE", "LEVEL"}};
+
+static void fx_text(int e, int32_t k, char *b)       /* an effect's knob: "1/8.", "35%", "20 MS", "0 dB" */
+{
+    int32_t v = set.fx[e][k];
+    b[0] = 0;
+    if (k == FK_LEVEL) {
+        db_text(v, b, 0);
+    } else if (e == FX_DELAY && k == FK_TIME) {
+        text_cat(b, DLY_NAME[v]);
+    } else {
+        int_text(v, b);
+        text_cat(b, e == FX_HALL && k == 0 ? " MS" : "%");
+    }
+}
 
 static const char *const LOOP_LABEL[4] = {"TEMPO", "LENGTH", "QUANT", "CLICK"};
 static const char *const QUANT_NAME[5] = {"OFF", "1/32", "1/16", "1/8", "1/4"};
@@ -1231,14 +1411,25 @@ static void speak(void)
             text_cat(t, ", EDITED");
         text_cat(t, ". OCTAVE ");
         text_cat(t, o);
-        if (ui.mix) {                                /* the mixer: the chosen part's strip */
-            text_cat(t, ". MIX");
-            for (k = 0; k < 4; k++) {
+        if (ui.mix) {                                /* the mixer: the chosen part's strip (SEND: its sends) */
+            text_cat(t, ui.tab ? ". SEND" : ". MIX");
+            for (k = ui.tab ? 4 : 0; k < (ui.tab ? 6 : 4); k++) {
                 char v[12];
                 text_cat(t, ". ");
                 text_cat(t, MIX_LABEL[k]);
                 text_cat(t, " ");
                 mix_text(part_cur(), k, v, 0);
+                text_cat(t, v);
+            }
+        }
+        if (ui.fx) {                                 /* the effects' page: the tab, what its knobs hold */
+            text_cat(t, ui.tab ? ". HALL" : ". DELAY");
+            for (k = 0; k < 4; k++) {
+                char v[12];
+                text_cat(t, ". ");
+                text_cat(t, FX_LABEL[ui.tab][k]);
+                text_cat(t, " ");
+                fx_text(ui.tab, k, v);
                 text_cat(t, v);
             }
         }
@@ -1339,7 +1530,7 @@ static void page_show(uint32_t page)                 /* EDIT 1 (0) or EDIT 2 (1)
 {
     char t[24] = "EDIT ";
     ui.edit = 1;
-    ui.mix = ui.loop = 0;
+    ui.mix = ui.loop = ui.fx = 0;
     ui.page = (uint8_t)page;
     ui.redraw = 1;
     text_cat(t, kl_page_title(eng_cur(), (int)page));
@@ -1390,7 +1581,8 @@ static void param_reset(int32_t k)                   /* HOME + K1..K4 on an edit
     announce(t);
 }
 
-static void mix_said(int32_t k)                      /* a screen reader hears the knob: "LEVEL -6 dB" */
+static void mix_said(int32_t k)                      /* a screen reader hears the knob: "LEVEL -6 dB", "DELAY 30"
+                                                     * (k 4, 5: SEND's) */
 {
     char t[32], v[12];
     t[0] = 0;
@@ -1401,12 +1593,20 @@ static void mix_said(int32_t k)                      /* a screen reader hears th
     announce(t);
 }
 
-static void mix_show(int on)                         /* GLO: the mixer open (an edit page closes), or shut */
+static void mix_show(int on)                         /* GLO: the mixer open on MIX (another page closes), or shut
+                                                     * (OCT-) */
 {
     ui.mix = (uint8_t)(on != 0);
-    ui.edit = ui.loop = 0;
+    ui.edit = ui.loop = ui.fx = ui.tab = 0;
     ui.redraw = 1;
     announce(on ? "MIX" : "RACK");
+}
+
+static void page_tab(int t)                          /* the mixer's or the effects' page: the other tab */
+{
+    ui.tab = (uint8_t)t;
+    ui.redraw = 1;
+    announce(ui.mix ? (t ? "SEND" : "MIX") : t ? "HALL" : "DELAY");
 }
 
 static void mix_changed(int32_t k)
@@ -1418,11 +1618,16 @@ static void mix_changed(int32_t k)
 }
 
 /* K1..K4 on the mixer, the chosen part's: LEVEL a dB a detent (below -40 off), PAN a step of 50 a side, MUTE and
- * SOLO on to the right, off to the left */
+ * SOLO on to the right, off to the left; on SEND, K1 DELAY and K2 HALL one a detent (0..100), K3 and K4 nothing */
 static void mix_step(int32_t k, int32_t d)
 {
     part_set_t *ps = part_cur();
-    if (k == 0)
+    if (ui.tab) {
+        if (k >= 2)
+            return;
+        ps->send[k] = (uint8_t)clamp(ps->send[k] + d, 0, 100);
+        k += 4;
+    } else if (k == 0)
         ps->level = (int8_t)clamp(ps->level + d, LEVEL_OFF, 6);
     else if (k == 1)
         ps->pan = (int8_t)clamp(ps->pan + d, -50, 50);
@@ -1433,10 +1638,15 @@ static void mix_step(int32_t k, int32_t d)
     mix_changed(k);
 }
 
-static void mix_reset(int32_t k)                     /* HOME + K1..K4 on the mixer: 0 dB, the middle, off */
+static void mix_reset(int32_t k)                     /* HOME + K1..K4 on the mixer: 0 dB, the middle, off; SEND: 0 */
 {
     part_set_t *ps = part_cur();
-    if (k == 0)
+    if (ui.tab) {
+        if (k >= 2)
+            return;
+        ps->send[k] = 0;
+        k += 4;
+    } else if (k == 0)
         ps->level = 0;
     else if (k == 1)
         ps->pan = 0;
@@ -1445,6 +1655,52 @@ static void mix_reset(int32_t k)                     /* HOME + K1..K4 on the mix
     else
         ps->solo = 0;
     mix_changed(k);
+}
+
+/* ------------------------------------------------------- the effects' page --- */
+static void fx_said(int32_t k)                       /* "FDBK 55%", the tab's */
+{
+    char t[32], v[12];
+    t[0] = 0;
+    text_cat(t, FX_LABEL[ui.tab][k]);
+    text_cat(t, " ");
+    fx_text(ui.tab, k, v);
+    text_cat(t, v);
+    announce(t);
+}
+
+static void fx_show(int on)                          /* FX: the effects' page open on DELAY (another page closes), or
+                                                     * shut (OCT-) */
+{
+    ui.fx = (uint8_t)(on != 0);
+    ui.edit = ui.mix = ui.loop = ui.tab = 0;
+    ui.redraw = 1;
+    announce(on ? "DELAY" : "RACK");
+}
+
+static void fx_changed(int32_t k)
+{
+    fx_apply();
+    mix_update();                                    /* LEVEL: the return */
+    dirty_update();
+    ui.redraw = 1;
+    fx_said(k);
+}
+
+static void fx_step(int32_t k, int32_t d)            /* K1..K4 on the effects' page: a step a detent */
+{
+    int8_t *v = &set.fx[ui.tab][k];
+    int32_t n = clamp(*v + d, FX_MIN[ui.tab][k], FX_MAX[ui.tab][k]);
+    if (n == *v)
+        return;
+    *v = (int8_t)n;
+    fx_changed(k);
+}
+
+static void fx_reset(int32_t k)                      /* HOME + K1..K4: 1/8., 35 %, 70 %, 0 dB; 20 ms, 50 %, 60 %, 0 dB */
+{
+    set.fx[ui.tab][k] = FX_DEF[ui.tab][k];
+    fx_changed(k);
 }
 
 /* -------------------------------------------------------- the looper's page --- */
@@ -1463,7 +1719,7 @@ static void loop_show(int on)                        /* SEQ: the looper's page o
                                                      * shut (OCT-) */
 {
     ui.loop = (uint8_t)(on != 0);
-    ui.edit = ui.mix = ui.tab = 0;
+    ui.edit = ui.mix = ui.fx = ui.tab = 0;
     ui.held = ui.held_new = 0;
     ui.redraw = 1;
     announce(on ? "LOOP" : "RACK");
@@ -1971,8 +2227,18 @@ static void input(void)
             step_tab(!ui.tab);                       /* the other tab, as EDIT and OCT+ on the edit pages */
         else if (k == B_SEQ)
             loop_show(1);
-        else if ((k == B_OCTDN && ui.mix) || k == B_GLO)
-            mix_show(!ui.mix);                       /* the mixer, open and shut */
+        else if (k == B_OCTDN && ui.mix)
+            mix_show(0);
+        else if (k == B_OCTDN && ui.fx)
+            fx_show(0);
+        else if ((k == B_GLO || k == B_OCTUP) && ui.mix)
+            page_tab(!ui.tab);                       /* MIX and SEND, as SEQ on the looper's page */
+        else if ((k == B_FX || k == B_OCTUP) && ui.fx)
+            page_tab(!ui.tab);                       /* DELAY and HALL */
+        else if (k == B_GLO)
+            mix_show(1);
+        else if (k == B_FX)
+            fx_show(1);
         else if (k == B_PLAY && (btn & 1u << B_HOME))
             loop_clear_ask();
         else if (k == B_PLAY)
@@ -1993,7 +2259,7 @@ static void input(void)
             part_step(1);
         else if (k == B_ENV && eng_cur() == KL_ACID)
             announce("ACCENT");                      /* held: the keys pressed now are accented */
-        else if (k == B_HOME && (ui.edit || ui.mix || ui.loop))
+        else if (k == B_HOME && (ui.edit || ui.mix || ui.loop || ui.fx))
             app_say("RESET", "TURN K1-K4");          /* held: a knob turned goes back to its sound's value */
         else if (k == B_HOME)
             app_say("HOME", "+ REC UNDO");           /* held: REC takes the last take back, PLAY empties a part */
@@ -2015,6 +2281,10 @@ static void input(void)
             loop_reset((int32_t)(k - EN_K1));
         else if (ui.loop && k >= EN_K1)
             loop_step((int32_t)(k - EN_K1), e);
+        else if (ui.fx && k >= EN_K1 && (btn & 1u << B_HOME))
+            fx_reset((int32_t)(k - EN_K1));
+        else if (ui.fx && k >= EN_K1)
+            fx_step((int32_t)(k - EN_K1), e);
         else if (ui.mix && k >= EN_K1 && (btn & 1u << B_HOME))
             mix_reset((int32_t)(k - EN_K1));
         else if (ui.mix && k >= EN_K1)
@@ -2033,7 +2303,7 @@ static void input(void)
     plat_glow(1);                                    /* the unlit buttons glow, readable in the dark */
     plat_play_red(lp.rec);                           /* PLAY green while it plays, red while it records */
     plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u) | (ui.mix ? 1u << B_GLO : 0u) | (ui.loop ? 1u << B_SEQ : 0u) |
-                  (lp.state != LP_STOP ? 1u << B_PLAY : 0u) | (lp.rec ? 1u << B_REC : 0u),
+                  (ui.fx ? 1u << B_FX : 0u) | (lp.state != LP_STOP ? 1u << B_PLAY : 0u) | (lp.rec ? 1u << B_REC : 0u),
               ui.loop && ui.tab ? step_lights() : keys);   /* STEP: the steps set, a running light */
 }
 
@@ -2156,12 +2426,14 @@ static void draw_header(void)
     if (msg) {
         int32_t x = cv_text(8, 3, &FONT_B, ui.msg[0], K_TEXT);
         cv_text(x + 6, 3, &FONT_B, ui.msg[1], tl->col);
-    } else if (ui.mix || ui.loop) {                  /* the mixer, the looper: all four parts */
-        const char *c = ui.mix ? "MIX" : ui.tab ? "STEP" : "LOOP";
+    } else if (ui.mix || ui.loop || ui.fx) {         /* the mixer, the looper, the effects: all four parts */
+        const char *c = ui.mix ? "MIX" : ui.fx ? "FX" : ui.tab ? "STEP" : "LOOP";
         char st[24] = "";
         int32_t w = text_w(&FONT_XS, c) + 8;
         if (ui.mix) {
             text_cat(st, "PARTS 1-4");
+        } else if (ui.fx) {
+            text_cat(st, "DELAY + HALL");
         } else if (ui.tab) {                         /* STEP: the part whose steps the keys are (DRUMS: and the
                                                      * instrument) */
             part_name(set.part, st);
@@ -2342,11 +2614,31 @@ static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
 }
 
 /* K1..K4: the chosen part's strip; LEVEL and PAN marked at 0 dB and the middle (where HOME takes them) while they are
- * elsewhere, MUTE and SOLO not (OFF or ON says it) */
+ * elsewhere, MUTE and SOLO not (OFF or ON says it). SEND: K1 DELAY, K2 HALL, marked at 0 while elsewhere; K3 and K4
+ * free ("-") */
 static void footer_mix(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
 {
     const part_set_t *ps = part_cur();
     int32_t i;
+    if (ui.tab) {
+        for (i = 0; i < 4; i++) {
+            lab[i][0] = 'K';
+            lab[i][1] = (char)('1' + i);
+            lab[i][2] = ' ';
+            lab[i][3] = 0;
+            v[i][0] = '-';
+            v[i][1] = 0;
+            frac[i] = 0;
+            mark[i] = -1;
+        }
+        for (i = 0; i < 2; i++) {
+            text_cat(lab[i], MIX_LABEL[4 + i]);
+            mix_text(ps, 4 + i, v[i], 0);
+            frac[i] = ps->send[i] * 256 / 100;
+            mark[i] = ps->send[i] ? 0 : -1;
+        }
+        return;
+    }
     for (i = 0; i < 4; i++) {
         lab[i][0] = 'K';
         lab[i][1] = (char)('1' + i);
@@ -2364,6 +2656,24 @@ static void footer_mix(char lab[4][16], char v[4][12], int32_t frac[4], int32_t 
         mark[1] = 128;
     frac[2] = ps->mute ? 256 : 0;
     frac[3] = ps->solo ? 256 : 0;
+}
+
+/* K1..K4: the effects' tab's, each marked where HOME takes it while it is elsewhere */
+static void footer_fx(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
+{
+    int e = ui.tab;
+    int32_t i;
+    for (i = 0; i < 4; i++) {
+        int32_t lo = FX_MIN[e][i], span = FX_MAX[e][i] - lo, x = set.fx[e][i], h = FX_DEF[e][i];
+        lab[i][0] = 'K';
+        lab[i][1] = (char)('1' + i);
+        lab[i][2] = ' ';
+        lab[i][3] = 0;
+        text_cat(lab[i], FX_LABEL[e][i]);
+        fx_text(e, i, v[i]);
+        frac[i] = (x - lo) * 256 / span;
+        mark[i] = x != h ? (h - lo) * 256 / span : -1;
+    }
 }
 
 /* K1..K4: TEMPO, LENGTH, QUANT, CLICK, each marked where HOME takes it (120 BPM, the first take's length, 1/16,
@@ -2434,6 +2744,8 @@ static void draw_footer(void)                        /* what the controls hold, 
     int32_t frac[4], mark[4], i;
     if (ui.mix)
         footer_mix(lab, v, frac, mark);
+    else if (ui.fx)
+        footer_fx(lab, v, frac, mark);
     else if (ui.loop && ui.tab)
         footer_step(lab, v, frac, mark);
     else if (ui.loop)
@@ -2563,9 +2875,17 @@ static void draw_edit(int32_t y0)
     cv_blit(0, (uint32_t)y0);
 }
 
+static const char *const TABS_LOOP[2] = {"LOOP", "STEP"};   /* the pages' tabs (draw_tabs, below) */
+static const char *const TABS_MIX[2] = {"MIX", "SEND"};
+static const char *const TABS_FX[2] = {"DELAY", "HALL"};
+static void draw_tabs(int32_t y0, const char *const TAB[2], const char *right);
+
 /* ---------------------------------------------------------------- the mixer --- */
-static int32_t meter_px(int32_t pk)                  /* a peak (24 bits) as a meter's height: -48 .. 0 dBFS in 88 px,
-                                                     * 6 dB a bit of the peak, its next three bits between */
+#define FD_TOP 73                                    /* the faders and meters: from this row, this high */
+#define FD_H 62
+
+static int32_t meter_px(int32_t pk)                  /* a peak (24 bits) as a meter's height: -48 .. 0 dBFS in FD_H
+                                                     * px, 6 dB a bit of the peak, its next three bits between */
 {
     int32_t msb = 23, pos;
     if (pk <= 0)
@@ -2573,7 +2893,7 @@ static int32_t meter_px(int32_t pk)                  /* a peak (24 bits) as a me
     while (msb > 0 && !(pk >> msb))
         msb--;
     pos = (msb - 15) * 8 + (msb >= 3 ? (pk >> (msb - 3)) & 7 : 0);
-    return clamp(pos, 0, 64) * 88 / 64;
+    return clamp(pos, 0, 64) * FD_H / 64;
 }
 
 static void meters_read(uint32_t now)                /* the output's peaks since the last look, falling 2 px a look */
@@ -2591,79 +2911,189 @@ static void meters_read(uint32_t now)                /* the output's peaks since
     ui.redraw_mix = 1;
 }
 
-static void draw_mix(int32_t y0)                     /* the mixer's strips, the rows y0 .. y0 + 92 of the screen */
+/* a send's row in a strip at x (46 wide), from row y: its name, a bar of v / 256 in col; the master's returns alike */
+static void send_row(int32_t x, int32_t y, const char *name, int32_t v, uint16_t lab, uint16_t col)
 {
-    int32_t p, i, solo = 0;
+    int32_t bx = x + 6 + text_w(&FONT_T, "HALL"), bw = x + 43 - bx;
+    cv_text(x + 3, y, &FONT_T, name, lab);
+    cv_rect(bx, y + 5, bw, 2, K_LINE);
+    cv_rect(bx, y + 5, bw * clamp(v, 0, 256) / 256, 2, col);
+}
+
+/* the mixer's tabs and strips, the rows y0 .. y0 + 92 of the screen; the tab lights what its knobs turn (MIX the
+ * faders, SEND the sends) */
+static void draw_mix(int32_t y0)
+{
+    int32_t p, i, solo = 0, bot = FD_TOP + FD_H;
     cv_begin(240, 93, K_GROUND);
+    draw_tabs(y0, TABS_MIX, "");
     for (p = 0; p < KL_NPART; p++)
         solo |= set.parts[p].solo;
-    for (p = 0; p < KL_NPART; p++) {                 /* a strip a part: glyph, name, fader, LEVEL, PAN, M S */
+    for (p = 0; p < KL_NPART; p++) {                 /* a strip a part: glyph, name, fader, LEVEL, PAN, sends, M S */
         const part_set_t *ps = &set.parts[p];
         const tile_t *tl = &TILES[TILE_OF[ps->engine]];
-        int32_t x = 1 + p * 48, cx = x + 23, ly = ps->level < -40 ? 146 : 146 - (ps->level + 40) * 88 / 46;
+        int32_t x = 1 + p * 48, cx = x + 23, ly = ps->level < -40 ? bot : bot - (ps->level + 40) * FD_H / 46;
         int sel = p == set.part, dim = ps->mute || (solo && !ps->solo);
-        uint16_t bg = sel ? K_SURF2 : K_SURF;
+        uint16_t bg = sel ? K_SURF2 : K_SURF, col = dim ? K_MUTED : tl->col;
         uint8_t sh[8];
         char t[12] = "";
-        cv_rect(x, 24 - y0, 46, 182, bg);
+        cv_rect(x, 43 - y0, 46, 163, bg);
         if (sel) {
-            cv_rect(x, 24 - y0, 46, 2, tl->col);
+            cv_rect(x, 43 - y0, 46, 2, tl->col);
             cv_rect(x, 204 - y0, 46, 2, tl->col);
-            cv_rect(x, 24 - y0, 2, 182, tl->col);
-            cv_rect(x + 44, 24 - y0, 2, 182, tl->col);
+            cv_rect(x, 43 - y0, 2, 163, tl->col);
+            cv_rect(x + 44, 43 - y0, 2, 163, tl->col);
         }
         kl_shape(ps->engine, work[p][ps->engine], sh);
-        glyph_draw(cx, 34 - y0, 7, sh, tl->col, bg);
+        glyph_draw(cx, 53 - y0, 7, sh, tl->col, bg);
         t[0] = (char)('1' + p);
         t[1] = ' ';
         t[2] = 0;
         text_cat(t, tl->name);
-        text_fit(cx - clamp(text_w(&FONT_T, t), 0, 42) / 2, 43 - y0, 42, &FONT_T, t, sel ? tl->col : K_TEXT);
-        cv_rect(cx - 1, 58 - y0, 3, 88, K_LINE);
+        text_fit(cx - clamp(text_w(&FONT_T, t), 0, 42) / 2, 61 - y0, 42, &FONT_T, t, sel ? tl->col : K_TEXT);
+        cv_rect(cx - 1, FD_TOP - y0, 3, FD_H, K_LINE);
         if (ps->level >= -40)
-            cv_rect(cx - 1, ly - y0, 3, 146 - ly, dim ? K_MUTED : tl->col);
+            cv_rect(cx - 1, ly - y0, 3, bot - ly, ui.tab ? K_MUTED : col);
         cv_rect(cx - 9, ly - 2 - y0, 18, 5, K_TEXT);
         mix_text(ps, 0, t, 1);
-        cv_text(cx - text_w(&FONT_T, t) / 2, 149 - y0, &FONT_T, t, K_TEXT);
-        cv_rect(cx - 17, 165 - y0, 34, 2, K_LINE);
-        disc(cx + ps->pan * 17 / 50, 166 - y0, 3, dim ? K_MUTED : tl->col);
+        cv_text(cx - text_w(&FONT_T, t) / 2, 138 - y0, &FONT_T, t, K_TEXT);
+        cv_rect(cx - 17, 152 - y0, 34, 2, K_LINE);
+        disc(cx + ps->pan * 17 / 50, 153 - y0, 3, col);
         mix_text(ps, 1, t, 1);
-        cv_text(cx - text_w(&FONT_T, t) / 2, 170 - y0, &FONT_T, t, K_MUTED);
+        cv_text(cx - text_w(&FONT_T, t) / 2, 156 - y0, &FONT_T, t, K_MUTED);
+        for (i = 0; i < 2; i++)                      /* DLY and HALL */
+            send_row(x, 167 + 11 * i - y0, i ? "HALL" : "DLY", ps->send[i] * 256 / 100,
+                     ui.tab && sel ? K_TEXT : K_MUTED, ui.tab ? col : K_MUTED);
         for (i = 0; i < 2; i++) {                    /* M and S */
             int on = i ? ps->solo : ps->mute;
             int32_t bx = cx - 16 + i * 18;
             const char *l = i ? "S" : "M";
             if (on)
-                cv_rect(bx, 186 - y0, 14, 13, K_TEXT);
+                cv_rect(bx, 190 - y0, 14, 13, K_TEXT);
             else
-                box_edge(bx, 186 - y0, 14, 13, 1, K_LINE);
-            cv_text(bx + (14 - text_w(&FONT_T, l)) / 2, 186 - y0, &FONT_T, l, on ? K_GROUND : K_MUTED);
+                box_edge(bx, 190 - y0, 14, 13, 1, K_LINE);
+            cv_text(bx + (14 - text_w(&FONT_T, l)) / 2, 190 - y0, &FONT_T, l, on ? K_GROUND : K_MUTED);
         }
     }
-    {   /* MASTER: the pot, the output's meters, LIM */
-        int32_t x = 193, cx = x + 13, pct = (int32_t)(plat_master() * 100u / 4096u), my = 146 - pct * 88 / 100;
+    {   /* MASTER: the pot, the output's meters, the effects' returns, LIM */
+        int32_t x = 193, cx = x + 13, pct = (int32_t)(plat_master() * 100u / 4096u), my = bot - pct * FD_H / 100;
         int lim = plat_ms() < ui.lim_until;
         char v[8];
-        cv_rect(x, 24 - y0, 46, 182, K_SURF);
-        cv_text(x + (46 - text_w(&FONT_T, "MASTER")) / 2, 30 - y0, &FONT_T, "MASTER", K_TEXT);
-        cv_rect(cx - 1, 58 - y0, 3, 88, K_LINE);
-        cv_rect(cx - 1, my - y0, 3, 146 - my, K_TEXT);
+        cv_rect(x, 43 - y0, 46, 163, K_SURF);
+        cv_text(x + (46 - text_w(&FONT_T, "MASTER")) / 2, 49 - y0, &FONT_T, "MASTER", K_TEXT);
+        cv_rect(cx - 1, FD_TOP - y0, 3, FD_H, K_LINE);
+        cv_rect(cx - 1, my - y0, 3, bot - my, K_TEXT);
         cv_rect(cx - 8, my - 2 - y0, 16, 5, K_TEXT);
         for (i = 0; i < 2; i++) {
             int32_t mx = x + 27 + i * 8;
-            cv_rect(mx, 58 - y0, 5, 88, K_LINE);
-            cv_rect(mx, 146 - ui.meter[i] - y0, 5, ui.meter[i], K_GREEN);
-            cv_text(mx, 149 - y0, &FONT_T, i ? "R" : "L", K_MUTED);
+            cv_rect(mx, FD_TOP - y0, 5, FD_H, K_LINE);
+            cv_rect(mx, bot - ui.meter[i] - y0, 5, ui.meter[i], K_GREEN);
+            cv_text(mx, 138 - y0, &FONT_T, i ? "R" : "L", K_MUTED);
         }
         v[0] = 0;
         int_text(pct, v);
         text_cat(v, "%");
-        cv_text(x + (46 - text_w(&FONT_T, v)) / 2, 165 - y0, &FONT_T, v, K_TEXT);
+        cv_text(x + (46 - text_w(&FONT_T, v)) / 2, 152 - y0, &FONT_T, v, K_TEXT);
+        for (i = 0; i < 2; i++)                      /* the returns: the effects' LEVEL */
+            send_row(x, 167 + 11 * i - y0, i ? "HALL" : "DLY", (set.fx[i][FK_LEVEL] - LEVEL_OFF) * 256 / (6 - LEVEL_OFF),
+                     K_MUTED, K_MUTED);
         if (lim)
-            cv_rect(x + 8, 184 - y0, 30, 15, K_TEXT);
+            cv_rect(x + 8, 190 - y0, 30, 13, K_TEXT);
         else
-            box_edge(x + 8, 184 - y0, 30, 15, 1, K_MUTED);
-        cv_text(x + 8 + (30 - text_w(&FONT_T, "LIM")) / 2, 185 - y0, &FONT_T, "LIM", lim ? K_GROUND : K_MUTED);
+            box_edge(x + 8, 190 - y0, 30, 13, 1, K_MUTED);
+        cv_text(x + 8 + (30 - text_w(&FONT_T, "LIM")) / 2, 190 - y0, &FONT_T, "LIM", lim ? K_GROUND : K_MUTED);
+    }
+    cv_blit(0, (uint32_t)y0);
+}
+
+/* -------------------------------------------------------- the effects' page --- */
+static uint16_t fx_shade(int32_t n, int32_t tone)    /* the n-th echo (0: the first), darker with a lower TONE */
+{
+    return mix565(K_TEXT, K_LINE, (uint32_t)clamp(256 - n * (220 - 2 * tone) / 6, 40, 256));
+}
+
+/* the effects' page, the rows y0 .. y0 + 92: its tabs; a picture of the tab's effect (the note sent in grey, then
+ * DELAY's echoes, left up and right down, TIME apart and FDBK of the one before; or the gap of PRE and HALL's tail,
+ * dying away with DECAY), both darker with TONE; under it what each part sends (the mixer's SEND; the chosen part
+ * framed, a silent one grey with M) */
+static void draw_fx(int32_t y0)
+{
+    const int8_t *f = set.fx[ui.tab];
+    int32_t p, i, cy = 92 - y0;
+    char t[24] = "", v[12];
+    cv_begin(240, 93, K_GROUND);
+    if (!ui.tab) {
+        int_text(lp.tempo, t);
+        text_cat(t, " BPM");
+    }
+    draw_tabs(y0, TABS_FX, t);
+    cv_rect(1, 44 - y0, 238, 82, K_SURF);
+    t[0] = 0;
+    if (ui.tab) {
+        text_cat(t, "PRE ");
+        fx_text(FX_HALL, 0, v);
+    } else {
+        text_cat(t, dly_played());
+        text_cat(t, " = ");
+        int_text((int32_t)((dly_samples(0) * 10u + 220u) / 441u), v);   /* samples / 44.1: ms */
+        text_cat(v, " MS");
+    }
+    text_cat(t, v);
+    cv_text(7, 47 - y0, &FONT_XS, ui.tab ? "STEREO" : "PING-PONG", K_TEXT);
+    cv_text(232 - text_w(&FONT_XS, t), 47 - y0, &FONT_XS, t, K_MUTED);
+    cv_text(8, 66 - y0, &FONT_T, "L", K_MUTED);
+    cv_text(8, 106 - y0, &FONT_T, "R", K_MUTED);
+    cv_rect(20, cy, 213, 1, K_LINE);
+    cv_rect(24, cy - 28, 3, 57, K_LINE);              /* the note sent in */
+    if (!ui.tab) {                                   /* DELAY: the echoes, L, R, L ... */
+        int32_t step = 8 + (int32_t)(dly_samples(0) * 17u / FX_DLY_N), h = 28 << 8, fb = f[FK_FDBK] * 251 / 100;
+        for (i = 0; 24 + step * (i + 1) < 228 && h >= 1 << 8; i++, h = h * fb >> 8) {
+            int32_t x = 24 + step * (i + 1), hh = clamp(h >> 8, 2, 28);
+            cv_rect(x, i & 1 ? cy + 1 : cy - hh, 4, hh, fx_shade(i, f[FK_TONE]));
+        }
+    } else {                                         /* HALL: the gap of PRE, the tail (a little different L and R) */
+        uint32_t r = 12345u;
+        int32_t x0 = 31 + f[0] * 30 / 100, tau = 16 + f[1] * 12 / 10, env = 26 << 8;
+        int32_t k = (256 << 8) / tau;                /* 1 / tau, Q16: env falls by env / tau a step of 2 px */
+        for (i = 0; x0 + 2 * i < 232 && env >= 1 << 8; i++, env -= (env * k >> 16) * 2) {   /* 6656 * 4096 fits */
+            int32_t c, a = i < 3 ? (i + 1) * 85 : 256;   /* the first lines grow in */
+            uint16_t col = fx_shade(i / 6, f[2]);
+            for (c = 0; c < 2; c++) {
+                int32_t hh;
+                r = r * 1103515245u + 12345u;
+                hh = ((env >> 8) * a >> 8) * (140 + (int32_t)(r >> 25)) >> 8;
+                if (hh > 0)
+                    cv_rect(x0 + 2 * i, c ? cy + 1 : cy - hh, 1, hh, col);
+            }
+        }
+    }
+    for (p = 0; p < KL_NPART; p++) {                 /* the parts' sends */
+        const part_set_t *ps = &set.parts[p];
+        const tile_t *tl = &TILES[TILE_OF[ps->engine]];
+        int32_t x = 1 + (p & 1) * 120, y = 129 + (p >> 1) * 40 - y0, s = ps->send[ui.tab], solo = 0, q;
+        int sel = p == set.part, dim;
+        uint16_t bg = sel ? K_SURF2 : K_SURF, col;
+        uint8_t sh[8];
+        for (q = 0; q < KL_NPART; q++)
+            solo |= set.parts[q].solo;
+        dim = ps->mute || (solo && !ps->solo);
+        col = dim ? K_MUTED : tl->col;
+        cv_rect(x, y, 118, 37, bg);
+        if (sel)
+            box_edge(x, y, 118, 37, 2, tl->col);
+        kl_shape(ps->engine, work[p][ps->engine], sh);
+        glyph_draw(x + 13, y + 18, 7, sh, col, bg);
+        t[0] = 0;
+        part_name(p, t);
+        text_fit(x + 26, y + 4, 64, &FONT_XS, t, sel ? tl->col : dim ? K_MUTED : K_TEXT);
+        cv_rect(x + 26, y + 26, 66, 3, K_LINE);
+        cv_rect(x + 26, y + 26, 66 * s / 100, 3, col);
+        v[0] = 0;
+        if (dim)
+            text_cat(v, "M");
+        else
+            int_text(s, v);
+        cv_text(x + 112 - text_w(&FONT_XS, v), y + 17, &FONT_XS, v, s && !dim ? K_TEXT : K_MUTED);
     }
     cv_blit(0, (uint32_t)y0);
 }
@@ -2674,10 +3104,10 @@ static void draw_mix(int32_t y0)                     /* the mixer's strips, the 
 #define LANE_Y 54                                    /* the first lane's row, each this high (and a row apart) */
 #define LANE_H 37
 
-/* the looper's page's tabs, LOOP and STEP, this one lit (as the edit pages'), and a note on the right */
-static void draw_tabs(int32_t y0, const char *right)
+/* a page's two tabs (the looper's LOOP and STEP, the mixer's MIX and SEND, the effects' DELAY and HALL), this one
+ * lit (as the edit pages'), and a note on the right */
+static void draw_tabs(int32_t y0, const char *const TAB[2], const char *right)
 {
-    static const char *const TAB[2] = {"LOOP", "STEP"};
     const tile_t *tl = &TILES[TILE_OF[eng_cur()]];
     int32_t i, x = 8;
     for (i = 0; i < 2; i++) {
@@ -2776,7 +3206,7 @@ static void draw_loop(int32_t y0)
     char v[12];
     cv_begin(240, 93, K_GROUND);
     bars_text(lp.bars, v);
-    draw_tabs(y0, v);
+    draw_tabs(y0, TABS_LOOP, v);
     for (b = 0; b < bars; b++) {
         int32_t x = LT_X + b * LT_W / bars;
         char t[4];
@@ -2822,7 +3252,7 @@ static void draw_step(int32_t y0)
     text_cat(t, "/");
     int_text((int32_t)step_bars(), v);
     text_cat(t, v);
-    draw_tabs(y0, t);
+    draw_tabs(y0, TABS_LOOP, t);
     for (i = 0; i < 16; i++) {                       /* the step numbers: 1, 5, 9, 13, and the one playing */
         int32_t cx = SX0 + i * SXW / 16 + SXW / 32;
         int_text(i + 1, v);
@@ -2928,6 +3358,9 @@ static void draw(void)
     if (ui.mix) {
         draw_mix(22);
         draw_mix(115);
+    } else if (ui.fx) {
+        draw_fx(22);
+        draw_fx(115);
     } else if (ui.loop && ui.tab) {
         draw_step(22);
         draw_step(115);
@@ -2959,6 +3392,8 @@ void app_frame(void)
     uint32_t hits;
     input();
     speak();
+    if (lp.tempo != fx_tempo)                        /* DELAY's time follows TEMPO */
+        fx_apply();
     if ((hits = kl_hits(set.part, &note)) != ui.hits) {        /* a note played: DRUMS lights its pad a moment */
         ui.hits = hits;
         ui.hit_pc = (int8_t)(note % 12);
@@ -3042,6 +3477,34 @@ void app_host_reboot(void)
     set_dirty = 0;
 }
 
+int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
+{
+    (void)a, (void)b, (void)c, (void)d;
+    if (!strcmp(cmd, "kls7")) {                      /* the settings into the store as KLS7 (v0.5's, no sends) */
+        settings7_t old;
+        uint32_t i, e;
+        memset(&old, 0, sizeof old);
+        old.magic = SET_MAGIC7;
+        old.part = set.part;
+        for (i = 0; i < KL_NPART; i++) {
+            const part_set_t *ps = &set.parts[i];
+            old.parts[i].engine = ps->engine;
+            for (e = 0; e < KL_NENG; e++)
+                old.parts[i].preset[e] = ps->preset[e];
+            old.parts[i].octave = ps->octave;
+            old.parts[i].level = ps->level;
+            old.parts[i].pan = ps->pan;
+            old.parts[i].mute = ps->mute;
+            old.parts[i].solo = ps->solo;
+        }
+        for (e = 0; e < KL_NENG; e++)
+            old.user[e] = set.user[e];
+        plat_store_save(OBJ_SETTINGS, &old, sizeof old);
+        return 1;
+    }
+    return 0;
+}
+
 static int expect_k(const char *what, const char *name)   /* "v4" for name "v": 4; else -1 */
 {
     size_t n = strlen(name);
@@ -3067,6 +3530,16 @@ int app_expect(const char *what, int *got)
         *got = kl_cost_now();
     else if (!strcmp(what, "mix"))                   /* the mixer is open */
         *got = ui.mix;
+    else if (!strcmp(what, "fx"))                    /* the effects' page is open */
+        *got = ui.fx;
+    else if (!strcmp(what, "dlyd"))                  /* DELAY's time, samples, as it plays at TEMPO */
+        *got = (int)dly_samples(0);
+    else if ((k = expect_k(what, "fxawake")) >= 0)   /* 0 DELAY, 1 HALL: it runs */
+        *got = fx_awake(k);
+    else if ((k = expect_k(what, "send")) >= 0)      /* the chosen part's: 0 DELAY, 1 HALL */
+        *got = k < 2 ? part_cur()->send[k] : -1;
+    else if ((k = expect_k(what, "fx")) >= 0)        /* the effects' knobs: 0..3 DELAY's, 4..7 HALL's */
+        *got = set.fx[k / 4][k % 4];
     else if (!strcmp(what, "level"))                 /* the chosen part's strip */
         *got = part_cur()->level;
     else if (!strcmp(what, "pan"))
@@ -3123,7 +3596,7 @@ int app_expect(const char *what, int *got)
         *got = (int)kl_hits(set.part, &k);
     else if (!strcmp(what, "ask"))                   /* HOME + PLAY's question stands */
         *got = ui.ask;
-    else if (!strcmp(what, "tab"))                   /* the looper's page: 1 LOOP, 2 STEP */
+    else if (!strcmp(what, "tab"))                   /* the page's: 1 LOOP, MIX, DELAY; 2 STEP, SEND, HALL */
         *got = ui.tab + 1;
     else if (!strcmp(what, "sbar"))                  /* STEP: the bar shown, 1.. */
         *got = ui.bar + 1;

@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FX – hall</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- v0.6's effects, the FX page, tab HALL (beside DELAY; FX or OCT+ switches, OCT- back to the rack).
+     HALL: Mutable Instruments Rings' reverb (MIT, ported to C): four allpasses diffuse the sum of the sends, then two
+     loops (two allpasses, a low pass, a delay moved by a slow LFO each) give it out in stereo. Its rooms are fixed
+     (no SIZE); what it can turn: the time it rings, the low pass, the diffusion.
+     The diagram: the note sent in, the gap of PRE, then the tail, dying away with DECAY, darker with TONE, a little
+     different left and right. Below: what each part sends (the mixer's tab SEND).
+     K1 PRE 0 .. 100 ms (a delay before the hall: 4 410 samples, 8 820 B). K2 DECAY 0 .. 100 % (Rings' set_time,
+     about 0.35 .. 0.98, as Rings maps it). K3 TONE 0 .. 100 % (Rings' set_lp, 100 bright). K4 LEVEL -40 .. +6 dB,
+     below off (the return). HOME + K1..K4: 20 ms, 50 %, 60 %, 0 dB, marked while the knob is elsewhere.
+     Here: DECAY raised to 70 % (marked: 50 %) -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #E8EAED; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">FX</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">DELAY + HALL</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-label="Playing"><polygon points="2,1 13,7 2,13" fill="#7EE08A"></polygon></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">3.2</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="FX page, tab HALL: the reverb's tail and the parts' sends" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="600" letter-spacing="1" fill="#9AA3B2">DELAY</text>
+<text x="82" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">HALL</text>
+<rect x="82" y="28" width="45" height="3" fill="#E8EAED"/>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<rect x="2" y="44" width="476" height="210" rx="8" fill="#151922"/>
+<text x="16" y="72" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">STEREO</text>
+<text x="464" y="72" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="17" fill="#9AA3B2">PRE 20 MS</text>
+<text x="18" y="120" font-size="16" font-weight="700" fill="#9AA3B2">L</text>
+<text x="18" y="212" font-size="16" font-weight="700" fill="#9AA3B2">R</text>
+<rect x="40" y="159" width="426" height="2" fill="#2A3242"/>
+<!-- the note sent in, the gap of PRE, then the tail: dense, dying away with DECAY, darker with TONE, a little different left and right -->
+<rect x="50" y="96" width="8" height="128" rx="3" fill="#4A5468"/>
+<rect x="80" y="151.7" width="2" height="6.3" fill="#E7E9EC"/>
+<rect x="80" y="162.0" width="2" height="7.8" fill="#E7E9EC"/>
+<rect x="84" y="140.6" width="2" height="17.4" fill="#E5E7EB"/>
+<rect x="84" y="162.0" width="2" height="10.4" fill="#E5E7EB"/>
+<rect x="88" y="132.9" width="2" height="25.1" fill="#E4E6E9"/>
+<rect x="88" y="162.0" width="2" height="25.0" fill="#E4E6E9"/>
+<rect x="92" y="136.5" width="2" height="21.5" fill="#E2E5E8"/>
+<rect x="92" y="162.0" width="2" height="22.8" fill="#E2E5E8"/>
+<rect x="96" y="130.2" width="2" height="27.8" fill="#E1E3E7"/>
+<rect x="96" y="162.0" width="2" height="35.4" fill="#E1E3E7"/>
+<rect x="100" y="114.2" width="2" height="43.8" fill="#E0E2E6"/>
+<rect x="100" y="162.0" width="2" height="41.4" fill="#E0E2E6"/>
+<rect x="104" y="133.2" width="2" height="24.8" fill="#DEE1E5"/>
+<rect x="104" y="162.0" width="2" height="24.5" fill="#DEE1E5"/>
+<rect x="108" y="126.1" width="2" height="31.9" fill="#DDDFE3"/>
+<rect x="108" y="162.0" width="2" height="37.4" fill="#DDDFE3"/>
+<rect x="112" y="124.4" width="2" height="33.6" fill="#DBDEE2"/>
+<rect x="112" y="162.0" width="2" height="27.0" fill="#DBDEE2"/>
+<rect x="116" y="135.9" width="2" height="22.1" fill="#DADDE1"/>
+<rect x="116" y="162.0" width="2" height="32.1" fill="#DADDE1"/>
+<rect x="120" y="134.0" width="2" height="24.0" fill="#D8DBE0"/>
+<rect x="120" y="162.0" width="2" height="37.0" fill="#D8DBE0"/>
+<rect x="124" y="128.2" width="2" height="29.8" fill="#D7DADF"/>
+<rect x="124" y="162.0" width="2" height="28.1" fill="#D7DADF"/>
+<rect x="128" y="122.4" width="2" height="35.6" fill="#D6D9DE"/>
+<rect x="128" y="162.0" width="2" height="28.9" fill="#D6D9DE"/>
+<rect x="132" y="126.1" width="2" height="31.9" fill="#D4D7DC"/>
+<rect x="132" y="162.0" width="2" height="26.5" fill="#D4D7DC"/>
+<rect x="136" y="132.9" width="2" height="25.1" fill="#D3D6DB"/>
+<rect x="136" y="162.0" width="2" height="24.6" fill="#D3D6DB"/>
+<rect x="140" y="128.0" width="2" height="30.0" fill="#D1D5DA"/>
+<rect x="140" y="162.0" width="2" height="20.0" fill="#D1D5DA"/>
+<rect x="144" y="128.8" width="2" height="29.2" fill="#D0D3D9"/>
+<rect x="144" y="162.0" width="2" height="27.8" fill="#D0D3D9"/>
+<rect x="148" y="132.5" width="2" height="25.5" fill="#CFD2D8"/>
+<rect x="148" y="162.0" width="2" height="18.2" fill="#CFD2D8"/>
+<rect x="152" y="137.7" width="2" height="20.3" fill="#CDD0D6"/>
+<rect x="152" y="162.0" width="2" height="28.4" fill="#CDD0D6"/>
+<rect x="156" y="134.4" width="2" height="23.6" fill="#CCCFD5"/>
+<rect x="156" y="162.0" width="2" height="21.0" fill="#CCCFD5"/>
+<rect x="160" y="142.5" width="2" height="15.5" fill="#CACED4"/>
+<rect x="160" y="162.0" width="2" height="26.1" fill="#CACED4"/>
+<rect x="164" y="141.5" width="2" height="16.5" fill="#C9CCD3"/>
+<rect x="164" y="162.0" width="2" height="20.4" fill="#C9CCD3"/>
+<rect x="168" y="139.1" width="2" height="18.9" fill="#C7CBD2"/>
+<rect x="168" y="162.0" width="2" height="16.7" fill="#C7CBD2"/>
+<rect x="172" y="142.4" width="2" height="15.6" fill="#C6CAD0"/>
+<rect x="172" y="162.0" width="2" height="14.9" fill="#C6CAD0"/>
+<rect x="176" y="141.8" width="2" height="16.2" fill="#C5C8CF"/>
+<rect x="176" y="162.0" width="2" height="22.1" fill="#C5C8CF"/>
+<rect x="180" y="142.7" width="2" height="15.3" fill="#C3C7CE"/>
+<rect x="180" y="162.0" width="2" height="19.0" fill="#C3C7CE"/>
+<rect x="184" y="139.5" width="2" height="18.5" fill="#C2C6CD"/>
+<rect x="184" y="162.0" width="2" height="21.3" fill="#C2C6CD"/>
+<rect x="188" y="139.7" width="2" height="18.3" fill="#C0C4CC"/>
+<rect x="188" y="162.0" width="2" height="15.2" fill="#C0C4CC"/>
+<rect x="192" y="146.3" width="2" height="11.7" fill="#BFC3CA"/>
+<rect x="192" y="162.0" width="2" height="16.5" fill="#BFC3CA"/>
+<rect x="196" y="144.3" width="2" height="13.7" fill="#BEC2C9"/>
+<rect x="196" y="162.0" width="2" height="20.1" fill="#BEC2C9"/>
+<rect x="200" y="142.8" width="2" height="15.2" fill="#BCC0C8"/>
+<rect x="200" y="162.0" width="2" height="16.6" fill="#BCC0C8"/>
+<rect x="204" y="142.4" width="2" height="15.6" fill="#BBBFC7"/>
+<rect x="204" y="162.0" width="2" height="14.5" fill="#BBBFC7"/>
+<rect x="208" y="143.4" width="2" height="14.6" fill="#B9BEC6"/>
+<rect x="208" y="162.0" width="2" height="13.4" fill="#B9BEC6"/>
+<rect x="212" y="142.3" width="2" height="15.7" fill="#B8BCC5"/>
+<rect x="212" y="162.0" width="2" height="10.8" fill="#B8BCC5"/>
+<rect x="216" y="146.5" width="2" height="11.5" fill="#B7BBC3"/>
+<rect x="216" y="162.0" width="2" height="15.1" fill="#B7BBC3"/>
+<rect x="220" y="143.1" width="2" height="14.9" fill="#B5BAC2"/>
+<rect x="220" y="162.0" width="2" height="9.2" fill="#B5BAC2"/>
+<rect x="224" y="145.2" width="2" height="12.8" fill="#B4B8C1"/>
+<rect x="224" y="162.0" width="2" height="12.6" fill="#B4B8C1"/>
+<rect x="228" y="147.6" width="2" height="10.4" fill="#B2B7C0"/>
+<rect x="228" y="162.0" width="2" height="13.8" fill="#B2B7C0"/>
+<rect x="232" y="143.5" width="2" height="14.5" fill="#B1B6BF"/>
+<rect x="232" y="162.0" width="2" height="14.0" fill="#B1B6BF"/>
+<rect x="236" y="147.9" width="2" height="10.1" fill="#AFB4BD"/>
+<rect x="236" y="162.0" width="2" height="9.5" fill="#AFB4BD"/>
+<rect x="240" y="149.8" width="2" height="8.2" fill="#AEB3BC"/>
+<rect x="240" y="162.0" width="2" height="11.7" fill="#AEB3BC"/>
+<rect x="244" y="144.5" width="2" height="13.5" fill="#ADB2BB"/>
+<rect x="244" y="162.0" width="2" height="13.2" fill="#ADB2BB"/>
+<rect x="248" y="145.5" width="2" height="12.5" fill="#ABB0BA"/>
+<rect x="248" y="162.0" width="2" height="9.1" fill="#ABB0BA"/>
+<rect x="252" y="148.9" width="2" height="9.1" fill="#AAAFB9"/>
+<rect x="252" y="162.0" width="2" height="11.7" fill="#AAAFB9"/>
+<rect x="256" y="147.0" width="2" height="11.0" fill="#A8AEB7"/>
+<rect x="256" y="162.0" width="2" height="7.1" fill="#A8AEB7"/>
+<rect x="260" y="149.7" width="2" height="8.3" fill="#A7ACB6"/>
+<rect x="260" y="162.0" width="2" height="7.5" fill="#A7ACB6"/>
+<rect x="264" y="151.5" width="2" height="6.5" fill="#A6ABB5"/>
+<rect x="264" y="162.0" width="2" height="10.6" fill="#A6ABB5"/>
+<rect x="268" y="146.9" width="2" height="11.1" fill="#A4AAB4"/>
+<rect x="268" y="162.0" width="2" height="8.1" fill="#A4AAB4"/>
+<rect x="272" y="149.5" width="2" height="8.5" fill="#A3A8B3"/>
+<rect x="272" y="162.0" width="2" height="9.2" fill="#A3A8B3"/>
+<rect x="276" y="151.7" width="2" height="6.3" fill="#A1A7B2"/>
+<rect x="276" y="162.0" width="2" height="7.0" fill="#A1A7B2"/>
+<rect x="280" y="148.3" width="2" height="9.7" fill="#A0A6B0"/>
+<rect x="280" y="162.0" width="2" height="6.7" fill="#A0A6B0"/>
+<rect x="284" y="150.5" width="2" height="7.5" fill="#9EA4AF"/>
+<rect x="284" y="162.0" width="2" height="8.3" fill="#9EA4AF"/>
+<rect x="288" y="150.0" width="2" height="8.0" fill="#9DA3AE"/>
+<rect x="288" y="162.0" width="2" height="6.7" fill="#9DA3AE"/>
+<rect x="292" y="152.4" width="2" height="5.6" fill="#9CA2AD"/>
+<rect x="292" y="162.0" width="2" height="5.3" fill="#9CA2AD"/>
+<rect x="296" y="150.6" width="2" height="7.4" fill="#9AA0AC"/>
+<rect x="296" y="162.0" width="2" height="6.1" fill="#9AA0AC"/>
+<rect x="300" y="152.9" width="2" height="5.1" fill="#999FAA"/>
+<rect x="300" y="162.0" width="2" height="8.1" fill="#999FAA"/>
+<rect x="304" y="152.9" width="2" height="5.1" fill="#979EA9"/>
+<rect x="304" y="162.0" width="2" height="7.2" fill="#979EA9"/>
+<rect x="308" y="150.1" width="2" height="7.9" fill="#969CA8"/>
+<rect x="308" y="162.0" width="2" height="5.2" fill="#969CA8"/>
+<rect x="312" y="150.6" width="2" height="7.4" fill="#959BA7"/>
+<rect x="312" y="162.0" width="2" height="7.4" fill="#959BA7"/>
+<rect x="316" y="153.3" width="2" height="4.7" fill="#9399A6"/>
+<rect x="316" y="162.0" width="2" height="6.6" fill="#9399A6"/>
+<rect x="320" y="152.3" width="2" height="5.7" fill="#9298A4"/>
+<rect x="320" y="162.0" width="2" height="5.5" fill="#9298A4"/>
+<rect x="324" y="153.2" width="2" height="4.8" fill="#9097A3"/>
+<rect x="324" y="162.0" width="2" height="5.6" fill="#9097A3"/>
+<rect x="328" y="152.9" width="2" height="5.1" fill="#8F95A2"/>
+<rect x="328" y="162.0" width="2" height="5.8" fill="#8F95A2"/>
+<rect x="332" y="153.2" width="2" height="4.8" fill="#8E94A1"/>
+<rect x="332" y="162.0" width="2" height="4.9" fill="#8E94A1"/>
+<rect x="336" y="154.4" width="2" height="3.6" fill="#8C93A0"/>
+<rect x="336" y="162.0" width="2" height="5.6" fill="#8C93A0"/>
+<rect x="340" y="153.4" width="2" height="4.6" fill="#8B919E"/>
+<rect x="340" y="162.0" width="2" height="5.1" fill="#8B919E"/>
+<rect x="344" y="152.2" width="2" height="5.8" fill="#89909D"/>
+<rect x="344" y="162.0" width="2" height="3.5" fill="#89909D"/>
+<rect x="348" y="152.6" width="2" height="5.4" fill="#888F9C"/>
+<rect x="348" y="162.0" width="2" height="4.4" fill="#888F9C"/>
+<rect x="352" y="154.4" width="2" height="3.6" fill="#868D9B"/>
+<rect x="352" y="162.0" width="2" height="3.8" fill="#868D9B"/>
+<rect x="356" y="153.7" width="2" height="4.3" fill="#858C9A"/>
+<rect x="356" y="162.0" width="2" height="5.2" fill="#858C9A"/>
+<rect x="360" y="154.4" width="2" height="3.6" fill="#848B99"/>
+<rect x="360" y="162.0" width="2" height="4.6" fill="#848B99"/>
+<rect x="364" y="154.9" width="2" height="3.1" fill="#828997"/>
+<rect x="364" y="162.0" width="2" height="3.7" fill="#828997"/>
+<rect x="368" y="153.8" width="2" height="4.2" fill="#818896"/>
+<rect x="368" y="162.0" width="2" height="3.7" fill="#818896"/>
+<rect x="372" y="153.7" width="2" height="4.3" fill="#7F8795"/>
+<rect x="372" y="162.0" width="2" height="2.6" fill="#7F8795"/>
+<rect x="376" y="155.3" width="2" height="2.7" fill="#7E8594"/>
+<rect x="376" y="162.0" width="2" height="2.8" fill="#7E8594"/>
+<rect x="380" y="154.0" width="2" height="4.0" fill="#7D8493"/>
+<rect x="380" y="162.0" width="2" height="3.2" fill="#7D8493"/>
+<rect x="384" y="154.4" width="2" height="3.6" fill="#7B8391"/>
+<rect x="384" y="162.0" width="2" height="2.8" fill="#7B8391"/>
+<rect x="388" y="155.1" width="2" height="2.9" fill="#7A8190"/>
+<rect x="388" y="162.0" width="2" height="3.3" fill="#7A8190"/>
+<rect x="392" y="154.5" width="2" height="3.5" fill="#78808F"/>
+<rect x="392" y="162.0" width="2" height="3.4" fill="#78808F"/>
+<rect x="396" y="154.9" width="2" height="3.1" fill="#777F8E"/>
+<rect x="396" y="162.0" width="2" height="3.3" fill="#777F8E"/>
+<rect x="400" y="155.4" width="2" height="2.6" fill="#757D8D"/>
+<rect x="400" y="162.0" width="2" height="2.2" fill="#757D8D"/>
+<rect x="404" y="155.6" width="2" height="2.4" fill="#747C8B"/>
+<rect x="404" y="162.0" width="2" height="2.4" fill="#747C8B"/>
+<rect x="408" y="155.1" width="2" height="2.9" fill="#737B8A"/>
+<rect x="408" y="162.0" width="2" height="2.8" fill="#737B8A"/>
+<rect x="412" y="155.6" width="2" height="2.4" fill="#717989"/>
+<rect x="412" y="162.0" width="2" height="3.3" fill="#717989"/>
+<rect x="416" y="156.0" width="2" height="2.0" fill="#707888"/>
+<rect x="416" y="162.0" width="2" height="2.4" fill="#707888"/>
+<rect x="420" y="156.1" width="2" height="1.9" fill="#6E7787"/>
+<rect x="420" y="162.0" width="2" height="2.7" fill="#6E7787"/>
+<rect x="424" y="156.0" width="2" height="2.0" fill="#6D7585"/>
+<rect x="424" y="162.0" width="2" height="1.7" fill="#6D7585"/>
+<rect x="428" y="156.0" width="2" height="2.0" fill="#6C7484"/>
+<rect x="428" y="162.0" width="2" height="2.3" fill="#6C7484"/>
+<rect x="432" y="156.3" width="2" height="1.7" fill="#6A7383"/>
+<rect x="432" y="162.0" width="2" height="2.0" fill="#6A7383"/>
+<rect x="436" y="162.0" width="2" height="2.5" fill="#697182"/>
+<rect x="440" y="155.8" width="2" height="2.2" fill="#677081"/>
+<rect x="440" y="162.0" width="2" height="1.6" fill="#677081"/>
+<rect x="444" y="156.0" width="2" height="2.0" fill="#666F80"/>
+<rect x="444" y="162.0" width="2" height="2.0" fill="#666F80"/>
+<rect x="448" y="155.8" width="2" height="2.2" fill="#656D7E"/>
+<rect x="448" y="162.0" width="2" height="1.5" fill="#656D7E"/>
+<rect x="452" y="156.1" width="2" height="1.9" fill="#636C7D"/>
+<rect x="452" y="162.0" width="2" height="1.9" fill="#636C7D"/>
+<rect x="456" y="156.2" width="2" height="1.8" fill="#626A7C"/>
+<rect x="60" y="238" width="14" height="2" fill="#9AA3B2"/>
+<text x="16" y="246" font-family="IBM Plex Mono, monospace" font-size="15" fill="#9AA3B2">IN</text>
+<text x="80" y="246" font-family="IBM Plex Mono, monospace" font-size="15" fill="#9AA3B2">PRE</text>
+<rect x="2" y="262" width="236" height="56" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="26.0,280.2 30.0,286.0 34.8,290.0 35.2,299.2 26.0,296.6 18.3,297.7 18.3,290.0 19.1,283.1" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="48" y="286" font-size="18" font-weight="700" fill="#E8EAED">1 VA</text>
+<rect x="48" y="298" width="132" height="6" rx="3" fill="#2A3242"/>
+<rect x="48" y="298" width="46" height="6" rx="3" fill="#FFB454"/>
+<text x="228" y="305" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">35</text>
+</g>
+<rect x="242" y="262" width="236" height="56" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="266.0,281.2 273.7,282.3 274.8,290.0 271.8,295.8 266.0,298.8 261.3,294.7 257.2,290.0 263.5,287.5" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="288" y="286" font-size="18" font-weight="700" fill="#E8EAED">2 DRUMS</text>
+<rect x="288" y="298" width="132" height="6" rx="3" fill="#2A3242"/>
+<rect x="288" y="298" width="20" height="6" rx="3" fill="#B9A2FF"/>
+<text x="468" y="305" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">15</text>
+</g>
+<rect x="2" y="324" width="236" height="56" rx="8" fill="#1C2230" stroke="#E3F45E" stroke-width="4"/>
+<g opacity="1">
+<polygon points="26.0,343.2 31.1,346.9 37.5,352.0 32.9,358.9 26.0,359.7 18.3,359.7 22.5,352.0 19.1,345.1" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="48" y="348" font-size="18" font-weight="700" fill="#E3F45E">3 ACID</text>
+<rect x="48" y="360" width="132" height="6" rx="3" fill="#2A3242"/>
+<rect x="48" y="360" width="59" height="6" rx="3" fill="#E3F45E"/>
+<text x="228" y="367" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">45</text>
+</g>
+<rect x="242" y="324" width="236" height="56" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="0.45">
+<polygon points="266.0,346.9 271.4,346.6 277.9,352.0 270.7,356.7 266.0,365.0 259.8,358.2 256.2,352.0 260.6,346.6" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="288" y="348" font-size="18" font-weight="700" fill="#E8EAED">4 FM6</text>
+<rect x="288" y="360" width="132" height="6" rx="3" fill="#2A3242"/>
+<rect x="288" y="360" width="79" height="6" rx="3" fill="#5CC8FF"/>
+<text x="468" y="367" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">M</text>
+</g>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 PRE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; color: #E8EAED">20 MS</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 20%; background: #E3F45E"></span></span>
+</div>
+<!-- a mark where HOME + the knob takes it back: 50 % -->
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 DECAY</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; color: #E8EAED">70%</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 70%; background: #E3F45E"></span><span style="position: absolute; left: calc(50% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 TONE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; color: #E8EAED">60%</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 60%; background: #E3F45E"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4 LEVEL</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; color: #E8EAED">0 dB</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 87%; background: #E3F45E"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

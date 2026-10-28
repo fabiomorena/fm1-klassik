@@ -4,18 +4,20 @@ Eine eigene Firmware für den M-VAVE FM-1: mehrere klassische Synth-Engines in e
 übersichtlichen Oberfläche, in der jeder Sound ein eigenes Symbol hat (seine **Glyphe**: die acht Parameter des
 Sounds als acht Strahlen).
 
-**Status: v0.6 in Arbeit (Step-Sequencer fertig, Effekte folgen), experimentell.** Getestet nur im Host-Simulator und im
+**Status: v0.6 (Step-Sequencer, Effekte Delay und Hall), experimentell.** Getestet nur im Host-Simulator und im
 Browser-Emulator, noch nicht auf einem FM-1.
 
 ![Rack im Host-Simulator (240×240)](docs/img/rack-va.png)
 ![DRUMS: die Tasten einer Oktave als Pads (240×240)](docs/img/drums-edit.png)
 ![ACID: die Filterseite mit Live-Glyphe (240×240)](docs/img/acid-edit.png)
 
-## Was es kann (Stand v0.6, Teil Step-Sequencer)
+## Was es kann (Stand v0.6)
 
 - Vier Parts gleichzeitig, jeder mit eigener Engine, eigenem Sound und eigener Oktave; SEL wählt den Part, MIDI-Kanal
   1–4 spielt Part 1–4.
-- Mixer (GLO): je Part Pegel, Pan, Mute, Solo; Ausgang stereo mit Limiter.
+- Mixer (GLO): je Part Pegel, Pan, Mute, Solo und die Sends an Delay und Hall (Tab SEND); Ausgang stereo mit Limiter.
+- Effekte (FX): ein Ping-Pong-Delay im Takt des Loopers (bis 0,5 s je Seite) und der Hall von
+  [Rings](https://github.com/pichenettes/eurorack) (MIT, nach C portiert) mit Vorverzögerung.
 - Noten-Looper (SEQ, PLAY, REC): eine Schleife für alle vier Parts, Overdub, die erste Aufnahme legt die Länge fest,
   Vorzähler und Klick, QUANT, eine Stufe Rückgängig (HOME + REC); die Kopfzeile zeigt Takt und Schlag.
 - Step-Sequencer (Tab STEP der Looper-Seite): 16 Steps je Takt auf denselben Noten, die weißen Tasten als Steps mit
@@ -58,6 +60,8 @@ Bedienung: [firmware/klassik/docs/MANUAL.md](firmware/klassik/docs/MANUAL.md). K
 | `firmware/klassik/dsp/eng_acid.c` | ACID: die acht Parameter und die Presets |
 | `firmware/klassik/dsp/acid/` | Open303, nach C portiert (MIT) |
 | `firmware/klassik/tools/gen_acid_tables.py` | rechnet die Wellenform-Tabellen und Filter-Koeffizienten von Open303 beim Build (MIT) |
+| `firmware/klassik/dsp/fx.c` | die Effekte: Ping-Pong-Delay, Vorverzögerung des Halls |
+| `firmware/klassik/dsp/hall/` | der Hall von Rings, nach C portiert (MIT) |
 | `firmware/klassik/fm1.toml` | Build-Einstellungen |
 | `firmware/klassik/tests/*.txt` | Tests für den Host-Simulator (mit Screenshots und WAV) |
 | `tools/setup.sh` | holt die Submodule in den getesteten Versionen |

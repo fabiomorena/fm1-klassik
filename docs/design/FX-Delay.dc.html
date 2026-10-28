@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FX – delay</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- v0.6's effects, the FX page, tab DELAY (beside HALL). FX opens it on DELAY (another page closes, the FX
+     LED lights); FX or OCT+ goes to the other tab, OCT- back to the rack; the keys play on. Both are send effects:
+     the parts' sends (the mixer's tab SEND) feed them, their returns go into the master before the limiter.
+     DELAY: a ping-pong delay, in time with the looper's TEMPO (header of the tab: the tempo it follows), up to 0.5 s
+     a side. The diagram: the note sent in, then its echoes, L, R, L ..., TIME apart, each FDBK of the one before,
+     darker with TONE. Below: what each part sends (set on the mixer's tab SEND; the chosen part framed, a muted one
+     dim with M).
+     K1 TIME 1/32, 1/16T, 1/16, 1/8T, 1/16., 1/8, 1/4T, 1/8., 1/4 of the TEMPO; longer than 0.5 s (a slow tempo): half
+     of it, until it fits (still in time; the line above the diagram says what it plays). K2 FDBK 0 .. 100 % (inside
+     kept below runaway). K3 TONE 0 .. 100 % (a low pass in the feedback, 100 open). K4 LEVEL -40 .. +6 dB, below
+     off (the return, as the mixer's LEVEL).
+     HOME + K1..K4: 1/8., 35 %, 70 %, 0 dB, marked on the bar while the knob is elsewhere.
+     Here: the loop plays at 98 BPM; 1/8. = 612 ms * 3/4 = 459 ms; FDBK raised to 55 % (marked: 35 %) -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #E8EAED; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">FX</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">DELAY + HALL</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-label="Playing"><polygon points="2,1 13,7 2,13" fill="#7EE08A"></polygon></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">3.2</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="FX page, tab DELAY: ping-pong echoes and the parts' sends" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">DELAY</text>
+<rect x="10" y="28" width="56" height="3" fill="#E8EAED"/>
+<text x="82" y="22" font-size="17" font-weight="600" letter-spacing="1" fill="#9AA3B2">HALL</text>
+<text x="470" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">98 BPM</text>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<rect x="2" y="44" width="476" height="210" rx="8" fill="#151922"/>
+<text x="16" y="72" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">PING-PONG</text>
+<text x="464" y="72" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="17" fill="#9AA3B2">1/8. = 459 MS</text>
+<text x="18" y="120" font-size="16" font-weight="700" fill="#9AA3B2">L</text>
+<text x="18" y="212" font-size="16" font-weight="700" fill="#9AA3B2">R</text>
+<rect x="40" y="159" width="426" height="2" fill="#2A3242"/>
+<!-- the note sent in (both sides), then the echoes: L, R, L ... a step of TIME apart, each FDBK of the one before, darker with TONE -->
+<rect x="50" y="96" width="8" height="128" rx="3" fill="#4A5468"/>
+<rect x="100" y="94" width="10" height="64" rx="3" fill="#E8EAED"/>
+<rect x="150" y="162" width="10" height="35" rx="3" fill="#D6D9DE"/>
+<rect x="200" y="139" width="10" height="19" rx="3" fill="#C4C8CF"/>
+<rect x="250" y="162" width="10" height="11" rx="3" fill="#B2B7BF"/>
+<rect x="300" y="152" width="10" height="6" rx="3" fill="#A0A5B0"/>
+<rect x="350" y="162" width="10" height="4" rx="3" fill="#8E94A1"/>
+<rect x="104" y="236" width="2" height="6" fill="#2A3242"/>
+<rect x="154" y="236" width="2" height="6" fill="#2A3242"/>
+<rect x="204" y="236" width="2" height="6" fill="#2A3242"/>
+<rect x="254" y="236" width="2" height="6" fill="#2A3242"/>
+<rect x="304" y="236" width="2" height="6" fill="#2A3242"/>
+<rect x="354" y="236" width="2" height="6" fill="#2A3242"/>
+<rect x="404" y="236" width="2" height="6" fill="#2A3242"/>
+<rect x="454" y="236" width="2" height="6" fill="#2A3242"/>
+<text x="16" y="246" font-family="IBM Plex Mono, monospace" font-size="15" fill="#9AA3B2">IN</text>
+<rect x="2" y="262" width="236" height="56" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="26.0,280.2 30.0,286.0 34.8,290.0 35.2,299.2 26.0,296.6 18.3,297.7 18.3,290.0 19.1,283.1" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="48" y="286" font-size="18" font-weight="700" fill="#E8EAED">1 VA</text>
+<rect x="48" y="298" width="132" height="6" rx="3" fill="#2A3242"/>
+<rect x="48" y="298" width="26" height="6" rx="3" fill="#FFB454"/>
+<text x="228" y="305" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">20</text>
+</g>
+<rect x="242" y="262" width="236" height="56" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="266.0,281.2 273.7,282.3 274.8,290.0 271.8,295.8 266.0,298.8 261.3,294.7 257.2,290.0 263.5,287.5" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="288" y="286" font-size="18" font-weight="700" fill="#E8EAED">2 DRUMS</text>
+<rect x="288" y="298" width="132" height="6" rx="3" fill="#2A3242"/>
+<text x="468" y="305" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#9AA3B2">0</text>
+</g>
+<rect x="2" y="324" width="236" height="56" rx="8" fill="#1C2230" stroke="#E3F45E" stroke-width="4"/>
+<g opacity="1">
+<polygon points="26.0,343.2 31.1,346.9 37.5,352.0 32.9,358.9 26.0,359.7 18.3,359.7 22.5,352.0 19.1,345.1" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="48" y="348" font-size="18" font-weight="700" fill="#E3F45E">3 ACID</text>
+<rect x="48" y="360" width="132" height="6" rx="3" fill="#2A3242"/>
+<rect x="48" y="360" width="40" height="6" rx="3" fill="#E3F45E"/>
+<text x="228" y="367" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">30</text>
+</g>
+<rect x="242" y="324" width="236" height="56" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="0.45">
+<polygon points="266.0,346.9 271.4,346.6 277.9,352.0 270.7,356.7 266.0,365.0 259.8,358.2 256.2,352.0 260.6,346.6" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="288" y="348" font-size="18" font-weight="700" fill="#E8EAED">4 FM6</text>
+<rect x="288" y="360" width="132" height="6" rx="3" fill="#2A3242"/>
+<rect x="288" y="360" width="66" height="6" rx="3" fill="#5CC8FF"/>
+<text x="468" y="367" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">M</text>
+</g>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<!-- at its value (1/8.): no mark -->
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 TIME</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; color: #E8EAED">1/8.</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 88%; background: #E3F45E"></span></span>
+</div>
+<!-- a mark where HOME + the knob takes it back: 35 % -->
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 FDBK</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; color: #E8EAED">55%</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 55%; background: #E3F45E"></span><span style="position: absolute; left: calc(35% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 TONE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; color: #E8EAED">70%</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 70%; background: #E3F45E"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4 LEVEL</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; color: #E8EAED">0 dB</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 87%; background: #E3F45E"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

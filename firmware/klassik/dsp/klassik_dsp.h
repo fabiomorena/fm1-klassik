@@ -48,3 +48,20 @@ uint32_t kl_hits(int part, int *note);      /* a part's notes started so far (ke
 int kl_value_now(int part, int k);          /* parameter k as the render plays it (the host's checks) */
 int kl_note_now(int part);                  /* a part's first voice's note (a MONO sound's), -1 silent (the host's
                                              * checks) */
+
+/* the send effects (dsp/fx.c, compiled apart at -O2): DELAY, a ping-pong delay (the first echo left) of up to 0.5 s a
+ * side, and HALL, Rings' reverb (dsp/hall/, MIT) behind PRE, a delay of up to 100 ms. Each takes the parts' sends
+ * mixed mono and gives stereo (L, R interleaved), in kl_render's scale (a part's clamp: 2^19). The app gives the
+ * buffers (its pool). */
+#define FX_DLY_N 22050                      /* the delay's samples a side: 0.5 s at 44.1 kHz */
+#define FX_PRE_N 4410                       /* PRE's: 100 ms */
+#define FX_HALL_N 32768                     /* the hall's, 16 bits each (Rings' FxEngine<32768, FORMAT_16_BIT>) */
+void fx_init(int16_t *dly, int16_t *pre, uint16_t *hall);   /* dly: 2 * FX_DLY_N (L, then R); all cleared */
+void fx_delay_set(uint32_t d, int fdbk, int tone);   /* main loop: the time in samples (1 .. FX_DLY_N; a new one fades
+                                                     * in), FDBK and TONE 0..100 */
+void fx_hall_set(uint32_t pre, int decay, int tone); /* main loop: PRE in samples (0 .. FX_PRE_N), DECAY and TONE
+                                                     * 0..100 */
+void fx_render(const int32_t *dly_in, const int32_t *hall_in, int32_t *dly_out, int32_t *hall_out, uint32_t n,
+               int dly_on, int hall_on);    /* audio interrupt: n frames (a multiple of 32); an effect no part sends
+                                             * to (on 0) sleeps once its echoes have died away */
+int fx_awake(int which);                    /* 0 DELAY, 1 HALL: it runs (the host's checks) */

@@ -139,13 +139,22 @@ expect peak_db_max -0.45
 expect peak_db_min -0.6
 master 2048
 wait 1000
-# OCT- and GLO shut it; EDIT opens the edit pages instead; the mixer is kept across a power cycle (KLS7)
+# OCT- shuts it, GLO opens it again (on MIX) and goes to SEND and back (v0.6: tests/fx.txt); EDIT opens the edit
+# pages instead; the mixer is kept across a power cycle (KLS8)
 tap OCT-
 wait 30
 expect mix 0
 tap GLO
 wait 30
 expect mix 1
+expect tab 1
+tap GLO
+wait 30
+expect mix 1
+expect tab 2
+tap GLO
+wait 30
+expect tab 1
 tap EDIT
 wait 30
 expect mix 0

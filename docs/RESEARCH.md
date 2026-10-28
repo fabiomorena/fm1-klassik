@@ -355,7 +355,7 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
 - Die Schriften enthalten nur ASCII bis Zeichen 126 (`base/tools/gen_font.py:126`): „·“ der Mockups ist auf dem Gerät
   „ - “.
 
-## Effekte: Quellen und Speicher (Stand 28.10.2026, Recherche, noch nichts übernommen)
+## Effekte: Quellen und Speicher (Stand 28.10.2026, Recherche vor der Übernahme)
 
 - **Mutable Instruments (github.com/pichenettes/eurorack, Commit `f4cfa76`, 12.10.2026):** README, Abschnitt
   „License“: „Code (STM32F projects): MIT license“, „Code (AVR projects): GPL3.0“. Rings, Clouds, Elements, Beads und
@@ -387,6 +387,42 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
 - **Rechenlast:** nicht gemessen. Der Hall rechnet je Sample etwa 14 Lese- und 12 Schreibzugriffe mit
   16-Bit-Umwandlung und rund 40 Gleitkomma-Operationen; wie viel das auf dem FM-1 ist, ist **unsicher**. Messen wie
   bei den Engines: erst relativ zu einer FM6-Stimme im Simulator, dann auf dem Gerät.
+
+## Effekte: Umsetzung und Messungen (Stand 28.10.2026, nur Simulator)
+
+- **Rings' Hall, wie Rings ihn belegt** (`rings/dsp/part.cc`, Stand `f4cfa76`, im Modell „String and reverb“):
+  `set_diffusion(0.625f)`, `set_time(0.35f + 0.63f * damping)`, `set_input_gain(0.2f)`,
+  `set_lp(0.3f + brightness * 0.6f)`, `set_amount(0.1f + damping * 0.5f)`. Übernommen: Diffusion und Eingang fest,
+  DECAY 0–100 % = `set_time` 0,35 … 0,98, TONE 0–100 % = `set_lp` 0,3 … 0,9; `amount` = 1 (Send-Effekt: nur der Hall).
+  Einstellbar sind in `reverb.h` nur `amount`, `input_gain`, `time`, `diffusion` und `lp`; die Längen der
+  Verzögerungen stehen fest im Code (Reserve-Liste), daher kein SIZE. Der Hall nimmt `left + right` mono und gibt
+  zwei Schleifen als links und rechts aus.
+- **Speicher der Delay-Lines:** zehn Leitungen, jede ein Sample hinter der vorigen (`fx_engine.h`, `DelayLine::base`):
+  150 + 214 + 319 + 527 + 2 182 + 2 690 + 4 501 + 2 525 + 2 197 + 6 312 = 21 617 Samples plus 10 = 21 627 ≤ 32 768
+  (die Maske braucht eine Zweierpotenz, also 65 536 B).
+- **Pool mit Effekten** (`tools/device_check.py`): 110 344 + 88 200 (Delay, 2 × 22 050 × 2 B) + 8 820 (PRE,
+  4 410 × 2 B) + 65 536 (Hall) = 272 900 B von 344 064 B, gemessen 272 900 B; frei 71 164 B. RAM `.data` + `.bss`
+  55 328 → 61 784 B (die Sends und Rückwege je Block: 2 × 256 × 4 + 2 × 512 × 4 = 6 144 B). App 226 936 → 235 452 B.
+- **Rechenlast relativ zu FM6**, wie bei den Engines (Mac M3, `-O2 -ffp-contract=off`, 4 000 Blöcke zu 32 Frames,
+  das Beste aus drei Läufen; eine FM6-Stimme = (6 Stimmen − 1 Stimme) / 5 = (8,84 − 1,68) / 5 = 1,43 ms):
+
+  | Effekt | Zeit | relativ zu einer FM6-Stimme |
+  | --- | --- | --- |
+  | DELAY | 0,37 ms | 0,26 |
+  | HALL (mit PRE) | 1,44 ms | 1,0 |
+  | beide | 1,75 ms | 1,2 |
+
+  Das ist ein Mac, nur das Verhältnis zählt; auf dem FM-1 **unsicher**. Ein Effekt, an den kein Part schickt, schläft,
+  sobald sein Ausgang länger still war, als etwas in seinen Leitungen braucht (Delay 0,5 s, Hall 32 768 + 4 410
+  Samples), und kostet dann nichts.
+- **Pegel** (Host-Simulator, Part 1 SAW LEAD, MASTER 50 %, Send 100, LEVEL 0 dB, `tests/fx.txt`): das erste Echo
+  223 038 gegen 223 166 der Note (gleich laut, −31,5 dBFS), nur links; das zweite 0,5 s später rechts 73 999
+  (FDBK 35 % und TONE 70 % in der Rückkopplung). Der Hall 0,25–0,55 s nach dem Ende einer 600-ms-Note: −41 dBFS,
+  etwa 10 dB unter der Note, links und rechts; bei DECAY 50 % fällt er im Test mit einem Impuls etwa 30 dB je Sekunde
+  (RT60 also etwa 2 s, grob).
+- **Delay-Zeit:** 44 100 × 60 / BPM × k / 24 = 110 250 × k / BPM Samples (k in 24steln einer Viertel: 1/32 = 3 …
+  1/4 = 24); über 22 050 halbiert. Bei 40 BPM: 1/4 = 66 150 → 33 075 → 16 537 (1/16), 1/8. = 49 612 → 24 806 →
+  12 403 (1/32.); mehr als zwei Halbierungen kommen bei 40–240 BPM nicht vor.
 
 ## Neuheits-Check der Signatur-Ideen
 
