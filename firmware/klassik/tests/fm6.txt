@@ -3,9 +3,9 @@
 #   firmware/klassik/build/host/klassik_host firmware/klassik/tests/fm6.txt firmware/klassik/build/host
 wait 600
 expect engine 0
-# K1 goes in the rack's order: FM6 is the tile before VA
+# K1 goes in the rack's order: VA, DRUMS, ACID, FM6 (the fourth tile, below VA), PD, ORGAN
 listen
-spin K1 -1
+spin K1 3
 wait 50
 expect engine 3
 expect preset 0

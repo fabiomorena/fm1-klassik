@@ -45,21 +45,22 @@
 #define K_GREEN RGB(126, 224, 138)
 #define K_REC RGB(255, 92, 92)                       /* the looper recording */
 
-/* the rack: six tiles, the engines that play now and those to come (eng -1) */
+/* the rack: six tiles, the engines that play now and those to come (eng -1); in the parts' order as they start
+ * (PART_ENGINE), so that their numbers run 1..6 from top left to bottom right */
 typedef struct {
     const char *name, *sub;
     int eng;
     uint16_t col;
 } tile_t;
 static const tile_t TILES[6] = {
-    {"FM6", "6-OP FM", KL_FM6, RGB(92, 200, 255)},
     {"VA", "ANALOG", KL_ANALOG, RGB(255, 180, 84)},
-    {"PD", "PHASE DIST", KL_PHASE, RGB(255, 122, 182)},
-    {"ORGAN", "DRAWBAR", KL_WHEEL, RGB(126, 224, 138)},
     {"DRUMS", "DRUM KITS", KL_DRUMS, RGB(185, 162, 255)},
     {"ACID", "MONO BASS", KL_ACID, RGB(227, 244, 94)},
+    {"FM6", "6-OP FM", KL_FM6, RGB(92, 200, 255)},
+    {"PD", "PHASE DIST", KL_PHASE, RGB(255, 122, 182)},
+    {"ORGAN", "DRAWBAR", KL_WHEEL, RGB(126, 224, 138)},
 };
-static const uint8_t TILE_OF[KL_NENG] = {1, 2, 3, 0, 4, 5};   /* engine -> its tile */
+static const uint8_t TILE_OF[KL_NENG] = {0, 4, 5, 3, 1, 2};   /* engine -> its tile */
 
 static int engine_pos(int e)                         /* its place among the playing tiles, as the rack shows them */
 {
@@ -138,7 +139,7 @@ _Static_assert(sizeof(settings7_t) != sizeof(settings_t) && sizeof(settings8_t) 
 static settings_t set, set_kept;                     /* as it is, and as the store has it (or the defaults at boot) */
 static uint8_t set_dirty;
 static const uint8_t PART_ENGINE[KL_NPART] = {KL_ANALOG, KL_DRUMS, KL_ACID, KL_FM6, KL_PHASE, KL_WHEEL};   /* the
-                                                     * parts at first: each engine once */
+                                                     * parts at first: each engine once, as the rack's tiles */
 #define LEVEL_OFF (-41)                              /* the mixer's LEVEL below -40 dB: off */
 static const int8_t FX_MIN[2][4] = {{0, 0, 0, LEVEL_OFF}, {0, 0, 0, LEVEL_OFF}};
 static const int8_t FX_MAX[2][4] = {{8, 100, 100, 6}, {100, 100, 100, 6}};

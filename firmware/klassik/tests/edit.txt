@@ -74,11 +74,11 @@ expect edit 0
 expect octave 0
 shot edited.png
 # an edit is kept while another engine plays
-spin K1 1
+spin K1 -2
 wait 30
 expect engine 1
 expect edited 0
-spin K1 -1
+spin K1 2
 wait 30
 expect engine 0
 expect edited 1
@@ -129,7 +129,7 @@ expect v2 64
 tap OCT-
 wait 30
 # PD's first page: one edit, kept while ORGAN is edited
-spin K1 1
+spin K1 -2
 wait 30
 expect engine 1
 tap EDIT

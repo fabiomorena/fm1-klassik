@@ -127,9 +127,9 @@ expect octave -1
 tap OCT+
 wait 30
 expect octave 0
-# each part its own engine and sound: part 4 to VA (K1 one back from FM6 wraps to ACID: one forward), a sound
+# each part its own engine and sound: part 4 to VA (K1 three back from FM6: the first tile), a sound
 # of its own; part 1 keeps SAW LEAD
-spin K1 1
+spin K1 -3
 wait 30
 expect engine 0
 expect preset 0
@@ -172,7 +172,7 @@ expect preset 1
 tap SEL
 wait 30
 expect part 2
-spin K1 -1
+spin K1 -2
 wait 30
 expect engine 2
 tap SEL
@@ -180,7 +180,7 @@ wait 30
 tap SEL
 wait 30
 expect part 4
-spin K1 -1
+spin K1 3
 wait 30
 expect engine 3
 midi 91 30 64

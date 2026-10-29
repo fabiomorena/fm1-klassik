@@ -73,7 +73,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
 ## Klang (Stand v0.6)
-- Parts: sechs gleichzeitig (am Anfang VA, DRUMS, ACID, FM6, PD, ORGAN: `PART_ENGINE`), SEL (Taster) oder SELECT
+- Parts: sechs gleichzeitig (am Anfang VA, DRUMS, ACID, FM6, PD, ORGAN: `PART_ENGINE`; das Rack (`TILES`) seit 29.10. in
+  derselben Reihenfolge, Part 1–6 von links oben nach rechts unten; K1 wählt die Engines in dieser Reihenfolge), SEL (Taster) oder SELECT
   (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem gewählten (`set.part`, `part_cur()`, `eng_cur()` in
   `app.c`); MIDI-Kanal 1–6 = Part 1–6; Mixer drei Parts je Seite (die des gewählten), Looper, Step und FX alle sechs; `work`/`orig`/`edited`
   je Part und Engine. Obergrenze: alle Parts zusammen ≤ 240 Zehntel FM6-Stimmen.
@@ -93,8 +94,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - Step-Sequencer (Tab STEP der Looper-Seite, `stp` und `step_*` in `app.c`): dieselben Ereignisse wie der Looper,
   ein Step = 1/16 = 48 Ticks (±24); die 16 weißen Tasten (`PLAT_WHITE_KEYS`) sind die Steps des gewählten Parts,
   DRUMS je Instrument (= Halbton); Änderungen über `lp_ask_step` (`LC_SSET`, `LC_SCLR`, `LC_SEDIT`) im Render.
-- Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL, FM6 = msfa (`KL_FM6`, im Rack links von VA; K1 folgt der
-  Rack-Reihenfolge), DRUMS (`KL_DRUMS` = 4, Kachel der früheren STRINGS). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
+- Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL, FM6 = msfa (`KL_FM6`), DRUMS (`KL_DRUMS` = 4, Kachel der früheren STRINGS). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
   `engine_t.edit[8]`, `page_title[2]`, `presets`). Festkomma, keine Allokation.
 - FM6: Presets sind ganze DX7-Stimmen plus acht beschreibende Werte; die Makros verschieben die Stimme relativ zum
   Preset (Regel im Kopf von `eng_fm6.c`). ALGO/FEEDBK live, die anderen ab der nächsten Note. Der Port ist gegen

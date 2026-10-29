@@ -14,14 +14,15 @@ body{margin:0}
 a{color:#9AA3B2}a:hover{color:#E8EAED}
 </style>
 </helmet>
-<!-- four parts, each its own engine and sound: part 1 ACID (chosen), 2 DRUMS, 3 FM6, 4 VA. SEL (the button) or
+<!-- four parts, each its own engine and sound: part 1 VA, 2 DRUMS, 3 ACID (chosen), 4 FM6 (the tiles in the
+     parts' order since 29.10.2026). SEL (the button) or
      SELECT (the encoder) goes to the next part (1, 2, 3, 4, 1; SELECT to the left: the one before); K1 picks the chosen part's engine, PRESET its sound, OCT-/OCT+ its octave; the keys play it.
      MIDI channel 1..4 plays part 1..4 -->
 <div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
 <header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
 <div style="display: flex; align-items: center; gap: 8px; min-width: 0">
 <!-- the chip: the part's number and its engine, in the engine's colour -->
-<span style="background: #E3F45E; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">1 ACID</span><svg width="22" height="22" viewBox="0 0 100 100" aria-hidden="true" style="flex: none"><polygon points="50.0,23.4 65.4,34.6 84.9,50.0 71.1,71.1 50.0,73.4 26.7,73.3 39.4,50.0 28.9,28.9" fill="#E3F45E" fill-opacity="0.22" stroke="#E3F45E" stroke-width="8" stroke-linejoin="round"></polygon></svg>
+<span style="background: #E3F45E; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">3 ACID</span><svg width="22" height="22" viewBox="0 0 100 100" aria-hidden="true" style="flex: none"><polygon points="50.0,23.4 65.4,34.6 84.9,50.0 71.1,71.1 50.0,73.4 26.7,73.3 39.4,50.0 28.9,28.9" fill="#E3F45E" fill-opacity="0.22" stroke="#E3F45E" stroke-width="8" stroke-linejoin="round"></polygon></svg>
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">ACID LINE</span>
 </div>
 <div style="display: flex; align-items: center; gap: 8px; flex: none">
@@ -32,21 +33,39 @@ a{color:#9AA3B2}a:hover{color:#E8EAED}
 <!-- on each tile the parts that play its engine: the chosen part filled in the engine's colour, the others ringed -->
 <main style="flex: 1; min-height: 0; box-sizing: border-box; padding: 6px 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px">
 <div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
-<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">3</span></div>
-<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,34.6 66.6,33.4 86.2,50.0 64.3,64.3 50.0,89.4 31.2,68.8 20.2,50.0 33.4,33.4" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="6" stroke-linejoin="round"></polygon></svg>
-<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">FM6</span>
-<span style="font-size: 16px; color: #9AA3B2">6-OP FM</span>
-<span style="font-size: 16px; white-space: nowrap; overflow: hidden">E.PIANO</span>
-</div>
-</div>
-<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
-<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">4</span></div>
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">1</span></div>
 <svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,20.2 62.0,38.0 76.6,50.0 77.9,77.9 50.0,70.2 26.7,73.3 26.6,50.0 28.9,28.9" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="6" stroke-linejoin="round"></polygon></svg>
 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
 <span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">VA</span>
 <span style="font-size: 16px; color: #9AA3B2">ANALOG</span>
 <span style="font-size: 16px; white-space: nowrap; overflow: hidden">SOFT PAD</span>
+</div>
+</div>
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">2</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,23.4 73.3,26.7 76.6,50.0 67.7,67.7 50.0,76.6 35.7,64.3 23.4,50.0 42.5,42.5" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">DRUMS</span>
+<span style="font-size: 16px; color: #9AA3B2">DRUM KITS</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">808</span>
+</div>
+</div>
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #1C2230; border: 3px solid #E3F45E; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; background: #E3F45E; color: #0B0D11">3</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,23.4 65.4,34.6 84.9,50.0 71.1,71.1 50.0,73.4 26.7,73.3 39.4,50.0 28.9,28.9" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E3F45E">ACID</span>
+<span style="font-size: 16px; color: #9AA3B2">MONO BASS</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">ACID LINE</span>
+</div>
+</div>
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">4</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,34.6 66.6,33.4 86.2,50.0 64.3,64.3 50.0,89.4 31.2,68.8 20.2,50.0 33.4,33.4" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">FM6</span>
+<span style="font-size: 16px; color: #9AA3B2">6-OP FM</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">E.PIANO</span>
 </div>
 </div>
 <div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
@@ -65,24 +84,6 @@ a{color:#9AA3B2}a:hover{color:#E8EAED}
 <span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">ORGAN</span>
 <span style="font-size: 16px; color: #9AA3B2">DRAWBAR</span>
 <span style="font-size: 16px; white-space: nowrap; overflow: hidden">FULL ORGAN</span>
-</div>
-</div>
-<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
-<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">2</span></div>
-<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,23.4 73.3,26.7 76.6,50.0 67.7,67.7 50.0,76.6 35.7,64.3 23.4,50.0 42.5,42.5" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="6" stroke-linejoin="round"></polygon></svg>
-<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">DRUMS</span>
-<span style="font-size: 16px; color: #9AA3B2">DRUM KITS</span>
-<span style="font-size: 16px; white-space: nowrap; overflow: hidden">808</span>
-</div>
-</div>
-<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #1C2230; border: 3px solid #E3F45E; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
-<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; background: #E3F45E; color: #0B0D11">1</span></div>
-<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,23.4 65.4,34.6 84.9,50.0 71.1,71.1 50.0,73.4 26.7,73.3 39.4,50.0 28.9,28.9" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="6" stroke-linejoin="round"></polygon></svg>
-<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E3F45E">ACID</span>
-<span style="font-size: 16px; color: #9AA3B2">MONO BASS</span>
-<span style="font-size: 16px; white-space: nowrap; overflow: hidden">ACID LINE</span>
 </div>
 </div>
 </main>

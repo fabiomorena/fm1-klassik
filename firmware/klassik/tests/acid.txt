@@ -3,9 +3,9 @@
 #   firmware/klassik/build/host/klassik_host firmware/klassik/tests/acid.txt firmware/klassik/build/host
 wait 600
 expect engine 0
-# K1 goes in the rack's order: FM6, VA, PD, ORGAN, DRUMS, ACID (the last tile, playing now)
+# K1 goes in the rack's order: VA, DRUMS, ACID (the third tile), FM6, PD, ORGAN
 listen
-spin K1 4
+spin K1 2
 wait 50
 expect engine 5
 expect preset 0

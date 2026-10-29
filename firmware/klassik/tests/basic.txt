@@ -17,8 +17,9 @@ expect peak_db_min -40
 key 7 up
 wait 2000
 expect voices 0
-# K1 picks the engine, PRESET the sound
-spin K1 1
+# K1 picks the engine in the rack's order (VA, DRUMS, ACID, FM6, PD, ORGAN; two back from VA wraps to PD),
+# PRESET the sound
+spin K1 -2
 wait 50
 expect engine 1
 spin PRESET 2

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rack – six parts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- six parts as they start (decided 29.10.2026): the tiles in the parts' order, 1..6 from top left to bottom
+     right: 1 VA (chosen), 2 DRUMS, 3 ACID, 4 FM6, 5 PD, 6 ORGAN. K1 picks the chosen part's engine in this order;
+     SEL (the button) or SELECT (the encoder) goes to the next part (1..6, 1; SELECT to the left: the one before);
+     MIDI channel 1..6 plays part 1..6 -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<!-- the chip: the part's number and its engine, in the engine's colour -->
+<span style="background: #FFB454; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">1 VA</span><svg width="22" height="22" viewBox="0 0 100 100" aria-hidden="true" style="flex: none"><polygon points="50.0,20.2 62.0,38.0 76.6,50.0 77.9,77.9 50.0,70.2 26.7,73.3 26.6,50.0 28.9,28.9" fill="#FFB454" fill-opacity="0.22" stroke="#FFB454" stroke-width="8" stroke-linejoin="round"></polygon></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">SAW LEAD</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; color: #9AA3B2">OCT +0</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<!-- on each tile the parts that play its engine: the chosen part filled in the engine's colour, the others ringed -->
+<main style="flex: 1; min-height: 0; box-sizing: border-box; padding: 6px 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px">
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #1C2230; border: 3px solid #FFB454; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; background: #FFB454; color: #0B0D11">1</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,20.2 62.0,38.0 76.6,50.0 77.9,77.9 50.0,70.2 26.7,73.3 26.6,50.0 28.9,28.9" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #FFB454">VA</span>
+<span style="font-size: 16px; color: #9AA3B2">ANALOG</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">SAW LEAD</span>
+</div>
+</div>
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">2</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,23.4 73.3,26.7 76.6,50.0 67.7,67.7 50.0,76.6 35.7,64.3 23.4,50.0 42.5,42.5" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">DRUMS</span>
+<span style="font-size: 16px; color: #9AA3B2">DRUM KITS</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">606</span>
+</div>
+</div>
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">3</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,23.4 65.4,34.6 84.9,50.0 71.1,71.1 50.0,73.4 26.7,73.3 39.4,50.0 28.9,28.9" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">ACID</span>
+<span style="font-size: 16px; color: #9AA3B2">MONO BASS</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">ACID LINE</span>
+</div>
+</div>
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">4</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,34.6 66.6,33.4 86.2,50.0 64.3,64.3 50.0,89.4 31.2,68.8 20.2,50.0 33.4,33.4" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">FM6</span>
+<span style="font-size: 16px; color: #9AA3B2">6-OP FM</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">E.PIANO</span>
+</div>
+</div>
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">5</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,29.8 75.6,24.4 73.4,50.0 71.1,71.1 50.0,67.0 31.2,68.8 10.6,50.0 35.7,35.7" fill="#FF7AB6" fill-opacity="0.375" stroke="#FF7AB6" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">PD</span>
+<span style="font-size: 16px; color: #9AA3B2">PHASE DIST</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">BRASS</span>
+</div>
+</div>
+<div style="position: relative; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: #151922; border: 3px solid #151922; display: flex; flex-direction: column; justify-content: space-between; min-width: 0">
+<div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 4px"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; border: 2px solid #9AA3B2; color: #E8EAED">6</span></div>
+<svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50.0,10.6 73.3,26.7 76.6,50.0 64.3,64.3 50.0,79.8 24.4,75.6 33.0,50.0 33.4,33.4" fill="#7EE08A" fill-opacity="0.375" stroke="#7EE08A" stroke-width="6" stroke-linejoin="round"></polygon></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 26px; font-weight: 700; line-height: 1; color: #E8EAED">ORGAN</span>
+<span style="font-size: 16px; color: #9AA3B2">DRAWBAR</span>
+<span style="font-size: 16px; white-space: nowrap; overflow: hidden">FULL ORGAN</span>
+</div>
+</div>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 ENGINE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">VA</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #FFB454"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">PRESET</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">01/12</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: #FFB454"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">OCTAVE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">+0</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 50%; background: #FFB454"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">MASTER</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">50%</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 50%; background: #FFB454"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

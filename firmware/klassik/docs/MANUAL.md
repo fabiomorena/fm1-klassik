@@ -24,7 +24,7 @@ jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt,
 | --- | --- |
 | Tasten | spielen den gewählten Part (Anschlagdynamik; ACID: Accent mit ENV), senden die Noten über USB-MIDI |
 | SEL, SELECT | nächster Part (SELECT nach links: voriger) |
-| K1 | Engine des Parts wählen, in der Reihenfolge des Racks: FM6, VA (ANALOG), PD (PHASE), ORGAN (WHEEL), DRUMS, ACID |
+| K1 | Engine des Parts wählen, in der Reihenfolge des Racks: VA (ANALOG), DRUMS, ACID, FM6, PD (PHASE), ORGAN (WHEEL) |
 | PRESET | Sound der Engine wählen; nach den Presets folgt USER, sobald die Engine einen eigenen Sound hat |
 | OCT- / OCT+ | Oktave des Parts −2 … +2 |
 | EDIT | Edit-Seiten der Engine öffnen |

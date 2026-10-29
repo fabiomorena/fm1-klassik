@@ -3,9 +3,9 @@
 #   firmware/klassik/build/host/klassik_host firmware/klassik/tests/drums.txt firmware/klassik/build/host
 wait 600
 expect engine 0
-# K1 goes in the rack's order: FM6, VA, PD, ORGAN, DRUMS (the tile STRINGS had)
+# K1 goes in the rack's order: VA, DRUMS (the second tile), ACID, FM6, PD, ORGAN
 listen
-spin K1 3
+spin K1 1
 wait 50
 expect engine 4
 expect preset 0
