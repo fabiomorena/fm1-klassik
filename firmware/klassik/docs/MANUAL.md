@@ -116,6 +116,28 @@ Nachhall.
 Schickt kein Part an einen Effekt, schaltet er sich ab, sobald seine Echos oder sein Nachhall verklungen sind (er
 kostet dann keine Rechenzeit). SAVE speichert die Effekte und die Sends mit.
 
+## LFO
+
+Jeder Part hat einen LFO. LFO öffnet die Seite des gewählten Parts (die anderen Seiten schließen sich), LFO oder
+OCT+ wechselt zum Tab MORE, OCT− zurück zum Rack; LFO leuchtet, solange die Seite offen ist. Oben die Welle mit
+einem Punkt, wo sie gerade ist, darunter je Part Ziel und Tiefe.
+
+| Regler | Was er tut |
+| --- | --- |
+| K1 RATE | SYNC ON: 4 Takte … 1/32 im TEMPO des Loopers (auch punktiert und triolisch); SYNC OFF: 0,1–20 Hz. Am Anfang 1/8 (5 Hz) |
+| K2 DEPTH | 0–100; 0 = aus. PITCH: bis ±12 Halbtöne (quadratisch: 10 ≈ ±12 Cent, 30 ≈ ±1 Halbton); FILTER, SHAPE: bis ±64 der 128 Schritte (ACID: ±2 Oktaven); AMP: bei 100 im Wellental still |
+| K3 WAVE | SIN, TRI, SAW (steigt), SQR, S&H (ein Zufallswert je Umdrehung) |
+| K4 DEST | wohin: PITCH, FILTER, SHAPE, AMP, je nach Engine (unten) |
+| MORE: K1 SYNC | ON (RATE als Notenwert) oder OFF (Hz) |
+| MORE: K2 RETRIG | FREE: eine Welle für alle Noten (mit SYNC ON läuft sie bei laufender Schleife im Takt mit, jede Runde gleich); KEY: jede Note startet die Welle neu |
+| MORE: K3 FADE | 0–2 s: so lange braucht die Tiefe nach einer Note (verzögertes Vibrato) |
+| HOME + K1–K4 | 1/8 (5 Hz), 0, SIN, das erste Ziel der Engine; auf MORE: ON, FREE, 0 |
+
+Ziele je Engine: VA alle vier (SHAPE hört man nur mit WAVE SYNC und PWM: die Tonhöhe von Oszillator 2 bzw. die
+Pulsbreite); PD PITCH, DCW (die Tiefe der Phasenverzerrung), AMP; ORGAN PITCH, AMP; FM6 PITCH (statt des Vibratos
+seines Presets), AMP; ACID PITCH, FILTER; DRUMS keins (seine Kachel ist grau). Wechselt ein Part die Engine, gilt
+deren erstes Ziel, bis K4 ein anderes wählt. SAVE speichert jeden LFO.
+
 ## Looper
 
 Der Looper nimmt Noten auf, keinen Klang: was die Tasten und MIDI dem gewählten Part spielen. Alle sechs Parts teilen

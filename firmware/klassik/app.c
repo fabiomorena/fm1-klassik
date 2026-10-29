@@ -80,11 +80,13 @@ static int engine_at(int pos)                        /* the engine at that place
 }
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5339u                        /* "KLS9": six parts. The effects' KLS8 and the mixer's KLS7
-                                                     * (four parts; KLS7 without sends) are taken over, parts 5 and 6
-                                                     * as at first; another magic (the parts' KLS6, v0.3's KLS5,
+#define SET_MAGIC 0x4B4C5341u                        /* "KLSA": each part's LFO and arpeggiator. The six parts' KLS9 is
+                                                     * taken over (the LFOs and arps as at first), so are the effects'
+                                                     * KLS8 and the mixer's KLS7 (four parts; KLS7 without sends),
+                                                     * parts 5 and 6 as at first; another magic (the parts' KLS6, v0.3's KLS5,
                                                      * DRUMS' KLS4, v0.2's KLS3, v0.1's KLS2, v0's KLS1) loads
                                                      * defaults */
+#define SET_MAGIC9 0x4B4C5339u
 #define SET_MAGIC8 0x4B4C5338u
 #define SET_MAGIC7 0x4B4C5337u
 #define OLD_NPART 4                                  /* KLS7's and KLS8's parts */
@@ -103,6 +105,12 @@ typedef struct {
     uint8_t mute, solo;
     uint8_t send[2];                                 /* to DELAY and HALL: 0..100 */
 } part_set_t;
+typedef struct {                                     /* a part's LFO (and its arpeggiator, v0.7) */
+    uint8_t lfo_sync, lfo_rate[2];                   /* SYNC ON (1) or OFF; RATE: LFO_SYNC's index, LFO_HZ's */
+    uint8_t lfo_depth, lfo_wave, lfo_dest;           /* 0..100 (0 off), KL_SIN.., KL_LFO_* */
+    uint8_t lfo_retrig, lfo_fade;                    /* 1 = KEY (each note starts the wave); FADE in tenths of a second */
+    uint8_t arp_mode, arp_rate, arp_oct, arp_gate;   /* the arpeggiator's (to come) */
+} mod_set_t;
 enum { FX_DELAY, FX_HALL };
 enum { FK_TIME, FK_FDBK, FK_TONE, FK_LEVEL };        /* DELAY's knobs (HALL's: PRE, DECAY, TONE, LEVEL) */
 typedef struct {
@@ -114,8 +122,16 @@ typedef struct {
     int8_t fx[2][4];                                 /* the effects' knobs: DELAY TIME (DLY_K's index), FDBK %, TONE
                                                      * %, LEVEL (dB, -40 .. +6, LEVEL_OFF below); HALL PRE (ms),
                                                      * DECAY %, TONE %, LEVEL */
+    mod_set_t mod[KL_NPART];                         /* each part's LFO and arpeggiator */
 } settings_t;
 _Static_assert(sizeof(settings_t) <= PLAT_STORE_MAX, "the settings are one store object");
+typedef struct {                                     /* KLS9's: the same before the LFOs */
+    uint32_t magic;
+    uint8_t part, rsv[3];
+    part_set_t parts[KL_NPART];
+    user_t user[KL_NENG];
+    int8_t fx[2][4];
+} settings9_t;
 typedef struct {                                     /* KLS8's: four parts */
     uint32_t magic;
     uint8_t part, rsv[3];
@@ -135,7 +151,8 @@ typedef struct {
     user_t user[KL_NENG];
 } settings7_t;
 _Static_assert(sizeof(settings7_t) != sizeof(settings_t) && sizeof(settings8_t) != sizeof(settings_t) &&
-               sizeof(settings7_t) != sizeof(settings8_t), "KLS7 and KLS8 tell themselves by their sizes");
+               sizeof(settings7_t) != sizeof(settings8_t) && sizeof(settings9_t) != sizeof(settings_t),
+               "KLS7, KLS8 and KLS9 tell themselves by their sizes");
 static settings_t set, set_kept;                     /* as it is, and as the store has it (or the defaults at boot) */
 static uint8_t set_dirty;
 static const uint8_t PART_ENGINE[KL_NPART] = {KL_ANALOG, KL_DRUMS, KL_ACID, KL_FM6, KL_PHASE, KL_WHEEL};   /* the
@@ -154,6 +171,25 @@ static uint8_t edited[KL_NPART][KL_NENG];
 static part_set_t *part_cur(void) { return &set.parts[set.part]; }
 static int eng_cur(void) { return set.parts[set.part].engine; }   /* the chosen part's engine */
 
+#define LFO_NSYNC 14
+#define LFO_NHZ 24
+#define LFO_DEF_SYNC 8                               /* 1/8 */
+#define LFO_DEF_HZ 17                                /* 5 Hz */
+#define LFO_FADE_MAX 20                              /* 2 s */
+static void mod_defaults(mod_set_t *m)               /* a part's LFO and arp as at first: where HOME takes them */
+{
+    uint32_t i;
+    uint8_t *b = (uint8_t *)m;
+    for (i = 0; i < sizeof *m; i++)
+        b[i] = 0;
+    m->lfo_sync = 1;
+    m->lfo_rate[0] = LFO_DEF_SYNC;
+    m->lfo_rate[1] = LFO_DEF_HZ;
+    m->arp_rate = 0;                                 /* (the arp's, to come) */
+    m->arp_oct = 1;
+    m->arp_gate = 50;
+}
+
 static void settings_defaults(void)
 {
     uint32_t i;
@@ -165,6 +201,8 @@ static void settings_defaults(void)
         set.parts[i].engine = PART_ENGINE[i];
     for (i = 0; i < 8u; i++)
         set.fx[i / 4u][i % 4u] = FX_DEF[i / 4u][i % 4u];
+    for (i = 0; i < KL_NPART; i++)
+        mod_defaults(&set.mod[i]);
 }
 
 static int values_ok(int e, const int8_t v[8])
@@ -201,13 +239,27 @@ static int settings_ok(void)
         if (u->saved > 1 || (u->saved && (u->base >= kl_presets((int)i) || !values_ok((int)i, u->v))))
             return 0;
     }
+    for (p = 0; p < KL_NPART; p++) {
+        const mod_set_t *m = &set.mod[p];
+        if (m->lfo_sync > 1 || m->lfo_rate[0] >= LFO_NSYNC || m->lfo_rate[1] >= LFO_NHZ || m->lfo_depth > 100 ||
+            m->lfo_wave >= KL_NWAVE || m->lfo_dest >= KL_LFO_NDEST || m->lfo_retrig > 1 || m->lfo_fade > LFO_FADE_MAX)
+            return 0;
+    }
     return 1;
 }
 
-static void settings_load(void)                      /* the store's, KLS8's or KLS7's taken over, or the defaults */
+static void settings_load(void)                      /* the store's, KLS9's, KLS8's or KLS7's taken over, or the
+                                                     * defaults */
 {
     int n = plat_store_load(OBJ_SETTINGS, &set, sizeof set);
     int v8 = n == (int)sizeof(settings8_t) && set.magic == SET_MAGIC8;
+    if (n == (int)sizeof(settings9_t) && set.magic == SET_MAGIC9) {   /* the same before the LFOs: as at first */
+        uint32_t i;
+        for (i = 0; i < KL_NPART; i++)
+            mod_defaults(&set.mod[i]);
+        set.magic = SET_MAGIC;
+        n = (int)sizeof set;
+    }
     if (v8 || (n == (int)sizeof(settings7_t) && set.magic == SET_MAGIC7)) {   /* four parts: 5 and 6 as at first */
         union {
             settings8_t s8;                          /* v0.6's effects */
@@ -1087,6 +1139,86 @@ static void fx_apply(void)                           /* the effects' knobs (and 
     fx_hall_set((uint32_t)h[0] * 441u / 10u, h[1], h[2]);   /* PRE: ms * 44.1 */
 }
 
+/* ---------------------------------------------------------------- the LFOs --- */
+/* each part's LFO (dsp/engines.c): RATE in time with the looper's TEMPO (SYNC ON: a note value in ticks, 192 a
+ * quarter; free running it follows the loop while it plays, the same each round) or free (SYNC OFF: Hz) */
+static const uint16_t LFO_SYNC[LFO_NSYNC] = {3072, 1536, 768, 384, 288, 192, 144, 128, 96, 72, 64, 48, 32, 24};
+static const char *const LFO_SYNC_NAME[LFO_NSYNC] = {"4 BARS", "2 BARS", "1 BAR", "1/2", "1/4.", "1/4", "1/8.",
+                                                     "1/4T", "1/8", "1/16.", "1/8T", "1/16", "1/16T", "1/32"};
+static const uint16_t LFO_HZ[LFO_NHZ] = {10, 13, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400,
+                                         500, 630, 800, 1000, 1250, 1600, 2000};   /* hundredths of a Hz: 0.1 .. 20,
+                                                                                    * a third of an octave a step */
+static const char *const LFO_WAVE_NAME[KL_NWAVE] = {"SIN", "TRI", "SAW", "SQR", "S&H"};
+static const char *const LFO_DEST_NAME[KL_LFO_NDEST] = {"PITCH", "FILTER", "SHAPE", "AMP"};
+static volatile uint16_t lfo_ticks[KL_NPART];        /* a part's wave in time with the loop: its turn in ticks (0:
+                                                     * not: SYNC OFF or RETRIG KEY) */
+static uint8_t lfo_tempo, lfo_eng[KL_NPART], lfo_seen;   /* what the DSP's LFOs were last set for */
+
+static int lfo_first(int e)                          /* an engine's first DEST (PITCH; none: PITCH, unused) */
+{
+    uint32_t m = kl_lfo_dests(e);
+    int d;
+    for (d = 0; d < KL_LFO_NDEST; d++)
+        if (m >> d & 1u)
+            return d;
+    return KL_LFO_PITCH;
+}
+
+static int lfo_dest(int p)                           /* the DEST that plays: the part's, or (another engine took it)
+                                                     * the engine's first */
+{
+    int d = set.mod[p].lfo_dest;
+    return kl_lfo_dests(set.parts[p].engine) >> d & 1u ? d : lfo_first(set.parts[p].engine);
+}
+
+static const char *lfo_dest_name(int p, int d)       /* PD's FILTER is its DCW */
+{
+    return d == KL_LFO_FILTER && set.parts[p].engine == KL_PHASE ? "DCW" : LFO_DEST_NAME[d];
+}
+
+static const char *lfo_dest_short(int p, int d)      /* the tiles': PIT, FLT (PD: DCW), SHP, AMP */
+{
+    static const char *const SHORT[KL_LFO_NDEST] = {"PIT", "FLT", "SHP", "AMP"};
+    return d == KL_LFO_FILTER && set.parts[p].engine == KL_PHASE ? "DCW" : SHORT[d];
+}
+
+static void lfo_apply(int p)                         /* a part's LFO to the DSP: RATE as a block's step, FADE in
+                                                     * blocks (1378 a second) */
+{
+    const mod_set_t *m = &set.mod[p];
+    uint32_t inc, ticks = LFO_SYNC[m->lfo_rate[0]];
+    if (m->lfo_sync)                                 /* bpm / 60 * 192 / ticks Hz; a Hz is 2^32 * 32 / 44100 =
+                                                     * 3116457.6 a block: bpm * 9972664 / ticks (240 * 9972664 fits) */
+        inc = lp.tempo * 9972664u / ticks;
+    else
+        inc = LFO_HZ[m->lfo_rate[1]] * 31165u;       /* a hundredth of a Hz: 31164.6 a block */
+    lfo_ticks[p] = (uint16_t)(m->lfo_sync && !m->lfo_retrig ? ticks : 0u);
+    kl_lfo(p, inc, kl_lfo_dests(set.parts[p].engine) ? m->lfo_depth : 0, m->lfo_wave, lfo_dest(p), m->lfo_retrig,
+           (uint32_t)m->lfo_fade * 1378u / 10u);
+    lfo_eng[p] = set.parts[p].engine;
+}
+
+static void lfo_follow(void)                         /* main loop: the LFOs follow TEMPO and each part's engine */
+{
+    int p;
+    for (p = 0; p < KL_NPART; p++)
+        if (!lfo_seen || lfo_eng[p] != set.parts[p].engine || (set.mod[p].lfo_sync && lp.tempo != lfo_tempo))
+            lfo_apply(p);
+    lfo_tempo = lp.tempo;
+    lfo_seen = 1;
+}
+
+static void lfo_loop_phase(void)                     /* render, each step: a wave in time with the loop at its place,
+                                                     * while it plays */
+{
+    uint32_t p, t;
+    if (lp.state != LP_PLAY)
+        return;
+    for (p = 0; p < KL_NPART; p++)
+        if ((t = lfo_ticks[p]) != 0)
+            kl_lfo_phase((int)p, (lp.pos16 % (t << 16)) / t << 16);   /* the turn, Q16, as Q32 (3072 << 16 fits) */
+}
+
 /* ------------------------------------------------------------------ audio --- */
 static int32_t part_buf[KL_NPART][APP_BLOCK];
 static int32_t gain_q8;                              /* MASTER's gain, gliding: no step at a block's edge */
@@ -1150,6 +1282,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         for (p = 0; p < KL_NPART; p++)
             out[p] = part_buf[p] + b;
         lp_step(ck_buf + b);
+        lfo_loop_phase();
         kl_render(out, 32u);
     }
     {   /* the sends mixed mono (after LEVEL, MUTE and SOLO), then the effects */
@@ -1243,6 +1376,7 @@ void app_init(void)
     step_init();
     fx_init(fx_dly_buf, fx_pre_buf, fx_hall_buf);
     fx_apply();
+    lfo_seen = 0;                                    /* the LFOs at the next frame */
 }
 
 /* --------------------------------------------------------------------- UI --- */
@@ -1261,6 +1395,7 @@ static struct {
                                                      * moved); the header alone (its bar and beat) */
     uint8_t ask, ask_part;                           /* HOME + PLAY asks before a part is emptied (OCT+ yes) */
     uint8_t fx;                                      /* the effects' page is open */
+    uint8_t lfo, redraw_lfo;                         /* the LFO's page is open; its picture again (the wave moved) */
     uint8_t tab, bar, turned;                        /* the tab of the page open: the looper's LOOP (0) or STEP (1),
                                                      * the mixer's MIX or SEND, the effects' DELAY or HALL; STEP's bar
                                                      * shown; a knob turned while a step was held */
@@ -1639,7 +1774,7 @@ static void page_show(uint32_t page)                 /* EDIT 1 (0) or EDIT 2 (1)
 {
     char t[24] = "EDIT ";
     ui.edit = 1;
-    ui.mix = ui.loop = ui.fx = 0;
+    ui.mix = ui.loop = ui.fx = ui.lfo = 0;
     ui.page = (uint8_t)page;
     ui.redraw = 1;
     text_cat(t, kl_page_title(eng_cur(), (int)page));
@@ -1706,7 +1841,7 @@ static void mix_show(int on)                         /* GLO: the mixer open on M
                                                      * (OCT-) */
 {
     ui.mix = (uint8_t)(on != 0);
-    ui.edit = ui.loop = ui.fx = ui.tab = 0;
+    ui.edit = ui.loop = ui.fx = ui.lfo = ui.tab = 0;
     ui.redraw = 1;
     announce(on ? "MIX" : "RACK");
 }
@@ -1715,7 +1850,7 @@ static void page_tab(int t)                          /* the mixer's or the effec
 {
     ui.tab = (uint8_t)t;
     ui.redraw = 1;
-    announce(ui.mix ? (t ? "SEND" : "MIX") : t ? "HALL" : "DELAY");
+    announce(ui.mix ? (t ? "SEND" : "MIX") : ui.lfo ? (t ? "MORE" : "LFO") : t ? "HALL" : "DELAY");
 }
 
 static void mix_changed(int32_t k)
@@ -1782,7 +1917,7 @@ static void fx_show(int on)                          /* FX: the effects' page op
                                                      * shut (OCT-) */
 {
     ui.fx = (uint8_t)(on != 0);
-    ui.edit = ui.mix = ui.loop = ui.tab = 0;
+    ui.edit = ui.mix = ui.loop = ui.lfo = ui.tab = 0;
     ui.redraw = 1;
     announce(on ? "DELAY" : "RACK");
 }
@@ -1812,6 +1947,156 @@ static void fx_reset(int32_t k)                      /* HOME + K1..K4: 1/8., 35 
     fx_changed(k);
 }
 
+/* ---------------------------------------------------------- the LFO's page --- */
+/* LFO: the chosen part's LFO, K1 RATE, K2 DEPTH, K3 WAVE, K4 DEST; LFO or OCT+ the tab MORE: K1 SYNC, K2 RETRIG,
+ * K3 FADE; OCT- back. HOME + K1..K4: 1/8 (5 Hz), 0, SIN, the engine's first DEST; ON, FREE, 0 */
+static const char *const LFO_LABEL[2][4] = {{"RATE", "DEPTH", "WAVE", "DEST"}, {"SYNC", "RETRIG", "FADE", ""}};
+
+static void hz_text(int32_t h, char *b)              /* hundredths of a Hz: "0.10 HZ", "5.0 HZ", "20 HZ" */
+{
+    char t[8];
+    b[0] = 0;
+    int_text(h / 100, t);
+    text_cat(b, t);
+    if (h < 1000) {
+        text_cat(b, ".");
+        int_text(h < 100 ? h % 100 / 10 : h % 100 / 10, t);
+        text_cat(b, t);
+        if (h < 100) {
+            int_text(h % 10, t);
+            text_cat(b, t);
+        }
+    }
+    text_cat(b, " HZ");
+}
+
+static void lfo_text(int p, int tab, int32_t k, char *b)   /* a knob's value: "1/8", "40%", "SIN", "FILTER" */
+{
+    const mod_set_t *m = &set.mod[p];
+    b[0] = 0;
+    if (tab == 0 && k == 0) {
+        if (m->lfo_sync)
+            text_cat(b, LFO_SYNC_NAME[m->lfo_rate[0]]);
+        else
+            hz_text(LFO_HZ[m->lfo_rate[1]], b);
+    } else if (tab == 0 && k == 1) {
+        int_text(m->lfo_depth, b);
+        text_cat(b, "%");
+    } else if (tab == 0 && k == 2) {
+        text_cat(b, LFO_WAVE_NAME[m->lfo_wave]);
+    } else if (tab == 0) {
+        text_cat(b, kl_lfo_dests(set.parts[p].engine) ? lfo_dest_name(p, lfo_dest(p)) : "-");
+    } else if (k == 0) {
+        text_cat(b, m->lfo_sync ? "ON" : "OFF");
+    } else if (k == 1) {
+        text_cat(b, m->lfo_retrig ? "KEY" : "FREE");
+    } else if (k == 2) {
+        char t[4];
+        int_text(m->lfo_fade / 10, b);
+        text_cat(b, ".");
+        int_text(m->lfo_fade % 10, t);
+        text_cat(b, t);
+        text_cat(b, " S");
+    } else {
+        text_cat(b, "-");
+    }
+}
+
+static void lfo_said(int32_t k)                      /* "DEPTH 40%" */
+{
+    char t[32], v[12];
+    t[0] = 0;
+    text_cat(t, LFO_LABEL[ui.tab][k]);
+    text_cat(t, " ");
+    lfo_text(set.part, ui.tab, k, v);
+    text_cat(t, v);
+    announce(t);
+}
+
+static void lfo_show(int on)                         /* LFO: the chosen part's LFO open (another page closes), or shut
+                                                     * (OCT-) */
+{
+    ui.lfo = (uint8_t)(on != 0);
+    ui.edit = ui.mix = ui.loop = ui.fx = ui.tab = 0;
+    ui.redraw = 1;
+    announce(on ? "LFO" : "RACK");
+}
+
+static void lfo_changed(int32_t k)
+{
+    lfo_apply(set.part);
+    dirty_update();
+    ui.redraw = 1;
+    lfo_said(k);
+}
+
+static int lfo_dest_step(int p, int32_t d)          /* DEST d steps on among the engine's (at the ends it stays) */
+{
+    uint32_t m = kl_lfo_dests(set.parts[p].engine);
+    int at = lfo_dest(p), i;
+    for (i = at + 1; d > 0 && i < KL_LFO_NDEST; i++)
+        if (m >> i & 1u) {
+            at = i;
+            d--;
+        }
+    for (i = at - 1; d < 0 && i >= 0; i--)
+        if (m >> i & 1u) {
+            at = i;
+            d++;
+        }
+    return at;
+}
+
+static void lfo_step(int32_t k, int32_t d)           /* K1..K4 on the LFO's page: a step a detent */
+{
+    mod_set_t *m = &set.mod[set.part];
+    if (!ui.tab && k == 0) {
+        int f = !m->lfo_sync;                        /* SYNC's list, or the Hz */
+        m->lfo_rate[f] = (uint8_t)clamp(m->lfo_rate[f] + d, 0, (f ? LFO_NHZ : LFO_NSYNC) - 1);
+    } else if (!ui.tab && k == 1) {
+        m->lfo_depth = (uint8_t)clamp(m->lfo_depth + d, 0, 100);
+    } else if (!ui.tab && k == 2) {
+        m->lfo_wave = (uint8_t)clamp(m->lfo_wave + d, 0, KL_NWAVE - 1);
+    } else if (!ui.tab) {
+        if (!kl_lfo_dests(set.parts[set.part].engine))
+            return;
+        m->lfo_dest = (uint8_t)lfo_dest_step(set.part, d);
+    } else if (k == 0) {
+        m->lfo_sync = d > 0;                         /* to the right ON, to the left OFF */
+    } else if (k == 1) {
+        m->lfo_retrig = d > 0;                       /* to the right KEY */
+    } else if (k == 2) {
+        m->lfo_fade = (uint8_t)clamp(m->lfo_fade + d, 0, LFO_FADE_MAX);
+    } else {
+        return;
+    }
+    lfo_changed(k);
+}
+
+static void lfo_reset(int32_t k)                     /* HOME + K1..K4 */
+{
+    mod_set_t *m = &set.mod[set.part];
+    if (!ui.tab && k == 0) {
+        m->lfo_rate[0] = LFO_DEF_SYNC;
+        m->lfo_rate[1] = LFO_DEF_HZ;
+    } else if (!ui.tab && k == 1) {
+        m->lfo_depth = 0;
+    } else if (!ui.tab && k == 2) {
+        m->lfo_wave = KL_SIN;
+    } else if (!ui.tab) {
+        m->lfo_dest = (uint8_t)lfo_first(set.parts[set.part].engine);
+    } else if (k == 0) {
+        m->lfo_sync = 1;
+    } else if (k == 1) {
+        m->lfo_retrig = 0;
+    } else if (k == 2) {
+        m->lfo_fade = 0;
+    } else {
+        return;
+    }
+    lfo_changed(k);
+}
+
 /* -------------------------------------------------------- the looper's page --- */
 static void loop_said(int32_t k)                     /* "TEMPO 98 BPM" */
 {
@@ -1828,7 +2113,7 @@ static void loop_show(int on)                        /* SEQ: the looper's page o
                                                      * shut (OCT-) */
 {
     ui.loop = (uint8_t)(on != 0);
-    ui.edit = ui.mix = ui.fx = ui.tab = 0;
+    ui.edit = ui.mix = ui.fx = ui.lfo = ui.tab = 0;
     ui.held = ui.held_new = 0;
     ui.cur = 0;
     ui.redraw = 1;
@@ -2415,6 +2700,12 @@ static void input(void)
             mix_show(0);
         else if (k == B_OCTDN && ui.fx)
             fx_show(0);
+        else if (k == B_OCTDN && ui.lfo)
+            lfo_show(0);
+        else if ((k == B_LFO || k == B_OCTUP) && ui.lfo)
+            page_tab(!ui.tab);                       /* LFO and MORE */
+        else if (k == B_LFO)
+            lfo_show(1);
         else if ((k == B_GLO || k == B_OCTUP) && ui.mix)
             page_tab(!ui.tab);                       /* MIX and SEND, as SEQ on the looper's page */
         else if ((k == B_FX || k == B_OCTUP) && ui.fx)
@@ -2443,7 +2734,7 @@ static void input(void)
             part_step(1);
         else if (k == B_ENV && eng_cur() == KL_ACID)
             announce("ACCENT");                      /* held: the keys pressed now are accented */
-        else if (k == B_HOME && (ui.edit || ui.mix || ui.loop || ui.fx))
+        else if (k == B_HOME && (ui.edit || ui.mix || ui.loop || ui.fx || ui.lfo))
             app_say("RESET", "TURN K1-K4");          /* held: a knob turned goes back to its sound's value */
         else if (k == B_HOME)
             app_say("HOME", "+ REC UNDO");           /* held: REC takes the last take back, PLAY empties a part */
@@ -2467,6 +2758,10 @@ static void input(void)
             loop_reset((int32_t)(k - EN_K1));
         else if (ui.loop && k >= EN_K1)
             loop_step((int32_t)(k - EN_K1), e);
+        else if (ui.lfo && k >= EN_K1 && (btn & 1u << B_HOME))
+            lfo_reset((int32_t)(k - EN_K1));
+        else if (ui.lfo && k >= EN_K1)
+            lfo_step((int32_t)(k - EN_K1), e);
         else if (ui.fx && k >= EN_K1 && (btn & 1u << B_HOME))
             fx_reset((int32_t)(k - EN_K1));
         else if (ui.fx && k >= EN_K1)
@@ -2489,7 +2784,8 @@ static void input(void)
     plat_glow(1);                                    /* the unlit buttons glow, readable in the dark */
     plat_play_red(lp.rec);                           /* PLAY green while it plays, red while it records */
     plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u) | (ui.mix ? 1u << B_GLO : 0u) | (ui.loop ? 1u << B_SEQ : 0u) |
-                  (ui.fx ? 1u << B_FX : 0u) | (lp.state != LP_STOP ? 1u << B_PLAY : 0u) | (lp.rec ? 1u << B_REC : 0u),
+                  (ui.fx ? 1u << B_FX : 0u) | (ui.lfo ? 1u << B_LFO : 0u) | (lp.state != LP_STOP ? 1u << B_PLAY : 0u) |
+                  (lp.rec ? 1u << B_REC : 0u),
               ui.loop && ui.tab ? step_lights() : keys);   /* STEP: the steps set, a running light */
 }
 
@@ -2612,14 +2908,16 @@ static void draw_header(void)
     if (msg) {
         int32_t x = cv_text(8, 3, &FONT_B, ui.msg[0], K_TEXT);
         cv_text(x + 6, 3, &FONT_B, ui.msg[1], tl->col);
-    } else if (ui.mix || ui.loop || ui.fx) {         /* the mixer, the looper, the effects: all four parts */
-        const char *c = ui.mix ? "MIX" : ui.fx ? "FX" : ui.tab ? "STEP" : "LOOP";
+    } else if (ui.mix || ui.loop || ui.fx || ui.lfo) {   /* the mixer, the looper, the effects, the LFO */
+        const char *c = ui.mix ? "MIX" : ui.fx ? "FX" : ui.lfo ? "LFO" : ui.tab ? "STEP" : "LOOP";
         char st[24] = "";
         int32_t w = text_w(&FONT_XS, c) + 8;
         if (ui.mix) {
             text_cat(st, set.part < 3 ? "PARTS 1-3" : "PARTS 4-6");   /* the page: the chosen part's three */
         } else if (ui.fx) {
             text_cat(st, "DELAY + HALL");
+        } else if (ui.lfo) {
+            part_name(set.part, st);
         } else if (ui.tab) {                         /* STEP: the part whose steps the keys are (DRUMS: and the
                                                      * instrument) */
             part_name(set.part, st);
@@ -2862,6 +3160,49 @@ static void footer_fx(char lab[4][16], char v[4][12], int32_t frac[4], int32_t m
     }
 }
 
+/* K1..K4 on the LFO's page, each marked where HOME takes it while it is elsewhere */
+static void footer_lfo(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
+{
+    const mod_set_t *m = &set.mod[set.part];
+    int e = eng_cur(), d = lfo_dest(set.part), first = lfo_first(e), n = 0, at = 0;
+    uint32_t av = kl_lfo_dests(e);
+    int32_t i;
+    for (i = 0; i < 4; i++) {
+        lab[i][0] = 'K';
+        lab[i][1] = (char)('1' + i);
+        lab[i][2] = ' ';
+        lab[i][3] = 0;
+        text_cat(lab[i], LFO_LABEL[ui.tab][i]);
+        lfo_text(set.part, ui.tab, i, v[i]);
+        frac[i] = 0;
+        mark[i] = -1;
+    }
+    if (!ui.tab) {
+        int f = !m->lfo_sync, top = (f ? LFO_NHZ : LFO_NSYNC) - 1, def = f ? LFO_DEF_HZ : LFO_DEF_SYNC;
+        frac[0] = m->lfo_rate[f] * 256 / top;
+        mark[0] = m->lfo_rate[f] != def ? def * 256 / top : -1;
+        frac[1] = m->lfo_depth * 256 / 100;
+        mark[1] = m->lfo_depth ? 0 : -1;
+        frac[2] = m->lfo_wave * 256 / (KL_NWAVE - 1);
+        mark[2] = m->lfo_wave ? 0 : -1;
+        for (i = 0; i < KL_LFO_NDEST; i++)          /* DEST among the engine's */
+            if (av >> i & 1u) {
+                if (i == d)
+                    at = n;
+                n++;
+            }
+        frac[3] = n > 1 ? at * 256 / (n - 1) : 0;
+        mark[3] = n > 1 && d != first ? 0 : -1;
+    } else {
+        frac[0] = m->lfo_sync * 256;
+        mark[0] = m->lfo_sync ? -1 : 256;
+        frac[1] = m->lfo_retrig * 256;
+        mark[1] = m->lfo_retrig ? 0 : -1;
+        frac[2] = m->lfo_fade * 256 / LFO_FADE_MAX;
+        mark[2] = m->lfo_fade ? 0 : -1;
+    }
+}
+
 /* K1..K4: TEMPO, LENGTH, QUANT, CLICK, each marked where HOME takes it (120 BPM, the first take's length, 1/16,
  * REC) while it is elsewhere */
 static void footer_loop(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
@@ -2932,6 +3273,8 @@ static void draw_footer(void)                        /* what the controls hold, 
         footer_mix(lab, v, frac, mark);
     else if (ui.fx)
         footer_fx(lab, v, frac, mark);
+    else if (ui.lfo)
+        footer_lfo(lab, v, frac, mark);
     else if (ui.loop && ui.tab)
         footer_step(lab, v, frac, mark);
     else if (ui.loop)
@@ -3064,6 +3407,7 @@ static void draw_edit(int32_t y0)
 static const char *const TABS_LOOP[2] = {"LOOP", "STEP"};   /* the pages' tabs (draw_tabs, below) */
 static const char *const TABS_MIX[2] = {"MIX", "SEND"};
 static const char *const TABS_FX[2] = {"DELAY", "HALL"};
+static const char *const TABS_LFO[2] = {"LFO", "MORE"};
 static void draw_tabs(int32_t y0, const char *const TAB[2], const char *right);
 
 /* ---------------------------------------------------------------- the mixer --- */
@@ -3321,6 +3665,145 @@ static void draw_fx(int32_t y0)
         else
             int_text(s, v);
         cv_text(x + 73 - text_w(&FONT_XS, v), y + 20, &FONT_XS, v, s && !dim ? K_TEXT : K_MUTED);
+    }
+    cv_blit(0, (uint32_t)y0);
+}
+
+/* ---------------------------------------------------------- the LFO's page --- */
+static int32_t lfo_wave_at(int w, uint32_t ph)       /* the picture's wave at ph, Q15 (the sine as two parabolas; S&H
+                                                     * as fixed steps, four a turn) */
+{
+    uint32_t u;
+    int32_t x;
+    switch (w) {
+    case KL_TRI:
+        u = (ph + 0x40000000u) >> 16;
+        return u < 32768u ? (int32_t)u * 2 - 32768 : 98303 - (int32_t)u * 2;
+    case KL_SAW:
+        return (int32_t)(ph >> 16) - 32768;
+    case KL_SQR:
+        return ph < 0x80000000u ? 32767 : -32767;
+    case KL_SH:
+        return (int32_t)((((ph >> 30) + 3u) * 2654435761u) >> 16) - 32768;
+    default:
+        x = (int32_t)(ph >> 16 & 32767u);            /* the half turn, Q15 */
+        x = x * (32768 - x) >> 13;                   /* 4 x (1 - x), Q15 */
+        x = x > 32767 ? 32767 : x;
+        return ph >> 31 ? -x : x;
+    }
+}
+
+#define LW_X 20                                      /* the wave: two turns from x, this wide */
+#define LW_W 212
+static void draw_lfo(int32_t y0)
+{
+    const mod_set_t *m = &set.mod[set.part];
+    const tile_t *ct = &TILES[TILE_OF[eng_cur()]];
+    uint32_t av = kl_lfo_dests(eng_cur()), turn = 0xFFFFFFFFu / (LW_W / 2) + 1u, ph_now = kl_lfo_phase_now(set.part);
+    int32_t p, x, cy = 86 - y0, amp = 3 + 22 * m->lfo_depth / 100, last = 0, fade = m->lfo_fade * (LW_W / 2) / 20;
+    int key = ui.tab && m->lfo_retrig;
+    char t[32] = "", v[16];
+    cv_begin(240, 93, K_GROUND);
+    int_text(lp.tempo, t);
+    text_cat(t, " BPM");
+    draw_tabs(y0, TABS_LFO, t);
+    cv_rect(1, 44 - y0, 238, 82, K_SURF);
+    t[0] = v[0] = 0;
+    if (!av) {
+        text_cat(t, "NO LFO");
+    } else if (!ui.tab) {
+        text_cat(t, LFO_WAVE_NAME[m->lfo_wave]);
+        text_cat(t, " - ");
+        text_cat(t, lfo_dest_name(set.part, lfo_dest(set.part)));
+        if (m->lfo_sync) {                           /* "1/8 = 250 MS": ticks / 192 * 60000 / bpm ms */
+            uint32_t ms = LFO_SYNC[m->lfo_rate[0]] * 625u / (2u * lp.tempo);
+            char u[8];
+            text_cat(v, LFO_SYNC_NAME[m->lfo_rate[0]]);
+            text_cat(v, " = ");
+            int_text((int32_t)(ms < 1000u ? ms : ms / 1000u), u);
+            text_cat(v, u);
+            if (ms >= 1000u) {
+                text_cat(v, ".");
+                int_text((int32_t)(ms / 100u % 10u), u);
+                text_cat(v, u);
+            }
+            text_cat(v, ms < 1000u ? " MS" : " S");
+        } else {
+            hz_text(LFO_HZ[m->lfo_rate[1]], v);
+        }
+    } else {
+        text_cat(t, m->lfo_retrig ? "RETRIG KEY" : "RETRIG FREE");
+        if (m->lfo_fade)
+            text_cat(t, " - FADE");
+        lfo_text(set.part, 1, 2, v);
+    }
+    cv_text(7, 47 - y0, &FONT_XS, t, K_TEXT);
+    cv_text(232 - text_w(&FONT_XS, v), 47 - y0, &FONT_XS, v, K_MUTED);
+    if (av) {
+        cv_rect(LW_X, cy, LW_W, 1, K_LINE);
+        for (x = 0; x < LW_W; x++) {                 /* the wave, a pixel's line a column */
+            uint32_t ph = (uint32_t)(key && x >= LW_W / 2 ? x - LW_W / 2 : x) * turn;
+            int32_t a = amp, y, y1, y2;
+            if (ui.tab && fade) {                    /* MORE: FADE from each note */
+                int32_t since = key && x >= LW_W / 2 ? x - LW_W / 2 : x;
+                a = since < fade ? amp * since / fade : amp;
+            }
+            y = cy - lfo_wave_at(m->lfo_wave, ph) * a / 32768;
+            y1 = x ? (y < last ? y : last) : y;
+            y2 = x ? (y > last ? y : last) : y;
+            cv_rect(LW_X + x, y1, 1, y2 - y1 + 2, m->lfo_depth ? ct->col : K_MUTED);
+            last = y;
+        }
+        if (ui.tab) {                                /* the notes that start it */
+            cv_rect(LW_X - 1, cy - 30, 2, 58, K_TEXT);
+            if (key)
+                cv_rect(LW_X + LW_W / 2 - 1, cy - 30, 2, 58, K_TEXT);
+        } else {                                     /* where it is now */
+            uint32_t q = ph_now / turn;
+            disc(LW_X + (int32_t)q, cy - lfo_wave_at(m->lfo_wave, ph_now) * amp / 32768, 3, K_TEXT);
+        }
+        t[0] = 0;
+        if (!ui.tab) {
+            text_cat(t, "DEPTH ");
+            lfo_text(set.part, 0, 1, v);
+            text_cat(t, v);
+            text_cat(t, m->lfo_sync ? " - SYNC" : " - FREE HZ");
+            text_cat(t, m->lfo_retrig ? " - KEY" : " - FREE");
+        } else {
+            text_cat(t, m->lfo_retrig ? "EACH NOTE STARTS THE WAVE" : "ONE WAVE FOR ALL NOTES");
+        }
+        cv_text(8, 113 - y0, &FONT_T, t, K_MUTED);
+    } else {
+        t[0] = 0;
+        part_name(set.part, t);
+        text_cat(t, ": NO LFO TO PLAY");
+        cv_text(8, 80 - y0, &FONT_XS, t, K_MUTED);
+    }
+    for (p = 0; p < KL_NPART; p++) {                 /* the parts' LFOs: DEST and DEPTH */
+        const part_set_t *ps = &set.parts[p];
+        const mod_set_t *mp = &set.mod[p];
+        const tile_t *tl = &TILES[TILE_OF[ps->engine]];
+        int32_t tx = 1 + (p % 3) * 80, y = 129 + (p / 3) * 40 - y0;
+        int sel = p == set.part, has = kl_lfo_dests(ps->engine) != 0;
+        uint16_t bg = sel ? K_SURF2 : K_SURF, col = has ? tl->col : K_MUTED;
+        uint8_t sh[8];
+        cv_rect(tx, y, 78, 37, bg);
+        if (sel)
+            box_edge(tx, y, 78, 37, 2, tl->col);
+        kl_shape(ps->engine, work[p][ps->engine], sh);
+        glyph_draw(tx + 11, y + 11, 6, sh, col, bg);
+        t[0] = 0;
+        part_name(p, t);
+        text_fit(tx + 20, y + 4, 55, &FONT_XS, t, sel ? tl->col : has ? K_TEXT : K_MUTED);
+        t[0] = 0;
+        text_cat(t, has ? lfo_dest_short(p, lfo_dest(p)) : "-");
+        cv_text(tx + 6, y + 23, &FONT_T, t, has && mp->lfo_depth ? K_TEXT : K_MUTED);
+        if (has) {
+            cv_rect(tx + 26, y + 27, 28, 3, K_LINE);
+            cv_rect(tx + 26, y + 27, 28 * mp->lfo_depth / 100, 3, col);
+            int_text(mp->lfo_depth, v);
+            cv_text(tx + 73 - text_w(&FONT_XS, v), y + 20, &FONT_XS, v, mp->lfo_depth ? K_TEXT : K_MUTED);
+        }
     }
     cv_blit(0, (uint32_t)y0);
 }
@@ -3597,6 +4080,9 @@ static void draw(void)
     } else if (ui.fx) {
         draw_fx(22);
         draw_fx(115);
+    } else if (ui.lfo) {
+        draw_lfo(22);
+        draw_lfo(115);
     } else if (ui.loop && ui.tab) {
         draw_step(22);
         draw_step(115);
@@ -3630,6 +4116,7 @@ void app_frame(void)
     speak();
     if (lp.tempo != fx_tempo)                        /* DELAY's time follows TEMPO */
         fx_apply();
+    lfo_follow();                                    /* the LFOs too, and each part's engine */
     if ((hits = kl_hits(set.part, &note)) != ui.hits) {        /* a note played: DRUMS lights its pad a moment */
         ui.hits = hits;
         ui.hit_pc = (int8_t)(note % 12);
@@ -3687,8 +4174,12 @@ void app_frame(void)
         ui.loop_at = now;
         ui.redraw_loop = 1;
     }
+    if (ui.lfo && !ui.tab && now - ui.loop_at >= 40u) {   /* the LFO's dot, alike */
+        ui.loop_at = now;
+        ui.redraw_lfo = 1;
+    }
     if (ui.redraw) {
-        ui.redraw = ui.redraw_pads = ui.redraw_mix = ui.redraw_loop = ui.redraw_head = 0;
+        ui.redraw = ui.redraw_pads = ui.redraw_mix = ui.redraw_loop = ui.redraw_head = ui.redraw_lfo = 0;
         draw();
         return;
     }
@@ -3704,6 +4195,10 @@ void app_frame(void)
         ui.redraw_loop = 0;
         draw_loop(22);
         draw_loop(115);
+    } else if (ui.redraw_lfo) {                      /* the LFO's page: its dot moved */
+        ui.redraw_lfo = 0;
+        draw_lfo(22);
+        draw_lfo(115);
     } else if (ui.redraw_mix) {                      /* the strips alone: the meters moved */
         ui.redraw_mix = 0;
         draw_mix(22);
@@ -3843,6 +4338,8 @@ int app_expect(const char *what, int *got)
         *got = lp.rpart + 1;
     else if (!strcmp(what, "bars"))                  /* the loop's length, 0: AUTO (none yet) */
         *got = lp.bars;
+    else if (!strcmp(what, "lpos"))                  /* where the loop plays: its tick */
+        *got = (int)(lp.pos16 >> 16);
     else if (!strcmp(what, "lbar"))                  /* the bar playing, 1.., 0 stopped */
         *got = lp.state == LP_PLAY ? (int)((lp.pos16 >> 16) / LP_BAR + 1u) : 0;
     else if (!strcmp(what, "tempo"))
@@ -3865,6 +4362,34 @@ int app_expect(const char *what, int *got)
         *got = ui.bar + 1;
     else if (!strcmp(what, "scur"))                  /* STEP: ALGO's cursor, 0 none (NEW STEPS), 1..16 */
         *got = ui.cur;
+    else if (!strcmp(what, "lfo"))                   /* the LFO's page open */
+        *got = ui.lfo;
+    else if (!strcmp(what, "lfodepth"))              /* the chosen part's LFO: DEPTH, WAVE, DEST (as it plays), SYNC,
+                                                     * RATE (its list's index), RETRIG, FADE */
+        *got = set.mod[set.part].lfo_depth;
+    else if (!strcmp(what, "lfowave"))
+        *got = set.mod[set.part].lfo_wave;
+    else if (!strcmp(what, "lfodest"))
+        *got = lfo_dest(set.part);
+    else if (!strcmp(what, "lfosync"))
+        *got = set.mod[set.part].lfo_sync;
+    else if (!strcmp(what, "lforate"))
+        *got = set.mod[set.part].lfo_rate[!set.mod[set.part].lfo_sync];
+    else if (!strcmp(what, "lforetrig"))
+        *got = set.mod[set.part].lfo_retrig;
+    else if (!strcmp(what, "lfofade"))
+        *got = set.mod[set.part].lfo_fade;
+    else if (!strcmp(what, "lfoval"))                /* the DSP's: the wave now (Q15), its turn (0..255), its depth */
+        *got = kl_lfo_now(set.part);
+    else if (!strcmp(what, "lfoph"))
+        *got = (int)(kl_lfo_phase_now(set.part) >> 24);
+    else if (!strcmp(what, "lfoamt"))
+        *got = kl_lfo_depth_now(set.part);
+    else if (!strcmp(what, "lfoloop")) {             /* the wave's distance from the loop's place for it (SYNC's
+                                                     * RATE): 1/256 of a turn */
+        uint32_t t = LFO_SYNC[set.mod[set.part].lfo_rate[0]], d = kl_lfo_phase_now(set.part) - ((lp.pos16 % (t << 16)) / t << 16);
+        *got = (int)((d < 0x80000000u ? d : 0u - d) >> 24);
+    }
     else if (!strcmp(what, "smask"))                 /* the chosen part's steps with a note in the bar shown (DRUMS:
                                                      * the instrument's), bit 0 step 1 */
         *got = (int)step_mask(set.part, step_sel());

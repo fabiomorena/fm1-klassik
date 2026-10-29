@@ -162,6 +162,9 @@ static struct {
     int16_t made[9];                                /* made from: the preset and the eight values */
     fm_lfo_t lfo;
     int32_t lfo_val, lfo_delay;                     /* this block's */
+    int32_t pitch_add, gain[2];                     /* KLASSIK's LFO: PITCH (Q24 an octave), AMP (Q15, the last block's
+                                                     * and this one's) */
+    uint8_t gain_ok;                                /* gain[1] set once */
 } fm6_part[NPART];
 static fm_note_t fm6_note[NPART][NVOICE];
 
@@ -198,6 +201,12 @@ static void fm6_block(struct track *t)              /* the voice up to date, the
     fm6_sync(t);
     fm6_part[part].lfo_val = fm_lfo_sample(&fm6_part[part].lfo);
     fm6_part[part].lfo_delay = fm_lfo_delay(&fm6_part[part].lfo);
+    fm6_part[part].pitch_add = lfo_pitch(part) * 5461;   /* 1/256 semitone in Q24 an octave: 2^24 / 3072 */
+    if (lfo_depth(part, KL_LFO_PITCH))              /* the part's LFO on PITCH: the preset's own vibrato rests */
+        fm6_part[part].lfo_val = 1 << 23;
+    fm6_part[part].gain[0] = fm6_part[part].gain_ok ? fm6_part[part].gain[1] : 32768;
+    fm6_part[part].gain[1] = lfo_gain(part);
+    fm6_part[part].gain_ok = 1;
 }
 
 static void fm6_render(struct track *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
@@ -211,9 +220,16 @@ static void fm6_render(struct track *t, voice_t *v, int32_t *out, uint32_t n, co
         fm_note_keyup(fn);
     fm_note_algorithm(fn, t->p[P_E0 + FM_ALGO] - 1, t->p[P_E0 + FM_FEEDBK]);
     memset(buf, 0, sizeof buf);
-    fm_note_compute(fn, buf, fm6_part[part].lfo_val, fm6_part[part].lfo_delay);
-    for (i = 0; i < n && i < (uint32_t)FM_N; i++)
-        out[i] += buf[i] >> FM6_SHIFT;
+    fm_note_compute(fn, buf, fm6_part[part].lfo_val, fm6_part[part].lfo_delay, fm6_part[part].pitch_add);
+    if (fm6_part[part].gain[0] == 32768 && fm6_part[part].gain[1] == 32768) {
+        for (i = 0; i < n && i < (uint32_t)FM_N; i++)
+            out[i] += buf[i] >> FM6_SHIFT;
+    } else {                                        /* the LFO's AMP, a ramp over the block (as amp0 -> amp1), Q12:
+                                                     * six carriers at full, 2^17.6 here, times 4096 fit */
+        int32_t g = fm6_part[part].gain[0] << 5, dg = fm6_part[part].gain[1] - fm6_part[part].gain[0];
+        for (i = 0; i < n && i < (uint32_t)FM_N; i++, g += dg)
+            out[i] += (buf[i] >> FM6_SHIFT) * (g >> 8) >> 12;
+    }
 }
 
 static int fm6_done(struct track *t, voice_t *v) { return fm_note_done(fm6_voice(t, v)); }

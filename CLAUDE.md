@@ -82,6 +82,12 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   MUTE, SOLO, `send[2]` in `part_set_t`; `mix_update()` setzt `mix_tgt`, `snd_tgt` (nach LEVEL/MUTE/SOLO, vor PAN,
   quadratisch) und `ret_tgt`; `app_render` gleitet, mischt stereo, Limiter (−0,5 dBFS) vor dem harten Begrenzen.
   Speicherformat `KLS9` (`KLS8` und `KLS7` mit vier Parts werden in `settings_load` übernommen).
+- LFO (Taster LFO; LFO/OCT+ wechselt LFO/MORE; `set.mod[p]` in `app.c`, `lfo_*`; DSP `lfo_tick` in `dsp/engines.c`):
+  je Part einer, RATE SYNC (Ticks, `LFO_SYNC`) oder Hz (`LFO_HZ`), SYNC + FREE folgt bei laufender Schleife
+  `lp.pos16` (`lfo_loop_phase` im Render), DEPTH, WAVE, DEST (`kl_lfo_dests`: VA alle, PD PITCH/DCW/AMP, ORGAN und
+  FM6 PITCH/AMP, ACID PITCH/FILTER, DRUMS keins), RETRIG, FADE. VA/PD/ORGAN über `vmod_t`, FM6 über
+  `fm_note_compute(…, pitch_add)` und eine Verstärkungsrampe, ACID über `acid_set_pitch_mod`/`acid_set_cutoff`.
+  Speicherformat `KLSA` (KLS9 wird übernommen).
 - Effekte (FX; FX/OCT+ wechselt DELAY/HALL; `set.fx[2][4]`, `fx_*` in `app.c`, `dsp/fx.c`): Send-Effekte, die Sends
   mono summiert, die Rückwege stereo vor dem Limiter. DELAY Ping-Pong (erstes Echo links), höchstens 0,5 s je Seite
   (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
@@ -151,7 +157,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
 | v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | erledigt (Simulator) |
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts; dazu Step-Cursor, DOUBLE/HALF | erledigt (Simulator; Emulator-Protokolle 29.10.) |
-| v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | offen |
+| v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | LFO erledigt (Simulator), ARP offen |
 | v0.8 | Edit-Seiten nach den Mockups 02 `Edit-VA` und 03 `Edit-FM6` (mehr Seiten je Engine: Hüllkurve, LFO, Filterkurve, Algorithmus-Grafik) | offen |
 | v0.9 | Preset-Liste und Glyphen-Browser (früher v0.4, dann v0.7) | offen |
 | v1.0 | Klang-Atlas, Klang-Stammbaum (früher v0.6, dann v0.8) | offen |

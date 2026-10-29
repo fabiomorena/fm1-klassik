@@ -52,7 +52,8 @@ typedef struct {                        /* Lfo: one for every voice of a part, a
 
 /* a voice: started (velocity 1..127), a block of FM_N samples added to buf, its key let go */
 void fm_note_init(fm_note_t *n, const uint8_t patch[FM_PATCH], int midinote, int velocity);
-void fm_note_compute(fm_note_t *n, int32_t *buf, int32_t lfo_val, int32_t lfo_delay);
+void fm_note_compute(fm_note_t *n, int32_t *buf, int32_t lfo_val, int32_t lfo_delay, int32_t pitch_add);   /* pitch_add:
+                                         * Q24 an octave (added: the host's LFO) */
 void fm_note_keyup(fm_note_t *n);
 /* added: the algorithm (0..31) and feedback (0..7) of a sounding voice, as it plays on; 1 = its key is up and none
  * of its carriers sounds any more */

@@ -6,7 +6,7 @@
  * on msfa), DRUMS (eng_drums.c, on Plaits' drum models) and ACID (eng_acid.c, on Open303) on four parts of six voices
  * each, every part its own sound; together the parts sound at most KL_BUDGET (each voice costs its engine's COST).
  * Built as one translation unit with the engines, as felucca_engine.h asks. A first version: its envelope is a plain
- * ADSR of its own (not Felucca's voice.c), and there is no LFO, glide, unison or effect yet; FM6, DRUMS and ACID have
+ * ADSR of its own (not Felucca's voice.c), an LFO a part (KLASSIK's own: lfo_tick), and no glide, unison or effect; FM6, DRUMS and ACID have
  * envelopes of their own (ownenv), DRUMS plays each instrument on one voice (same_note). A MONO preset (ACID's, some of ANALOG's)
  * plays on the part's first voice and keeps the keys held: a key while another is held is legato, and the latest let go while
  * another is held goes back to that one (legato 2). The eight parameters come from the app with each sound asked
@@ -37,6 +37,83 @@ static int legato;                                  /* MONO: 1 the note_on comes
                                                      * goes back to a key still held (the latest let go) */
 
 #include "dsp.c"
+
+/* ---------------------------------------------------------- each part's LFO --- */
+/* a wave a block: the main loop sets it (kl_lfo), the app's render may set where it is (kl_lfo_phase); the host puts
+ * it on ANALOG's, PHASE's and WHEEL's block (vmod_t: pitch, cutoff, shape, amplitude), FM6 and ACID take it
+ * themselves (lfo_pitch, lfo_lin, lfo_gain) */
+typedef struct {
+    volatile uint32_t inc, fade;                    /* a block's step, Q32 of a turn; blocks the depth fades in */
+    volatile uint8_t depth, wave, dest, retrig;     /* 0..100 (0 off), KL_SIN.., KL_LFO_*, 1 = each note starts it */
+    uint8_t ph_set, hit;                            /* kl_lfo_phase came this block; a note started (S&H: anew) */
+    uint32_t ph, ph_to, fade_n, rnd;
+    int32_t out, amt;                               /* this block's wave (Q15), its depth (percent, Q8, faded in) */
+} lfo_t;
+static lfo_t lfo[NPART];
+
+static void lfo_tick(int part)                      /* a block on */
+{
+    lfo_t *l = &lfo[part];
+    uint32_t was = l->ph, u;
+    l->ph = l->ph_set ? l->ph_to : l->ph + l->inc;
+    l->ph_set = 0;
+    switch (l->wave) {
+    case KL_TRI:                                    /* from 0 up, as the sine */
+        u = (l->ph + 0x40000000u) >> 16;
+        l->out = u < 32768u ? (int32_t)u * 2 - 32768 : 98303 - (int32_t)u * 2;
+        break;
+    case KL_SAW:                                    /* up from the bottom: the turn starts low */
+        l->out = (int32_t)(l->ph >> 16) - 32768;
+        break;
+    case KL_SQR:
+        l->out = l->ph < 0x80000000u ? 32767 : -32767;
+        break;
+    case KL_SH:                                     /* a new random value each turn (and with RETRIG each note) */
+        if (l->ph < was || l->hit) {
+            l->rnd = l->rnd * 1103515245u + 12345u;
+            l->out = (int32_t)(l->rnd >> 16) - 32768;
+        }
+        break;
+    default:
+        l->out = SINE[l->ph >> 22];
+        break;
+    }
+    l->hit = 0;
+    if (l->fade_n < l->fade)
+        l->fade_n++;
+    l->amt = l->fade ? (int32_t)l->depth * 256 * (int32_t)l->fade_n / (int32_t)l->fade : (int32_t)l->depth * 256;
+}
+
+static void lfo_note(int part)                      /* a note of the part starts: RETRIG, FADE */
+{
+    lfo_t *l = &lfo[part];
+    if (l->retrig) {
+        l->ph = 0u - l->inc;                        /* the next tick: 0 */
+        l->hit = 1;
+    }
+    l->fade_n = 0;
+}
+
+static int32_t lfo_depth(int part, int dest) { return lfo[part].dest == dest ? lfo[part].amt : 0; }
+
+static int32_t lfo_pitch(int part)                  /* PITCH: 1/256 semitone, +-12 semitones at DEPTH 100 */
+{
+    int32_t a = lfo_depth(part, KL_LFO_PITCH);
+    return a ? lfo[part].out * (int32_t)((uint32_t)a * (uint32_t)a / 213333u) >> 15 : 0;   /* 3072 * (a / 25600)^2 */
+}
+
+static int32_t lfo_lin(int part, int dest, int32_t full)   /* FILTER, SHAPE: +-full at DEPTH 100 */
+{
+    int32_t a = lfo_depth(part, dest);
+    return a ? lfo[part].out * (full * a / 25600) >> 15 : 0;
+}
+
+static int32_t lfo_gain(int part)                   /* AMP: Q15, 1 at the wave's top, 1 - DEPTH at its trough */
+{
+    int32_t a = lfo_depth(part, KL_LFO_AMP), u = (lfo[part].out + 32768) >> 1;
+    return a ? 32768 - (32768 - u) * a / 25600 : 32768;
+}
+
 #include "eng_analog.c"
 #include "eng_phase.c"
 #include "eng_wheel.c"
@@ -319,6 +396,7 @@ static void voice_start(int part, int note, int vel)
     v->age = ++vage;
     q->hit_note = (uint8_t)note;
     q->hits = q->hits + 1u;
+    lfo_note(part);
     v->pitch16 = v->pitch_cur = (int32_t)note * 16;
     v->fine = 0;
     if (!sounding)
@@ -403,6 +481,8 @@ static void part_block(int part, int32_t *out)      /* one block of a part's voi
     track_t *t = &trk[part];
     const engine_t *en = ENG[q->cur_e];
     uint32_t k;
+    int32_t po = lfo_pitch(part), cut = lfo_lin(part, KL_LFO_FILTER, 64 << 8), shp = lfo_lin(part, KL_LFO_SHAPE, 64 << 8);
+    int32_t g = lfo_gain(part);
     if (en->block)
         en->block(t);
     for (k = 0; k < NVOICE; k++) {
@@ -426,16 +506,18 @@ static void part_block(int part, int32_t *out)      /* one block of a part's voi
             if (!v->active)
                 continue;
             a = a * (40 + v->vel) / 167;           /* velocity: 0.24 .. 1 */
+            a = mulq15(a, g);                       /* the LFO's AMP */
         }
-        base = pitch_inc((uint32_t)clamp(v->pitch16, 0, 2047));
         memset(&m, 0, sizeof m);
-        m.pitch16 = v->pitch16;
-        m.inc = base;
+        m.pitch16 = v->pitch16 + (po >> 4);         /* the LFO's PITCH: 1/16 semitone in pitch16, the rest in fine */
+        m.fine = (po & 15) * 237 >> 8;              /* 1/256 semitone: 2^(1/3072) - 1 = 225.6e-6, 0.924 of 1/4096 */
+        base = pitch_inc((uint32_t)clamp(m.pitch16, 0, 2047));
+        m.inc = base + (uint32_t)((int32_t)(base >> 12) * m.fine);
         m.amp0 = q->last_amp[k];
         m.amp1 = a;
         m.envq15 = env;
-        m.cutoff = q->env_fenv * (env >> 7);       /* ENV -> FILTER: up to +-64 cutoff steps */
-        m.shape = 64 << 8;                          /* the middle: no shape modulation yet */
+        m.cutoff = q->env_fenv * (env >> 7) + cut;  /* ENV -> FILTER: up to +-64 cutoff steps; the LFO's FILTER */
+        m.shape = (64 << 8) + shp;                  /* the middle, and the LFO's SHAPE */
         q->last_amp[k] = a;
         en->render(t, v, out, CTL, &m);
     }
@@ -464,6 +546,7 @@ void kl_render(int32_t *const out[KL_NPART], uint32_t n)
     for (b = 0; b + CTL <= n; b += CTL)
         for (part = 0; part < NPART; part++) {
             int32_t blk[CTL];
+            lfo_tick(part);
             memset(blk, 0, sizeof blk);
             part_block(part, blk);
             for (i = 0; i < CTL; i++)
@@ -503,3 +586,35 @@ int kl_cost_now(void)
 
 int kl_value_now(int part, int k) { return part_ok(part) && k >= 0 && k < 8 ? trk[part].p[P_E0 + k] : 0; }
 int kl_note_now(int part) { return part_ok(part) && trk[part].v[0].active ? trk[part].v[0].note : -1; }
+
+uint32_t kl_lfo_dests(int e)
+{
+    static const uint8_t DESTS[KL_NENG] = {15, 1 | 2 | 8, 1 | 8, 1 | 8, 0, 1 | 2};   /* ANALOG .. ACID: KL_LFO_* bits */
+    return eng_ok(e) ? DESTS[e] : 0u;
+}
+
+void kl_lfo(int part, uint32_t inc, int depth, int wave, int dest, int retrig, uint32_t fade)
+{
+    lfo_t *l;
+    if (!part_ok(part))
+        return;
+    l = &lfo[part];
+    l->inc = inc;
+    l->depth = (uint8_t)clamp(depth, 0, 100);
+    l->wave = (uint8_t)clamp(wave, 0, KL_NWAVE - 1);
+    l->dest = (uint8_t)clamp(dest, 0, KL_LFO_NDEST - 1);
+    l->retrig = (uint8_t)(retrig != 0);
+    l->fade = fade;
+}
+
+void kl_lfo_phase(int part, uint32_t ph)
+{
+    if (!part_ok(part))
+        return;
+    lfo[part].ph_to = ph;
+    lfo[part].ph_set = 1;
+}
+
+uint32_t kl_lfo_phase_now(int part) { return part_ok(part) ? lfo[part].ph : 0u; }
+int32_t kl_lfo_now(int part) { return part_ok(part) ? lfo[part].out : 0; }
+int kl_lfo_depth_now(int part) { return part_ok(part) ? (int)(lfo[part].amt >> 8) : 0; }

@@ -49,6 +49,23 @@ int kl_value_now(int part, int k);          /* parameter k as the render plays i
 int kl_note_now(int part);                  /* a part's first voice's note (a MONO sound's), -1 silent (the host's
                                              * checks) */
 
+/* each part's LFO (dsp/engines.c): a wave a block (32 samples), to one destination of the part's sound. PITCH up to
+ * +-12 semitones at DEPTH 100 (DEPTH squared: 10 gives +-12 cents), FILTER and SHAPE +-64 of their 128 steps (ACID's
+ * FILTER +-2 octaves), AMP down to silence at the wave's trough */
+enum { KL_LFO_PITCH, KL_LFO_FILTER, KL_LFO_SHAPE, KL_LFO_AMP, KL_LFO_NDEST };
+enum { KL_SIN, KL_TRI, KL_SAW, KL_SQR, KL_SH, KL_NWAVE };
+uint32_t kl_lfo_dests(int e);               /* what engine e takes: bit KL_LFO_* (VA all four; PD PITCH, FILTER (its
+                                             * DCW), AMP; ORGAN and FM6 PITCH, AMP; ACID PITCH, FILTER; DRUMS none) */
+void kl_lfo(int part, uint32_t inc, int depth, int wave, int dest, int retrig, uint32_t fade);   /* main loop: a
+                                             * block's step (Q32 of a turn), DEPTH 0..100 (0 off), KL_SIN.., KL_LFO_*,
+                                             * retrig 1 = each note starts the wave, fade: blocks the depth takes to
+                                             * come in after a note (0 none) */
+void kl_lfo_phase(int part, uint32_t ph);   /* audio interrupt, before kl_render: the wave's place this block (Q32;
+                                             * the loop's, for a wave in time with it) */
+uint32_t kl_lfo_phase_now(int part);        /* where the wave is (the screen) */
+int32_t kl_lfo_now(int part);               /* its value, Q15 (the host's checks) */
+int kl_lfo_depth_now(int part);             /* its depth as it plays, FADE in: 0..100 (the host's checks) */
+
 /* the send effects (dsp/fx.c, compiled apart at -O2): DELAY, a ping-pong delay (the first echo left) of up to 0.5 s a
  * side, and HALL, Rings' reverb (dsp/hall/, MIT) behind PRE, a delay of up to 100 ms. Each takes the parts' sends
  * mixed mono and gives stereo (L, R interleaved), in kl_render's scale (a part's clamp: 2^19). The app gives the

@@ -23,6 +23,7 @@
  *     the volume, the filter's other modes and drive left out (TB_303 and LP_18 kept); the normalizers n1 and n2,
  *     which Open303 sets to 1, left out
  *   - a floor of 1e-20 under the envelopes (no denormals in float)
+ *   - added: acid_set_pitch_mod, a factor on the oscillator's frequency (KLASSIK's LFO on PITCH)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
  * documentation files (the "Software"), to deal in the Software without restriction, including without limitation
@@ -111,6 +112,8 @@ static void env_mod_scaler_offset(acid_t *a)    /* calculateEnvModScalerAndOffse
     a->env_offset = oF * c + oC;
 }
 
+void acid_set_pitch_mod(acid_t *a, float f) { a->pmod = f; }
+
 void acid_set_cutoff(acid_t *a, float hz)
 {
     a->cutoff = hz;
@@ -163,6 +166,7 @@ void acid_init(acid_t *a)
     a->cutoff = 1000.0f;
     a->normal_decay = 1000.0f;
     a->osc_freq = a->freq = 440.0f;
+    a->pmod = 1.0f;
     a->idle = 1;
     a->env_y = 1.0f;
     a->amp_stage = 2;
@@ -257,7 +261,7 @@ void acid_render(acid_t *a, float *out, int n)
         inst = a->osc_freq + a->slew_e;
         if (inst > 0.0f && inst < 20000.0f)
             a->freq = inst;
-        inc_f = (float)ACID_TAB_N * a->freq / FSO;
+        inc_f = (float)ACID_TAB_N * a->freq * a->pmod / FSO;
         inc = (uint32_t)(inc_f * (float)PHASE_ONE);
         u.f = inc_f;
         tab = ((u.i >> 23) & 255) - 127 + 2;    /* EXPOFDBL + 2: up to nyquist / 4 on the highest note */

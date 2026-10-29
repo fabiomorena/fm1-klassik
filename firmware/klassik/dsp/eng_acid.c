@@ -40,6 +40,7 @@ typedef struct {
     uint8_t ready;                                  /* acid_init done */
     uint8_t note;                                   /* the key it plays (TUNE moves it) */
     uint16_t quiet;                                 /* blocks in a row it was silent */
+    uint8_t lfo_cut, lfo_pitch;                     /* the part's LFO moved the cutoff, the pitch (back when it stops) */
 } acid_voice_t;
 static acid_voice_t acid_v[NPART];
 
@@ -119,6 +120,22 @@ static void acid_note_on(struct track *t, voice_t *v)
     }
 }
 
+/* the part's LFO: FILTER +-2 octaves of CUTOFF, PITCH as the host's (1/256 semitone, as a factor); each block */
+static void acid_lfo(struct track *t, acid_voice_t *d)
+{
+    int part = (int)(t - trk);
+    int32_t c = lfo_lin(part, KL_LFO_FILTER, 1 << 15), p = lfo_pitch(part);
+    if (c || d->lfo_cut) {
+        acid_set_cutoff(&d->a, 314.0f * acid_exp2(2.93065f * (float)d->val[AC_CUTOFF] * (1.0f / 99.0f) +
+                                                   (float)c * (2.0f / 32768.0f)));
+        d->lfo_cut = c != 0;
+    }
+    if (p || d->lfo_pitch) {
+        acid_set_pitch_mod(&d->a, acid_exp2((float)p * (1.0f / 3072.0f)));
+        d->lfo_pitch = p != 0;
+    }
+}
+
 static void acid_render_v(struct track *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
     acid_voice_t *d = acid_voice(t);
@@ -128,6 +145,7 @@ static void acid_render_v(struct track *t, voice_t *v, int32_t *out, uint32_t n,
     if (n > CTL)
         n = CTL;
     acid_sync(t);
+    acid_lfo(t, d);
     if (!v->gate && d->a.note_on)                   /* its key let go */
         acid_release(&d->a);
     acid_render(&d->a, buf, (int)n);

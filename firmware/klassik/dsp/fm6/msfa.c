@@ -16,6 +16,7 @@
  *   - added: fm_note_algorithm, fm_note_done, fm_carrier; the LFO's random state starts at 0
  *   - added: fm_note_retrigger, a sounding voice started again without a step (its operators' phases, gains and
  *     envelope levels kept, and its feedback)
+ *   - added: fm_note_compute's pitch_add, a pitch offset the host's own LFO gives (Q24 an octave, as basepitch)
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License in LICENSE beside this file, or at
  * http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software
@@ -525,9 +526,9 @@ void fm_note_retrigger(fm_note_t *n, const uint8_t patch[FM_PATCH], int midinote
     n->fb_buf[1] = fb1;
 }
 
-void fm_note_compute(fm_note_t *n, int32_t *buf, int32_t lfo_val, int32_t lfo_delay)
+void fm_note_compute(fm_note_t *n, int32_t *buf, int32_t lfo_val, int32_t lfo_delay, int32_t pitch_add)
 {
-    int32_t pitchmod = pitchenv_getsample(&n->pitchenv);
+    int32_t pitchmod = pitchenv_getsample(&n->pitchenv) + pitch_add;
     uint32_t pmd = (uint32_t)n->pitchmoddepth * (uint32_t)lfo_delay;   /* Q32 */
     int32_t senslfo = n->pitchmodsens * (lfo_val - (1 << 23));
     int op;

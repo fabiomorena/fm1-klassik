@@ -436,6 +436,26 @@ fwradar.com/p/m-vave-fm-1/custom-firmware, fm1-editor.com/firmware, wero1414.git
   1/4 = 24); über 22 050 halbiert. Bei 40 BPM: 1/4 = 66 150 → 33 075 → 16 537 (1/16), 1/8. = 49 612 → 24 806 →
   12 403 (1/32.); mehr als zwei Halbierungen kommen bei 40–240 BPM nicht vor.
 
+## LFO: was die Engines annehmen (Stand 29.10.2026, nur Simulator)
+
+Quellen: `engines/src/felucca_engine.h` (`vmod_t`: Tonhöhe, Lautstärke-Rampe, `cutoff`, `shape`, `fine`, MIT),
+`engines/src/eng_analog.c`, `eng_phase.c`, `eng_wheel.c`; KLASSIKs `dsp/eng_fm6.c`, `dsp/fm6/msfa.c`,
+`dsp/eng_acid.c`, `dsp/acid/acid.c`.
+- ANALOG (VA): `m->cutoff` ins Filter, `m->shape` als Pulsbreite (`analog_osc`, `pw`) bzw. bei SUB/SYNC als
+  Tonhöhe von Oszillator 2 (`analog_render_x`); SAW, SQR, TRI, SIN ändern sich mit SHAPE nicht.
+- PHASE (PD): `m->cutoff` und `m->shape` addieren sich beide zur DCW-Tiefe (`phase_loop`): ein Ziel, „DCW“.
+- WHEEL (ORGAN): nur `m->inc` (Tonhöhe) und die Lautstärke; kein Filter, keine Form.
+- FM6 (msfa): nur die Tonhöhe hat einen LFO-Eingang (`pitchmod`), keine Amplitudenmodulation; KLASSIK gibt eine
+  Tonhöhen-Zugabe (Q24 je Oktave) und multipliziert den Block mit einer Rampe.
+- ACID (Open303): keine Modulationseingänge; KLASSIK setzt je Block den Cutoff und einen Frequenzfaktor.
+
+Messung (Simulator, 1/4 bei 120 BPM = 2 Hz, Tiefe 100, gehaltene C4, 25-ms-Fenster; Schwankung = größter / kleinster
+Wert, ohne LFO → mit LFO): VA PITCH Nulldurchgänge 2,1 → 5,2, FILTER Pegel 1,8 → 10,2, AMP Pegel 1,8 → 190, SHAPE
+(SAW) unverändert, SHAPE mit SYNC Helligkeit 1,08 → 1,57; PD DCW Helligkeit 1,05 → 1,95, PITCH Nulldurchgänge
+1,1 → 4,3; ORGAN PITCH 1,3 → 4,6, AMP Pegel 1,4 → 263; FM6 PITCH 1,2 → 4,3, AMP Pegel 2,1 → 921; ACID FILTER
+Nulldurchgänge 4,4 → 12,6, PITCH Periode bis 86 statt 168 Samples (eine Oktave). Helligkeit = Effektivwert der
+ersten Differenz durch den Effektivwert. Nach Gehör noch nicht geprüft.
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

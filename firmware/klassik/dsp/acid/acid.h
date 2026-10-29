@@ -42,6 +42,7 @@ typedef struct {
     int idle;                           /* nothing played yet: the next trigger starts from a clean state */
     float osc_freq, slew_e;             /* the note's frequency, and the slew limiter's distance from it (Hz) */
     float freq;                         /* the oscillator's (BlendOscillator::setFrequency keeps the last good one) */
+    float pmod;                         /* added: its frequency times this (KLASSIK's LFO), 1 none */
     uint32_t phase;                     /* the oscillator's phase, the table index in Q21 */
     float env_y, env_d, env_y0;         /* the main envelope (DecayEnvelope): y, 1 - its coefficient, y at a trigger */
     float rc2;                          /* the accent's RC (rc1 is a wire: its time constant is 0) */
@@ -64,6 +65,7 @@ void acid_set_decay(acid_t *a, float ms);       /* from the next note */
 void acid_set_accent(acid_t *a, float pct);     /* from the next note */
 void acid_set_waveform(acid_t *a, float w);     /* 0 saw .. 1 square */
 void acid_set_slide_time(acid_t *a, float ms);
+void acid_set_pitch_mod(acid_t *a, float f);    /* added: the oscillator's frequency times f (an LFO's), 1 none */
 void acid_set_mode(acid_t *a, int mode);        /* ACID_TB303 (the default) or ACID_LP18 */
 
 void acid_trigger(acid_t *a, float pitch, int accent);  /* a note from silence or after a release (pitch: MIDI) */

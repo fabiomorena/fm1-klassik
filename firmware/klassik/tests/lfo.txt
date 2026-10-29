@@ -1,0 +1,194 @@
+# KLASSIK's LFOs (v0.7) in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/lfo.txt firmware/klassik/build/host
+# At 120 BPM a 1/8 is 250 ms: a turn of the wave; lfoph is its place, 0..255.
+wait 600
+listen
+# LFO opens the chosen part's LFO (part 1 VA): at first SYNC ON, 1/8, DEPTH 0, SIN, DEST PITCH
+expect lfo 0
+tap LFO
+wait 30
+expect lfo 1
+said LFO
+expect lfodepth 0
+expect lfowave 0
+expect lfodest 0
+expect lfosync 1
+expect lforate 8
+expect lfoamt 0
+shot lfo-off.png
+# K2 DEPTH 40, K4 DEST FILTER (VA has all four), K3 WAVE TRI and back
+spin K2 40
+wait 30
+expect lfodepth 40
+expect lfoamt 40
+spin K4 1
+wait 30
+expect lfodest 1
+said DEST FILTER
+spin K3 1
+wait 30
+said WAVE TRI
+spin K3 -1
+wait 30
+expect lfowave 0
+shot lfo.png
+# LFO (or OCT+) the tab MORE: RETRIG KEY, each note starts the wave at 0; half a turn later it is half way
+tap LFO
+wait 30
+said MORE
+spin K2 1
+wait 30
+expect lforetrig 1
+said RETRIG KEY
+key 7 down
+wait 20
+expect lfoph <24
+wait 125
+expect lfoph >100
+expect lfoph <156
+key 7 up
+wait 30
+# FADE 1.0 s: after a note the depth comes in over a second
+spin K3 10
+wait 30
+expect lfofade 10
+shot lfo-more.png
+key 7 down
+wait 30
+expect lfoamt <6
+wait 470
+expect lfoamt >14
+expect lfoamt <26
+wait 600
+expect lfoamt 40
+key 7 up
+wait 30
+# HOME + K1..K3 on MORE: SYNC ON, FREE, no FADE
+press HOME
+wait 30
+spin K2 -1
+wait 30
+spin K3 -1
+wait 30
+release HOME
+wait 30
+expect lforetrig 0
+expect lfofade 0
+# SYNC OFF: RATE in Hz (5 Hz at first); a step to the right 6.3 Hz
+spin K1 -1
+wait 30
+expect lfosync 0
+said SYNC OFF
+tap OCT+
+wait 30
+said LFO
+expect lforate 17
+spin K1 1
+wait 30
+said RATE 6.3 HZ
+press HOME
+wait 30
+spin K1 1
+wait 30
+release HOME
+wait 30
+expect lforate 17
+tap OCT+
+wait 30
+spin K1 1
+wait 30
+expect lfosync 1
+tap OCT+
+wait 30
+# SYNC ON, RETRIG FREE: while the loop plays the wave keeps to its place in the loop (lfoloop: how far from it, in
+# 256ths of a turn). A step on STEP makes a bar; with RETRIG KEY the wave goes its own way
+tap SEQ
+wait 30
+tap SEQ
+wait 30
+key w0 down
+wait 30
+key w0 up
+wait 30
+tap PLAY
+wait 500
+expect lstate 2
+expect lfoloop <3
+wait 333
+expect lfoloop <3
+tap LFO
+wait 30
+tap LFO
+wait 30
+expect tab 2
+spin K2 1
+wait 30
+key 7 down
+wait 40
+key 7 up
+wait 30
+expect lfoloop >3
+spin K2 -1
+wait 30
+tap LFO
+wait 30
+tap SEQ
+wait 30
+tap PLAY
+wait 30
+tap LFO
+wait 30
+expect lfo 1
+# each engine its DESTs: PD's FILTER is DCW; ORGAN PITCH and AMP; DRUMS none (its tile grey, no depth plays)
+spin SELECT 4
+wait 30
+expect part 5
+said PART 5. PD
+spin K2 30
+wait 30
+spin K4 1
+wait 30
+said DEST DCW
+spin K4 1
+wait 30
+expect lfodest 3
+said DEST AMP
+tap SEL
+wait 30
+expect part 6
+spin K2 20
+wait 30
+spin K4 1
+wait 30
+expect lfodest 3
+spin K4 -1
+wait 30
+expect lfodest 0
+spin SELECT -4
+wait 30
+expect part 2
+spin K2 50
+wait 30
+expect lfodepth 50
+expect lfoamt 0
+spin K4 1
+wait 30
+expect lfodest 0
+shot lfo-drums.png
+# OCT- back to the rack; SAVE keeps each part's LFO across a power cycle
+tap OCT-
+wait 30
+expect lfo 0
+tap SAVE
+wait 30
+reboot
+wait 600
+expect part 2
+expect lfodepth 50
+spin SELECT -1
+wait 30
+expect part 1
+expect lfodepth 40
+expect lfodest 1
+expect lfoamt 40
