@@ -1,4 +1,4 @@
-# KLASSIK – Bedienung (v0.7: Parts, Mixer, Looper, Step-Sequencer, Effekte, LFO, ARP)
+# KLASSIK – Bedienung (v0.8: Parts, Mixer, Looper, Step-Sequencer, Effekte, LFO, ARP, Hüllkurven)
 
 ## Parts
 
@@ -245,15 +245,17 @@ in diesem Takt).
 
 ## Edit-Seiten
 
-Jede Engine hat zwei Seiten mit je vier Parametern: FM6 ALGO und ENV, VA OSC und FLT, PD PHS und LINE, ORGAN BARS
-und TONE, DRUMS DRUM und KIT, ACID FILTER und VOICE. In der Mitte steht die Glyphe des Sounds groß; die Namen an den Strahlen der vier
-Parameter auf K1–K4 leuchten in der Farbe der Engine. Bei DRUMS stehen dort stattdessen die Tasten einer Oktave
-(siehe DRUMS).
+Jede Engine hat zwei Seiten mit je vier ihrer acht Parameter: FM6 ALGO und ENV, VA OSC und FLT, PD PHS und LINE, ORGAN
+BARS und TONE, DRUMS DRUM und KIT, ACID FILTER und VOICE. VA, PD und ORGAN haben danach noch **ENV** (die Hüllkurve)
+und **MORE** (ENV > FILTER, VOICE). Meist steht in der Mitte die Glyphe des Sounds groß; die Namen an den Strahlen der
+vier Parameter auf K1–K4 leuchten in der Farbe der Engine. Eigene Bilder haben: VA FLT (die Filterkurve), FM6 ALGO
+(der Algorithmus), ENV und MORE (die Hüllkurve), DRUMS (die Tasten einer Oktave, siehe DRUMS).
 
 | Bedienelement | Was es tut |
 | --- | --- |
 | K1–K4 | die vier Parameter der Seite; Klang und Glyphen ändern sich sofort (bei FM6 einige erst ab der nächsten Note, siehe unten) |
-| EDIT oder OCT+ | die andere Seite |
+| EDIT oder OCT+ | die nächste Seite (VA: OSC, FLT, ENV, MORE, dann wieder OSC) |
+| ENV | die Hüllkurve des gewählten Parts: VA, PD, ORGAN die Seite ENV, noch einmal MORE, noch einmal ENV; FM6 seine Seite ENV; ACID: ENV bleibt der Accent; DRUMS: `NO ENV`. ENV leuchtet auf ENV und MORE |
 | OCT- | zurück zum Rack |
 | HOME + K1–K4 | HOME halten und einen Regler drehen: Er springt auf den Wert seines Sounds zurück (des Presets oder des USER-Sounds) |
 | PRESET | anderen Sound laden (eine ungespeicherte Änderung geht dabei verloren) |
@@ -263,8 +265,30 @@ Ein geänderter, noch nicht gespeicherter Sound hat ein `*` hinter dem Namen, un
 Balken eines Reglers zeigt, wo sein Sound ihn hat; steht jeder Regler wieder dort (mit HOME oder von Hand), sind
 `*` und Marken weg. SAVE macht ihn zum
 USER-Sound seiner Engine und speichert alles über den Neustart hinaus. Jede Engine hat einen USER-Sound für alle
-Parts; ein neuer ersetzt den alten (haben zwei Parts dieselbe Engine geändert, gilt der gewählte Part). Er behält Hüllkurve und MONO des Presets, aus dem er entstanden ist. Wer zwischendurch die Engine
+Parts; ein neuer ersetzt den alten (haben zwei Parts dieselbe Engine geändert, gilt der gewählte Part). Er speichert
+auch Hüllkurve, ENV > FILTER und VOICE (VA, PD, ORGAN); ein USER-Sound aus v0.7 bekommt beim ersten Start die seines
+Presets. Wer zwischendurch die Engine
 wechselt, behält die Änderungen bis zum Ausschalten; ein SAVE speichert die geänderten Sounds aller Engines.
+
+### Hüllkurve: ENV und MORE (VA, PD, ORGAN)
+
+| Seite | Regler | Was er tut |
+| --- | --- | --- |
+| ENV | K1 ATK | Anschwellen bis ganz oben: 0,7 ms … 1,46 s |
+| ENV | K2 DEC | Abklingen bis zum SUS-Pegel, angezeigt die Zeit bis −60 dB: 7 ms … 2,5 s |
+| ENV | K3 SUS | der Pegel, solange die Taste gehalten wird, 0–100 % |
+| ENV | K4 REL | Ausklingen nach dem Loslassen, bis −60 dB: 17 ms … 4,9 s |
+| MORE | K1 ENV>FLT | wie weit die Hüllkurve den Filter öffnet (−64 … 63; negativ: schließt ihn); bei PD heißt er ENV>DCW (die Tiefe der Phasenverzerrung), ORGAN hat keinen Filter (`-`) |
+| MORE | K2 VOICE | POLY (sechs Stimmen) oder MONO (eine Stimme: eine Taste, während eine andere gehalten ist, spielt legato). Beim Umschalten klingt aus, was gerade spielt |
+
+Das Bild auf ENV zeigt die Kurve (Abklingen und Ausklingen gebogen, wie sie klingen), darunter A D S R; ein weißer
+Punkt zeigt, wo die zuletzt gespielte Note gerade ist. Darunter ENV > FILTER und die Glyphe (LIVE). MORE zeigt den
+Cutoff (PD: DCW) über eine Note: gestrichelt der Wert des Reglers CUT, darüber der Anteil der Hüllkurve; darunter
+VOICE. Alle sechs Werte gehören zum Sound: HOME + Regler, `*`, SAVE wie bei den anderen Parametern.
+
+**VA FLT** zeigt die Filterkurve des Tiefpasses (12 dB/Oktave) von 20 Hz bis 20 kHz: gestrichelt der Cutoff, rechts
+oben seine Frequenz (CUT 0–127: 30 Hz … 16 kHz), die Spitze ist RES. Darunter die Hüllkurve klein mit ENV > FILTER,
+DRV, KTR und die Glyphe.
 
 ## FM6
 
@@ -282,6 +306,12 @@ ihr Charakter erhalten bleibt.
 | ENV | DEC 0–99 | Abklingen nach dem Anschlag: 0 schnell, 99 sehr langsam |
 | ENV | SUS 0–99 | der Pegel, solange die Taste gehalten wird; 0: der Ton klingt auch gehalten ganz aus |
 | ENV | REL 0–99 | Ausklingen nach dem Loslassen: 0 sofort, 99 sehr lang |
+
+**ALGO** zeigt den Algorithmus wie auf einem DX7: unten die Träger (gefüllt, man hört sie), über jedem die
+Operatoren, die ihn modulieren (umrandet), Linien dazwischen, die Rückkopplung als Schleife, die Träger zu OUT. Darunter
+der Pegel jedes Operators, wie er spielt (C Träger, M Modulator): MOD verschiebt die der Modulatoren. **ENV** (auch
+über den Taster ENV) zeigt die Hüllkurve der Träger aus ATK, DEC, SUS, REL (als Raten, ohne Zeiten); einen Punkt für
+die laufende Note gibt es bei FM6 nicht.
 
 ALGO und FEEDBK wirken sofort, auch auf gehaltene Töne; die anderen sechs ab der nächsten Note. Die Anschlagdynamik
 steckt in den Presets: Bei E.PIANO, CLAV und MARIMBA klingt ein härterer Anschlag heller, FM ORGAN reagiert nicht

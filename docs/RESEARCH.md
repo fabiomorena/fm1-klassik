@@ -474,6 +474,35 @@ Folge für v0.8: Werden die Hüllkurven einstellbar, brauchen DEC und REL eine f
 Wert, z. B. aus einer Tabelle), sonst ändert sich bei 15 von 16 Reglerschritten nichts. Welche Längen (bis wie viele
 Sekunden) gut klingen, nach Gehör; mit Gerät nachmessen (CONCEPT.md „eigene Hüllkurve verfeinern“).
 
+**Umgesetzt (v0.8, 29.10.2026):** je Block `− ((x >> 9) · k) >> 7` mit k = 2^−s in Q16, s = 1 + DEC/16 (REL:
+2 + REL/16) mit Bruchteil (`ENV_FRAC`: 65536 · 2^(−j/16)); (x >> 9) · k passt in 32 Bit (2^15 · 2^15). Angezeigt
+die Zeit bis −60 dB: ln(1000) / −ln(1 − 2^−s) Blöcke (`ENV_T60`): DEC 7 ms … 2,5 s, REL 17 ms … 4,9 s. Gemessen im
+Simulator (`tests/env.txt`, Probe `envq`): SUS 0, DEC 98 (697 ms): nach 100 / 171 / 250 / 343 ms 38 / 19 / 8 / 3 %
+(erwartet 10^(−3t/697): 37 / 18 / 8,4 / 3,4 %); REL 82 (697 ms) ab 79 %: nach 171 / 343 ms 14 / 2 % (erwartet 14,6 /
+2,7 %).
+
+## Filter von ANALOG (VA): was die Kurve auf FLT zeigt (Stand 29.10.2026, aus dem Code)
+
+- Simpers trapezoidaler State-Variable-Filter, 2-polig, als Tiefpass (12 dB/Oktave): `tsvf_coef_k`, `tsvf_lp` in
+  `engines/src/dsp.c`; KLASSIK setzt den Typ `P_FTYPE` auf 0 (Tiefpass, `load` in `dsp/engines.c`).
+- Cutoff: CUT 0–127 → 30 Hz · (16000 / 30)^(CUT/127), also 30 Hz … 16 kHz (`cutoff_hz` in
+  `engines/tools/gen_engine_tables.py`); dazu ENV > FILTER und der LFO (`m->cutoff`, je 1/256 Schritt) und KTR
+  (Abstand zur Taste C4, `eng_analog.c` Zeile 62).
+- Resonanz: Dämpfung k = (8192 − RES · 7600 / 127) / 4096 = 2,0 … 0,144 (Q = 1/k = 0,5 … 6,9, Spitze +16,8 dB).
+- Die Kurve auf FLT: |H|² = 1 / ((1 − r²)² + (k r)²), r = f / Cutoff (der analoge Prototyp; der trapezoidale Filter
+  weicht nahe der halben Abtastrate ab, die Tabelle begrenzt den Cutoff auf 0,45 · 44 100 Hz). Ohne KTR, ENV und LFO.
+- Geprüft (`tests/edit.txt`, Probe `fc`): CUT 64 → 710 Hz, 0 → 30 Hz, 127 → 16 000 Hz.
+
+## FM6: Algorithmen als Bild (Stand 29.10.2026)
+
+Quelle: `ALGORITHMS[32][6]` in `dsp/fm6/msfa.c` (msfas FmCore-Flags; abgefragt über `fm_algorithm_flags`, nicht in
+die App kopiert, Apache-2.0). Je Operator (FmCore-Reihenfolge: OP6 zuerst) Bits 0–1 der Bus, in den er schreibt (0:
+Ausgang = Träger), Bit 2 addiert, Bits 4–5 der Bus, den er liest (seine Modulatoren: wer zuletzt auf diesem Bus
+stand), Bit 6/7 Feedback in/aus. `kl_fm6_algo` (`dsp/eng_fm6.c`) macht daraus Träger, Modulatoren je Operator und die
+Feedback-Schleife. Alle 32 als Bild mit der DX7-Algorithmentabelle verglichen (Screenshots im Simulator, 29.10.);
+im Test (`tests/fm6.txt`) 5 (drei Paare, FB auf 6), 16 (OP1 unter 2, 3 + 4, 5 + 6), 4 (Feedback 4 → 6), 32 (sechs
+Träger).
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

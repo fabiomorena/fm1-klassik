@@ -20,10 +20,17 @@ expect glyph1 64
 said DTN 32ct
 expect edited 1
 expect dirty 1
-# EDIT again: the second page, FLT, CUT on K1; OCT+ flips the pages too, and leaves the octave
+# EDIT again: the second page, FLT, CUT on K1; OCT+ goes on through the pages too (VA: ENV, MORE, then OSC again),
+# and leaves the octave
 tap EDIT
 wait 30
 expect page 2
+tap OCT+
+wait 30
+expect page 3
+tap OCT+
+wait 30
+expect page 4
 tap OCT+
 wait 30
 expect page 1
@@ -54,10 +61,25 @@ expect v4 64
 expect dsp4 64
 said CUT 50%
 key 7 up
+# FLT's picture (v0.8): the cutoff as ANALOG has it, 30 Hz * (16000 / 30)^(CUT / 127): CUT 64 is 710 Hz, 0 is 30 Hz,
+# 127 is 16 kHz
+expect fc 710
+spin K1 -64
+wait 30
+expect fc 30
+spin K1 127
+wait 30
+expect fc 16000
+spin K1 -63
+wait 30
+expect v4 64
 shot edit-va-2.png
-# ANALOG's WAVE renames a parameter: on SYNC, DTN's knob is SYNC
+# ANALOG's WAVE renames a parameter: on SYNC, DTN's knob is SYNC (EDIT from FLT: ENV, MORE, then OSC)
+tap EDIT
+tap EDIT
 tap EDIT
 wait 30
+expect page 1
 spin K1 5
 wait 30
 said WAVE SYNC

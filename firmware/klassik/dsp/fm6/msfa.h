@@ -62,6 +62,9 @@ int fm_note_done(const fm_note_t *n);
 /* added: fm_note_init for a voice still sounding, going on from where its operators are (no click) */
 void fm_note_retrigger(fm_note_t *n, const uint8_t patch[FM_PATCH], int midinote, int velocity);
 int fm_carrier(int algorithm, int op);  /* op 0..5 as the patch has them (0 = OP6): 1 = it is heard */
+/* added: its flags in FmCore's order (0 = OP6): bits 0-1 the bus it writes (0: the output), bit 2 adds to it, bits 4-5
+ * the bus it reads (0: none), bit 6 feedback in, bit 7 feedback out */
+int fm_algorithm_flags(int algorithm, int op);
 
 /* the LFO: its six parameters (the patch's bytes 137..142), a value 0..1 (Q24) and the delay's 0..1 a block */
 void fm_lfo_reset(fm_lfo_t *l, const uint8_t params[6]);

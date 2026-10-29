@@ -37,6 +37,43 @@ expect edit 1
 expect page 1
 said EDIT ALGO
 shot fm6-edit-1.png
+# ALGO's picture (v0.8) from msfa's buses: E.PIANO's algorithm 5 is three pairs, 2 on 1, 4 on 3, 6 on 5, 6 on itself;
+# each operator's level as it plays: MOD moves the modulators' (E.PIANO: OP2 64, OP4 76, OP6 68) and not the carriers'
+expect fmcar 21
+expect fmmod0 2
+expect fmmod2 8
+expect fmmod4 32
+expect fmfb 102
+expect fmol0 99
+expect fmol1 64
+expect fmol3 76
+spin K3 -40
+wait 30
+expect fmol0 99
+expect fmol1 24
+expect fmol3 36
+expect fmol5 28
+spin K3 40
+wait 30
+expect fmol1 64
+# algorithm 16: OP1 alone heard, under 2, 3 (with 4 on it) and 5 (with 6 on it); 4: feedback from OP4 to OP6; 32: all
+# six heard
+spin K1 11
+wait 30
+expect fmcar 1
+expect fmmod0 22
+expect fmmod2 8
+expect fmmod4 32
+spin K1 -12
+wait 30
+expect fmfb 70
+spin K1 28
+wait 30
+expect fmcar 63
+spin K1 -27
+wait 30
+expect v0 5
+said ALGO 5
 key 7 down
 wait 200
 spin K1 27

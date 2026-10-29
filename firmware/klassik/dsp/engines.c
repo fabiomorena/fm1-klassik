@@ -132,14 +132,25 @@ const char *kl_preset_name(int e, int p)
     return eng_ok(e) && p >= 0 && p < ENG[e]->npresets ? ENG[e]->presets[p].name : "";
 }
 
-void kl_preset_values(int e, int p, int8_t v[8])
+void kl_preset_values(int e, int p, int8_t v[KL_NV])
 {
+    const preset_t *pr = eng_ok(e) && p >= 0 && p < ENG[e]->npresets ? &ENG[e]->presets[p] : 0;
     uint32_t k;
     for (k = 0; k < 8u; k++)
-        v[k] = eng_ok(e) && p >= 0 && p < ENG[e]->npresets ? ENG[e]->presets[p].e[k] : 0;
+        v[k] = pr ? pr->e[k] : 0;
+    for (k = 0; k < 4u; k++)
+        v[KL_ATK + k] = (int8_t)(pr ? clamp(pr->env[k], 0, 127) : 0);
+    v[KL_FENV] = (int8_t)(pr ? clamp(pr->fenv, -64, 63) : 0);
+    v[KL_MONO] = (int8_t)(pr && pr->mono);
 }
 
-const char *kl_page_title(int e, int page) { return eng_ok(e) ? ENG[e]->page_title[page & 1] : ""; }
+int kl_env(int e) { return eng_ok(e) && !ENG[e]->ownenv; }
+int kl_pages(int e) { return kl_env(e) ? 4 : 2; }
+const char *kl_page_title(int e, int page)
+{
+    static const char *const MORE[2] = {"ENV", "MORE"};
+    return !eng_ok(e) ? "" : page >= 2 && kl_env(e) ? MORE[page & 1] : ENG[e]->page_title[page & 1];
+}
 
 const char *kl_drum_name(int kit, int pc) { return drum_name(kit, DR_OF_PC[pc % 12]); }
 int kl_drum_pages(int pc)
@@ -150,13 +161,27 @@ int kl_drum_pages(int pc)
 
 static track_t ask_t;                               /* a sound's values, for an engine's desc hook (it reads p[]) */
 
-void kl_param(int e, int k, const int8_t v[8], kl_param_t *d)
+void kl_param(int e, int k, const int8_t v[KL_NV], kl_param_t *d)
 {
+    static const char *const VOICE[2] = {"POLY", "MONO"};
+    static const kl_param_t ENV_P[KL_NV - 8] = {
+        {"ATK", 0, 0, 0, 127, KL_MS}, {"DEC", 0, 0, 0, 127, KL_MS}, {"SUS", 0, 0, 0, 127, KL_PCT},
+        {"REL", 0, 0, 0, 127, KL_MS}, {"ENV>FLT", 0, 0, -64, 63, KL_INT}, {"VOICE", 0, VOICE, 0, 1, KL_ENUM},
+    };
     const param_desc_t *pd;
     uint32_t i;
-    if (!eng_ok(e) || k < 0 || k > 7) {
+    if (!eng_ok(e) || k < 0 || k >= KL_NV) {
         memset(d, 0, sizeof *d);
         d->label = "";
+        return;
+    }
+    if (k >= 8) {                                   /* the envelope, ENV > FILTER (PD's: to DCW; ORGAN has no
+                                                     * filter), VOICE */
+        *d = ENV_P[k - 8];
+        if (k == KL_FENV && e == KL_PHASE)
+            d->label = "ENV>DCW";
+        else if (k == KL_FENV && e == KL_WHEEL)
+            d->label = "";
         return;
     }
     pd = &ENG[e]->edit[k];
@@ -193,13 +218,13 @@ void kl_shape(int e, const int8_t v[8], uint8_t out[8])
 /* ------------------------------------------------- the main loop asks, the render plays --- */
 typedef struct {                                    /* a part: its sound, as asked for and as it plays */
     volatile int sel_e, sel_p;                      /* asked for */
-    volatile int8_t sel_v[8];
+    volatile int8_t sel_v[KL_NV];
     volatile uint32_t sel_n;                        /* asks so far: the render takes the values when it moves */
     uint8_t loaded;                                 /* cur_e and cur_p play */
     int cur_e, cur_p;                               /* playing */
     uint32_t cur_n;                                 /* the ask whose values play */
-    uint8_t env_set[4];                             /* the preset's ATK DEC SUS REL, 0..127 */
-    int32_t env_fenv;                               /* its ENV -> FILTER, -64..63 */
+    uint8_t env_set[4];                             /* ATK DEC SUS REL, 0..127: the app's (kl_env), else the preset's */
+    int32_t env_fenv;                               /* ENV -> FILTER, -64..63, alike */
     uint8_t mono_mode;
     uint8_t held[8], nheld;                         /* MONO: the keys held, the latest last */
     int32_t last_amp[NVOICE];
@@ -217,16 +242,41 @@ static uint32_t vage;                               /* voice starts so far, all 
  * together may sound KL_BUDGET of them: past it the oldest voice anywhere goes */
 static const uint8_t COST[KL_NENG] = {8, 5, 11, 10, 14, 74};
 
+/* the decay's and release's fall to -60 dB, ms: a block (0.7256 ms) takes 2^-s of what is left, s = 1 + i / 16 (DEC:
+ * i = DEC, REL: i = REL + 16), so ln(1000) / -ln(1 - 2^-s) blocks (RESEARCH.md: Hüllkurve) */
+static const uint16_t ENV_T60[144] = {
+    7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 13, 13,
+    14, 15, 16, 17, 17, 18, 19, 20, 21, 22, 23, 25,
+    26, 27, 28, 30, 31, 33, 34, 36, 38, 39, 41, 43,
+    45, 47, 49, 52, 54, 57, 59, 62, 65, 68, 71, 74,
+    78, 81, 85, 89, 93, 97, 101, 106, 111, 116, 121, 127,
+    132, 138, 145, 151, 158, 165, 172, 180, 188, 197, 205, 215,
+    224, 234, 245, 256, 267, 279, 292, 305, 318, 332, 347, 363,
+    379, 396, 414, 432, 451, 471, 492, 514, 537, 561, 586, 612,
+    639, 667, 697, 728, 760, 794, 830, 866, 905, 945, 987, 1031,
+    1077, 1124, 1174, 1226, 1281, 1337, 1397, 1459, 1523, 1591, 1662, 1735,
+    1812, 1893, 1976, 2064, 2156, 2251, 2351, 2455, 2564, 2677, 2796, 2920,
+    3049, 3185, 3326, 3473, 3627, 3788, 3955, 4131, 4314, 4505, 4704, 4913,
+};
+
+int kl_env_ms(int k, int v)
+{
+    v = clamp(v, 0, 127);
+    if (k == KL_ATK)                                /* 1 + ATK^2 / 8 blocks */
+        return (1 + (v * v >> 3)) * 7256 / 10000;
+    return k == KL_DEC ? ENV_T60[v] : k == KL_REL ? ENV_T60[v + 16] : 0;
+}
+
 static int part_ok(int part) { return part >= 0 && part < NPART; }
 
-void kl_select(int part, int e, int p, const int8_t v[8])
+void kl_select(int part, int e, int p, const int8_t v[KL_NV])
 {
     part_t *q;
     uint32_t k;
     if (!part_ok(part))
         return;
     q = &prt[part];
-    for (k = 0; k < 8u; k++)
+    for (k = 0; k < (uint32_t)KL_NV; k++)
         q->sel_v[k] = v[k];
     q->sel_e = eng_ok(e) ? e : KL_ANALOG;
     q->sel_p = p;
@@ -310,6 +360,24 @@ static void ensure_loaded(int part)
         load(part, e, p);
     for (k = 0; k < 8u; k++)
         trk[part].p[P_E0 + k] = (int16_t)clamp(q->sel_v[k], ENG[q->cur_e]->edit[k].min, ENG[q->cur_e]->edit[k].max);
+    if (kl_env(q->cur_e)) {                         /* the app's envelope, ENV > FILTER and VOICE */
+        int mono = q->sel_v[KL_MONO] != 0;
+        for (k = 0; k < 4u; k++)
+            q->env_set[k] = (uint8_t)clamp(q->sel_v[KL_ATK + k], 0, 127);
+        q->env_fenv = clamp(q->sel_v[KL_FENV], -64, 63);
+        trk[part].p[P_ATK] = q->env_set[0];
+        trk[part].p[P_REL] = q->env_set[3];
+        if (mono != q->mono_mode) {                 /* POLY <-> MONO: what sounds is let go (MONO looks at voice 0
+                                                     * only: a POLY voice would hang) */
+            for (k = 0; k < NVOICE; k++)
+                if (trk[part].v[k].active && trk[part].v[k].gate) {
+                    trk[part].v[k].gate = 0;
+                    trk[part].v[k].stage = 3;
+                }
+            q->nheld = 0;
+            q->mono_mode = (uint8_t)mono;
+        }
+    }
     q->cur_n = n;
 }
 
@@ -443,8 +511,14 @@ void kl_key_now(int part, int on, int note, int vel)
         voice_stop(part, note);
 }
 
-/* a plain ADSR, once per engine block (32 samples, 0.73 ms): attack up to ~1.5 s, decay toward the sustain
- * level, release by a fraction a block (ATK, DEC, SUS, REL of the preset, 0..127). Returns Q15. */
+/* the share of what is left a block takes, Q16: 2^-(1 + i / 16) (DEC: i = DEC; REL: i = REL + 16) */
+static const uint32_t ENV_FRAC[16] = {65536, 62757, 60097, 57549, 55109, 52773, 50535, 48393, 46341, 44376, 42495,
+                                      40693, 38968, 37316, 35734, 34219};   /* 65536 * 2^(-j / 16) */
+static int32_t env_k(int i) { return (int32_t)(ENV_FRAC[i & 15] >> (1 + (i >> 4))); }   /* 66 .. 32768 */
+
+/* a plain ADSR, once per engine block (32 samples, 0.73 ms): attack up to ~1.5 s, decay toward the sustain level
+ * and release by a share a block (fine: kl_env_ms), ATK, DEC, SUS, REL 0..127. 32 bits: (x >> 9) * k fits (2^15 *
+ * 2^15). Returns Q15. */
 static int32_t env_tick(const uint8_t env_set[4], voice_t *v)
 {
     int32_t sus = (int32_t)env_set[2] << 17;
@@ -459,10 +533,10 @@ static int32_t env_tick(const uint8_t env_set[4], voice_t *v)
         break;
     }
     case 2:
-        v->env -= (v->env - sus) >> (1 + env_set[1] / 16);
+        v->env -= ((v->env - sus) >> 9) * env_k(env_set[1]) >> 7;
         break;
     case 3:
-        v->env -= v->env >> (2 + env_set[3] / 16);
+        v->env -= (v->env >> 9) * env_k(env_set[3] + 16) >> 7;
         if (v->env < (1 << 24) / 2000) {
             v->env = 0;
             v->stage = 0;
@@ -586,6 +660,22 @@ int kl_cost_now(void)
 
 int kl_value_now(int part, int k) { return part_ok(part) && k >= 0 && k < 8 ? trk[part].p[P_E0 + k] : 0; }
 int kl_note_now(int part) { return part_ok(part) && trk[part].v[0].active ? trk[part].v[0].note : -1; }
+
+int kl_env_now(int part, int *stage)
+{
+    const voice_t *n = 0;
+    uint32_t k;
+    *stage = 0;
+    if (!part_ok(part))
+        return 0;
+    for (k = 0; k < NVOICE; k++)
+        if (trk[part].v[k].active && (!n || trk[part].v[k].age > n->age))
+            n = &trk[part].v[k];
+    if (!n)
+        return 0;
+    *stage = n->stage;
+    return ENG[prt[part].cur_e]->ownenv ? -1 : n->env >> 9;
+}
 
 uint32_t kl_lfo_dests(int e)
 {

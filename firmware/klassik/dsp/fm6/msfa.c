@@ -17,6 +17,7 @@
  *   - added: fm_note_retrigger, a sounding voice started again without a step (its operators' phases, gains and
  *     envelope levels kept, and its feedback)
  *   - added: fm_note_compute's pitch_add, a pitch offset the host's own LFO gives (Q24 an octave, as basepitch)
+ *   - added: fm_algorithm_flags, an algorithm's bus flags as FmCore has them (the host draws the algorithm)
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License in LICENSE beside this file, or at
  * http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software
@@ -358,6 +359,7 @@ static const uint8_t ALGORITHMS[32][6] = {
 };
 
 int fm_carrier(int algorithm, int op) { return (ALGORITHMS[algorithm & 31][op % 6] & 3) == 0; }
+int fm_algorithm_flags(int algorithm, int op) { return ALGORITHMS[algorithm & 31][op % 6]; }
 
 static int32_t bus[2][FM_N];                        /* FmCore's buses: one voice at a time uses them */
 

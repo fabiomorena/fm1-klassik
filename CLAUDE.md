@@ -72,7 +72,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (`base/bsp/docs/CPU.md`). Stattdessen 32 Bit mit Rechenweg, oder eine `noinline`-Hilfsfunktion. Kein `double`.
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
-## Klang (Stand v0.7)
+## Klang (Stand v0.8)
 - Parts: sechs gleichzeitig (am Anfang VA, DRUMS, ACID, FM6, PD, ORGAN: `PART_ENGINE`; das Rack (`TILES`) seit 29.10. in
   derselben Reihenfolge, Part 1–6 von links oben nach rechts unten; K1 wählt die Engines in dieser Reihenfolge), SEL (Taster) oder SELECT
   (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem gewählten (`set.part`, `part_cur()`, `eng_cur()` in
@@ -96,6 +96,13 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   reihen sich ein); der erste Schritt wartet `ARP_GATHER` (14,5 ms) auf den Akkord. REC
   nimmt die Arp-Noten auf ihren Ticks auf (`lp_record_at`, ohne QUANT); USB-MIDI-Out auf dem Kanal des Parts.
   Felder in `mod_set_t` (`KLSA`).
+- Edit-Seiten (v0.8): ein Sound hat `KL_NV` = 14 Werte (die acht Parameter, dann `KL_ATK`, `KL_DEC`, `KL_SUS`,
+  `KL_REL`, `KL_FENV`, `KL_MONO`; `work`/`orig`/`user_t.v`); VA, PD, ORGAN (`kl_env`) haben vier Seiten (`kl_pages`:
+  …, ENV, MORE), die anderen zwei. Taster ENV: `env_show` (ACID bleibt Accent, DRUMS `NO ENV`). DSP: `env_tick` mit
+  stufenloser DEC/REL (`env_k`, `ENV_FRAC`), Zeiten bis −60 dB `ENV_T60`/`kl_env_ms`; VOICE-Wechsel lässt los, was
+  klingt (`ensure_loaded`). Bilder: `draw_env`, `draw_more`, `draw_flt` (VA, 2-poliger SVF), `draw_algo` (FM6,
+  `kl_fm6_algo` aus msfas Bus-Flags `fm_algorithm_flags`, `kl_fm6_levels`). Speicherformat `KLSB` (KLSA … KLS7 über
+  `user_from8`).
 - Effekte (FX; FX/OCT+ wechselt DELAY/HALL; `set.fx[2][4]`, `fx_*` in `app.c`, `dsp/fx.c`): Send-Effekte, die Sends
   mono summiert, die Rückwege stereo vor dem Limiter. DELAY Ping-Pong (erstes Echo links), höchstens 0,5 s je Seite
   (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
@@ -166,7 +173,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | erledigt (Simulator) |
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts; dazu Step-Cursor, DOUBLE/HALF | erledigt (Simulator; Emulator-Protokolle 29.10.) |
 | v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | erledigt (Simulator) |
-| v0.8 | Edit-Seiten nach den Mockups 02 `Edit-VA` und 03 `Edit-FM6` (mehr Seiten je Engine: Hüllkurve, LFO, Filterkurve, Algorithmus-Grafik) | offen |
+| v0.8 | Edit-Seiten nach den Mockups 34–36 (aus 02 `Edit-VA`, 03 `Edit-FM6`): Hüllkurve ENV und MORE (Taster ENV), VA-Filterkurve, FM6-Algorithmus | erledigt (Simulator) |
 | v0.9 | Preset-Liste und Glyphen-Browser (früher v0.4, dann v0.7) | offen |
 | v1.0 | Klang-Atlas, Klang-Stammbaum (früher v0.6, dann v0.8) | offen |
 | danach | Sequencer-Extras aus Mockup 05 (CHANCE, RATCH, Patterns, SONG), Drive und Chorus | offen |

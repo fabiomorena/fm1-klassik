@@ -234,6 +234,44 @@ static void fm6_render(struct track *t, voice_t *v, int32_t *out, uint32_t n, co
 
 static int fm6_done(struct track *t, voice_t *v) { return fm_note_done(fm6_voice(t, v)); }
 
+/* the app's picture of FM6 (klassik_dsp.h): algorithm a (0..31) from msfa's buses, each operator's modulators (bit
+ * j: OP j + 1), the carriers as the result, the feedback loop as from << 4 | to (OP numbers) */
+uint32_t kl_fm6_algo(int a, uint8_t mods[6], int *fb)
+{
+    uint32_t car = 0;
+    uint8_t in[3] = {0, 0, 0};                      /* who is on each bus so far (bus 0: the output) */
+    int i, from = 0, to = 0;
+    for (i = 0; i < 6; i++)
+        mods[i] = 0;
+    for (i = 0; i < 6; i++) {                       /* FmCore's order: OP6 first */
+        int op = 5 - i, f = fm_algorithm_flags(a, i), ib = f >> 4 & 3, ob = f & 3;
+        if (ib)
+            mods[op] = in[ib];
+        if (f & 0x80)
+            from = op + 1;
+        if (f & 0x40)
+            to = op + 1;
+        if (!ob)
+            car |= 1u << op;
+        else
+            in[ob] = (uint8_t)((f & 4 ? in[ob] : 0) | 1u << op);
+    }
+    *fb = from << 4 | to;
+    return car;
+}
+
+void kl_fm6_levels(int p, const int8_t v[8], uint8_t ol[6])   /* each operator's output level as fm6_make plays it */
+{
+    int32_t alg, d_mod, k;
+    p = clamp(p, 0, (int32_t)NELEM(FM6_VOICE) - 1);
+    alg = clamp(v[FM_ALGO], 1, 32) - 1;
+    d_mod = v[FM_MOD] - FM6_PRESETS[p].e[FM_MOD];
+    for (k = 0; k < 6; k++) {
+        const fm6_op_t *o = &FM6_VOICE[p].op[k];
+        ol[k] = (uint8_t)(fm_carrier((int)alg, 5 - (int)k) ? o->ol : fm6_clamp99(o->ol + d_mod));
+    }
+}
+
 static const engine_t ENG_FM6 = {
     .name = "FM6",
     .page_title = {"ALGO", "ENV"},

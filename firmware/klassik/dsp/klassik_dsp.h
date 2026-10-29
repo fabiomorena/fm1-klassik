@@ -3,13 +3,18 @@
 /* KLASSIK's sound, as the app sees it (dsp/engines.c, compiled apart at -O2): six parts, each its own sound. The
  * main loop asks (kl_select, kl_key); the audio interrupt plays (kl_render, and kl_key_now for MIDI that arrives
  * there).
- * A sound is an engine, a preset (its envelope, filter envelope and MONO) and eight parameters (EDIT 1, EDIT 2):
- * the preset's own values, or the app's (an edited sound, a USER sound). */
+ * A sound is an engine, a preset and KL_NV values: eight parameters (EDIT 1, EDIT 2), then the envelope (ATK, DEC,
+ * SUS, REL), ENV > FILTER and VOICE (POLY, MONO): the preset's own values, or the app's (an edited sound, a USER
+ * sound). VA's, PD's and ORGAN's envelope, ENV > FILTER and VOICE are the app's to set (kl_env); FM6, DRUMS and ACID
+ * have envelopes of their own and play as their preset has them. */
 #pragma once
 #include <stdint.h>
 
 enum { KL_ANALOG, KL_PHASE, KL_WHEEL, KL_FM6, KL_DRUMS, KL_ACID, KL_NENG };
-enum { KL_INT, KL_PCT, KL_ENUM };           /* how a parameter's value reads */
+enum { KL_INT, KL_PCT, KL_ENUM, KL_MS };   /* how a parameter's value reads (KL_MS: a time, kl_env_ms) */
+#define KL_NV 14                            /* a sound's values */
+enum { KL_ATK = 8, KL_DEC, KL_SUS, KL_REL, KL_FENV, KL_MONO };   /* after the eight parameters: 0..127 each, ENV >
+                                                                 * FILTER -64..63, VOICE 0 POLY, 1 MONO */
 #define KL_NPART 6                          /* parts, each its own sound (MIDI channels 1..6) */
 #define KL_BUDGET 240                       /* what all parts may sound at once, in tenths of an FM6 voice (engines.c
                                              * COST; an estimate until measured on an FM-1) */
@@ -26,16 +31,24 @@ const char *kl_engine_name(int e);          /* the engine's own name: "ANALOG", 
                                              * "ACID" */
 int kl_presets(int e);
 const char *kl_preset_name(int e, int p);
-void kl_preset_values(int e, int p, int8_t v[8]);   /* the preset's eight parameters */
-const char *kl_page_title(int e, int page);  /* EDIT 1 (page 0) and EDIT 2 (page 1): "OSC", "FLT" */
-void kl_param(int e, int k, const int8_t v[8], kl_param_t *d);   /* parameter k of a sound with the values v (its
-                                                                   * name may depend on another: ANALOG's WAVE) */
+void kl_preset_values(int e, int p, int8_t v[KL_NV]);   /* the preset's values */
+int kl_env(int e);                          /* 1: its envelope, ENV > FILTER and VOICE are the sound's to set (VA, PD,
+                                             * ORGAN) */
+int kl_pages(int e);                        /* its edit pages: EDIT 1, EDIT 2, and with kl_env ENV and MORE */
+const char *kl_page_title(int e, int page);  /* "OSC", "FLT", "ENV", "MORE" */
+void kl_param(int e, int k, const int8_t v[KL_NV], kl_param_t *d);   /* value k (0..KL_NV-1) of a sound with the
+                                                                       * values v (a name may depend on another:
+                                                                       * ANALOG's WAVE); label "": none to set (ORGAN's
+                                                                       * ENV > FILTER) */
+int kl_env_ms(int k, int v);                /* KL_ATK, KL_DEC, KL_REL at v as a time, ms: the attack's rise, the decay's
+                                             * and release's fall to -60 dB */
 void kl_shape(int e, const int8_t v[8], uint8_t out[8]);   /* each value as 0..255 of its range (the glyph) */
 const char *kl_drum_name(int kit, int pc);  /* DRUMS: the instrument on a key in a kit (pc: its note's semitone,
                                              * C = 0): "BD"; G# is the kit's own */
 int kl_drum_pages(int pc);                  /* the edit pages whose knobs change it: bit 0 EDIT 1, bit 1 EDIT 2 */
 
-void kl_select(int part, int e, int p, const int8_t v[8]);   /* main loop: a part's sound to play, from the next block */
+void kl_select(int part, int e, int p, const int8_t v[KL_NV]);   /* main loop: a part's sound to play, from the next
+                                                                 * block (VOICE changed: what sounds is let go) */
 void kl_key(int part, int on, int note, int vel);   /* main loop: a note on (vel 1..127; ACID: 100 or more accents)
                                                      * or off, queued */
 void kl_key_now(int part, int on, int note, int vel);   /* the audio interrupt's own (MIDI in) */
@@ -48,6 +61,13 @@ uint32_t kl_hits(int part, int *note);      /* a part's notes started so far (ke
 int kl_value_now(int part, int k);          /* parameter k as the render plays it (the host's checks) */
 int kl_note_now(int part);                  /* a part's first voice's note (a MONO sound's), -1 silent (the host's
                                              * checks) */
+int kl_env_now(int part, int *stage);       /* the part's newest voice: its envelope, Q15 (an engine of its own: -1),
+                                             * and *stage 1 attack, 2 decay and sustain, 3 release, 0 none */
+uint32_t kl_fm6_algo(int a, uint8_t mods[6], int *fb);   /* FM6's algorithm a (0..31): the carriers (bit i: OP i +
+                                             * 1), each operator's modulators (mods[i], the same bits), the feedback
+                                             * loop from OP (*fb >> 4) to OP (*fb & 15) */
+void kl_fm6_levels(int p, const int8_t v[8], uint8_t ol[6]);   /* FM6's preset p played with the values v: each
+                                             * operator's output level, 0..99 (OP1 first) */
 
 /* each part's LFO (dsp/engines.c): a wave a block (32 samples), to one destination of the part's sound. PITCH up to
  * +-12 semitones at DEPTH 100 (DEPTH squared: 10 gives +-12 cents), FILTER and SHAPE +-64 of their 128 steps (ACID's

@@ -1,16 +1,19 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0.7 (parts, mixer, looper, step sequencer, effects, LFOs, arpeggiators): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
+/* KLASSIK v0.8 (parts, mixer, looper, step sequencer, effects, LFOs, arpeggiators, envelopes): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
  * Felucca-Engines (ANALOG, PHASE, WHEEL), DRUMS (four kits on Plaits' drum models) and ACID (Open303's TB-303), on
  * six parts that play at once, each its own sound and octave: SEL, or SELECT turned, goes to the next part (SELECT
  * to the left: the one before), and the keys, K1 (the engine, in the rack's order), PRESET (its sound), OCT- / OCT+
  * (its octave) and EDIT are the chosen part's; MIDI
  * channel 1..6 plays part 1..6 (others the chosen part), the keys send on their part's channel. On ACID a key
- * pressed while ENV is held is accented (ACC in the header). EDIT opens the engine's two pages of four parameters
- * on K1..K4 (EDIT or OCT+ the other page, OCT- back to the rack); an edit plays at once (FM6's MOD, DTUN, ATK, DEC,
- * SUS and REL and ACID's DECAY and ACCENT from the next note). HOME held, a knob turned goes back to its sound's
- * value (the preset's, or the USER sound's), marked on its bar while it is elsewhere.
+ * pressed while ENV is held is accented (ACC in the header). EDIT opens the engine's pages of four values on K1..K4
+ * (EDIT or OCT+ the next page, OCT- back to the rack): two of its eight parameters; VA, PD and ORGAN then ENV (ATK,
+ * DEC, SUS, REL, as times) and MORE (ENV > FILTER, VOICE POLY / MONO), which ENV opens too (FM6: its ENV page; DRUMS
+ * has none). VA's FLT shows the filter's response, FM6's ALGO the algorithm and the operators' levels, ENV and MORE the
+ * envelope; the other pages the glyph large. An edit plays at once (FM6's MOD, DTUN, ATK, DEC, SUS and REL and ACID's
+ * DECAY and ACCENT from the next note). HOME held, a knob turned goes back to its sound's value (the preset's, or the
+ * USER sound's), marked on its bar while it is elsewhere.
  * SAVE keeps the parts (the one chosen, each one's engine, sounds and octave) across a power cycle, an edited sound
  * as its engine's USER sound (every part's).
  * GLO opens the mixer: a strip a part, three a page (the chosen part's: 1-3 or 4-6; LEVEL, PAN, MUTE, SOLO on K1..K4
@@ -83,21 +86,27 @@ static int engine_at(int pos)                        /* the engine at that place
 }
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5341u                        /* "KLSA": each part's LFO and arpeggiator. The six parts' KLS9 is
-                                                     * taken over (the LFOs and arps as at first), so are the effects'
-                                                     * KLS8 and the mixer's KLS7 (four parts; KLS7 without sends),
-                                                     * parts 5 and 6 as at first; another magic (the parts' KLS6, v0.3's KLS5,
-                                                     * DRUMS' KLS4, v0.2's KLS3, v0.1's KLS2, v0's KLS1) loads
-                                                     * defaults */
+#define SET_MAGIC 0x4B4C5342u                        /* "KLSB": a USER sound's envelope, ENV > FILTER and VOICE. The LFOs'
+                                                     * KLSA and the six parts' KLS9 are taken over (their USER sounds
+                                                     * with their preset's envelope; KLS9's LFOs and arps as at first),
+                                                     * so are the effects' KLS8 and the mixer's KLS7 (four parts; KLS7
+                                                     * without sends), parts 5 and 6 as at first; another magic (the
+                                                     * parts' KLS6, v0.3's KLS5, DRUMS' KLS4, v0.2's KLS3, v0.1's KLS2,
+                                                     * v0's KLS1) loads defaults */
+#define SET_MAGICA 0x4B4C5341u
 #define SET_MAGIC9 0x4B4C5339u
 #define SET_MAGIC8 0x4B4C5338u
 #define SET_MAGIC7 0x4B4C5337u
 #define OLD_NPART 4                                  /* KLS7's and KLS8's parts */
 typedef struct {
-    int8_t v[8];                                     /* the eight parameters */
-    uint8_t base;                                    /* the preset it was made from: its envelopes and MONO */
+    int8_t v[KL_NV];                                 /* the eight parameters, the envelope, ENV > FILTER, VOICE */
+    uint8_t base;                                    /* the preset it was made from (FM6's voice, DRUMS' kit) */
     uint8_t saved;                                   /* 1 = there is one */
 } user_t;
+typedef struct {                                     /* KLSA's and before: the eight parameters (the rest the base's) */
+    int8_t v[8];
+    uint8_t base, saved;
+} user8_t;
 typedef struct {
     uint8_t engine;                                  /* KL_* */
     uint8_t preset[KL_NENG];                         /* each engine's last sound on the part; kl_presets(e) is its
@@ -129,18 +138,26 @@ typedef struct {
     mod_set_t mod[KL_NPART];                         /* each part's LFO and arpeggiator */
 } settings_t;
 _Static_assert(sizeof(settings_t) <= PLAT_STORE_MAX, "the settings are one store object");
+typedef struct {                                     /* KLSA's: the USER sounds' eight parameters */
+    uint32_t magic;
+    uint8_t part, rsv[3];
+    part_set_t parts[KL_NPART];
+    user8_t user[KL_NENG];
+    int8_t fx[2][4];
+    mod_set_t mod[KL_NPART];
+} settingsA_t;
 typedef struct {                                     /* KLS9's: the same before the LFOs */
     uint32_t magic;
     uint8_t part, rsv[3];
     part_set_t parts[KL_NPART];
-    user_t user[KL_NENG];
+    user8_t user[KL_NENG];
     int8_t fx[2][4];
 } settings9_t;
 typedef struct {                                     /* KLS8's: four parts */
     uint32_t magic;
     uint8_t part, rsv[3];
     part_set_t parts[OLD_NPART];
-    user_t user[KL_NENG];
+    user8_t user[KL_NENG];
     int8_t fx[2][4];
 } settings8_t;
 typedef struct {                                     /* KLS7's, without the sends */
@@ -152,11 +169,11 @@ typedef struct {
     uint32_t magic;
     uint8_t part, rsv[3];
     part_set7_t parts[OLD_NPART];
-    user_t user[KL_NENG];
+    user8_t user[KL_NENG];
 } settings7_t;
-_Static_assert(sizeof(settings7_t) != sizeof(settings_t) && sizeof(settings8_t) != sizeof(settings_t) &&
-               sizeof(settings7_t) != sizeof(settings8_t) && sizeof(settings9_t) != sizeof(settings_t),
-               "KLS7, KLS8 and KLS9 tell themselves by their sizes");
+_Static_assert(sizeof(settings7_t) < sizeof(settings8_t) && sizeof(settings8_t) < sizeof(settings9_t) &&
+               sizeof(settings9_t) < sizeof(settingsA_t) && sizeof(settingsA_t) < sizeof(settings_t),
+               "KLS7, KLS8, KLS9 and KLSA tell themselves by their sizes (each fits where the store loads them)");
 static settings_t set, set_kept;                     /* as it is, and as the store has it (or the defaults at boot) */
 static uint8_t set_dirty;
 static const uint8_t PART_ENGINE[KL_NPART] = {KL_ANALOG, KL_DRUMS, KL_ACID, KL_FM6, KL_PHASE, KL_WHEEL};   /* the
@@ -169,7 +186,7 @@ static const int8_t FX_DEF[2][4] = {{7, 35, 70, 0}, {20, 50, 60, 0}};   /* 1/8.,
 
 /* each part's sound of each engine as it plays: its preset's values or its USER sound's (orig), and whether EDIT has
  * any of them elsewhere (not saved) */
-static int8_t work[KL_NPART][KL_NENG][8], orig[KL_NPART][KL_NENG][8];
+static int8_t work[KL_NPART][KL_NENG][KL_NV], orig[KL_NPART][KL_NENG][KL_NV];
 static uint8_t edited[KL_NPART][KL_NENG];
 
 static part_set_t *part_cur(void) { return &set.parts[set.part]; }
@@ -214,11 +231,11 @@ static void settings_defaults(void)
         mod_defaults(&set.mod[i]);
 }
 
-static int values_ok(int e, const int8_t v[8])
+static int values_ok(int e, const int8_t v[KL_NV])
 {
     kl_param_t d;
     int k;
-    for (k = 0; k < 8; k++) {
+    for (k = 0; k < KL_NV; k++) {
         kl_param(e, k, v, &d);
         if (v[k] < d.min || v[k] > d.max)
             return 0;
@@ -259,35 +276,45 @@ static int settings_ok(void)
     return 1;
 }
 
-static void settings_load(void)                      /* the store's, KLS9's, KLS8's or KLS7's taken over, or the
-                                                     * defaults */
+/* an older format's USER sound: its eight parameters, the rest (envelope, ENV > FILTER, VOICE) as its preset has them */
+static void user_from8(user_t *u, const user8_t *o, int e)
+{
+    uint32_t k;
+    kl_preset_values(e, o->base, u->v);
+    for (k = 0; k < 8u; k++)
+        u->v[k] = o->v[k];
+    u->base = o->base;
+    u->saved = o->saved;
+}
+
+static void settings_load(void)                      /* the store's, KLSA's, KLS9's, KLS8's or KLS7's taken over, or
+                                                     * the defaults */
 {
     int n = plat_store_load(OBJ_SETTINGS, &set, sizeof set);
-    int v8 = n == (int)sizeof(settings8_t) && set.magic == SET_MAGIC8;
-    if (n == (int)sizeof(settings9_t) && set.magic == SET_MAGIC9) {   /* the same before the LFOs: as at first */
-        uint32_t i;
-        for (i = 0; i < KL_NPART; i++)
-            mod_defaults(&set.mod[i]);
-        set.magic = SET_MAGIC;
-        n = (int)sizeof set;
-    }
-    if (v8 || (n == (int)sizeof(settings7_t) && set.magic == SET_MAGIC7)) {   /* four parts: 5 and 6 as at first */
+    uint32_t magic = set.magic;
+    int va = n == (int)sizeof(settingsA_t) && magic == SET_MAGICA, v9 = n == (int)sizeof(settings9_t) && magic == SET_MAGIC9;
+    int v8 = n == (int)sizeof(settings8_t) && magic == SET_MAGIC8, v7 = n == (int)sizeof(settings7_t) && magic == SET_MAGIC7;
+    if (va || v9 || v8 || v7) {
         union {
-            settings8_t s8;                          /* v0.6's effects */
+            settingsA_t sa;                          /* v0.7's LFOs and arps */
+            settings9_t s9;                          /* v0.6's six parts */
+            settings8_t s8;                          /* v0.6's effects, four parts */
             settings7_t s7;                          /* v0.5's mixer, no sends */
         } old;
-        uint32_t i, e;
+        uint32_t i, e, np = va || v9 ? KL_NPART : OLD_NPART;
         const uint8_t *src = (const uint8_t *)&set;
+        const user8_t *u8 = va ? old.sa.user : v9 ? old.s9.user : v8 ? old.s8.user : old.s7.user;
+        const int8_t(*fx)[4] = va ? old.sa.fx : v9 ? old.s9.fx : v8 ? old.s8.fx : 0;
         uint8_t *d = (uint8_t *)&old;
         for (i = 0; i < (uint32_t)n; i++)
             d[i] = src[i];
-        settings_defaults();
-        set.part = v8 ? old.s8.part : old.s7.part;
-        for (i = 0; i < OLD_NPART; i++) {
+        settings_defaults();                         /* what the old one has not: as at first */
+        set.part = old.s7.part;                      /* each format's first fields */
+        for (i = 0; i < np; i++) {
             part_set_t *ps = &set.parts[i];
             const part_set7_t *o = &old.s7.parts[i];
-            if (v8) {
-                *ps = old.s8.parts[i];
+            if (!v7) {
+                *ps = va ? old.sa.parts[i] : v9 ? old.s9.parts[i] : old.s8.parts[i];
                 continue;
             }
             ps->engine = o->engine;
@@ -300,9 +327,11 @@ static void settings_load(void)                      /* the store's, KLS9's, KLS
             ps->solo = o->solo;
         }
         for (e = 0; e < KL_NENG; e++)
-            set.user[e] = v8 ? old.s8.user[e] : old.s7.user[e];
-        for (i = 0; v8 && i < 8u; i++)
-            set.fx[i / 4u][i % 4u] = old.s8.fx[i / 4u][i % 4u];
+            user_from8(&set.user[e], &u8[e], (int)e);
+        for (i = 0; fx && i < 8u; i++)
+            set.fx[i / 4u][i % 4u] = fx[i / 4u][i % 4u];
+        for (i = 0; va && i < KL_NPART; i++)
+            set.mod[i] = old.sa.mod[i];
         n = (int)sizeof set;
     }
     if (n != (int)sizeof set || !settings_ok())
@@ -319,11 +348,11 @@ static void sound_load(int p, int e)                 /* a part's sound of an eng
 {
     uint32_t k;
     if (is_user(p, e))
-        for (k = 0; k < 8u; k++)
+        for (k = 0; k < (uint32_t)KL_NV; k++)
             work[p][e][k] = set.user[e].v[k];
     else
         kl_preset_values(e, set.parts[p].preset[e], work[p][e]);
-    for (k = 0; k < 8u; k++)
+    for (k = 0; k < (uint32_t)KL_NV; k++)
         orig[p][e][k] = work[p][e][k];
     edited[p][e] = 0;
 }
@@ -332,7 +361,7 @@ static void edited_update(int p, int e)              /* edited while a value is 
 {
     uint32_t k;
     edited[p][e] = 0;
-    for (k = 0; k < 8u; k++)
+    for (k = 0; k < (uint32_t)KL_NV; k++)
         edited[p][e] |= work[p][e][k] != orig[p][e][k];
 }
 
@@ -1683,6 +1712,7 @@ static struct {
                                                      * the notes it held, as last drawn */
     uint32_t karp, arp_steps;                        /* the keys that went down to their part's arp; its steps, as
                                                      * last drawn */
+    uint8_t env_stage;                               /* ENV: the latest note's stage, as last drawn */
     uint8_t tab, bar, turned;                        /* the tab of the page open: the looper's LOOP (0) or STEP (1),
                                                      * the mixer's MIX or SEND, the effects' DELAY or HALL; STEP's bar
                                                      * shown; a knob turned while a step was held */
@@ -1760,13 +1790,35 @@ static void sound_title(int p, int e, char *t)       /* its name, with "*" while
         text_cat(t, "*");
 }
 
-/* a parameter's value as the screen shows it: "SAW", "50%", "+2", "10ct" */
-static void value_text(const kl_param_t *d, int32_t v, char *b)
+static void ms_text(int32_t ms, char *b)             /* "2 MS", "120 MS", "1.2 S", "4.9 S" onto b */
+{
+    char t[8];
+    if (ms < 1000) {
+        int_text(ms, t);
+        text_cat(b, t);
+        text_cat(b, " MS");
+        return;
+    }
+    ms = (ms + 50) / 100;
+    int_text(ms / 10, t);
+    text_cat(b, t);
+    text_cat(b, ".");
+    int_text(ms % 10, t);
+    text_cat(b, t);
+    text_cat(b, " S");
+}
+
+/* value k of a sound as the screen shows it: "SAW", "50%", "+2", "10ct", "120 MS"; "-" none to set */
+static void value_text(const kl_param_t *d, int32_t k, int32_t v, char *b)
 {
     int32_t span = d->max - d->min;
     char t[12];
     b[0] = 0;
-    if (d->fmt == KL_ENUM) {
+    if (!d->label[0]) {
+        text_cat(b, "-");
+    } else if (d->fmt == KL_MS) {
+        ms_text(kl_env_ms((int)k, (int)v), b);
+    } else if (d->fmt == KL_ENUM) {
         text_cat(b, d->names[clamp(v, d->min, d->max) - d->min]);
     } else if (d->fmt == KL_PCT) {
         int_text(span > 0 ? ((v - d->min) * 100 + span / 2) / span : 0, b);
@@ -1786,10 +1838,22 @@ static void param_cat(char *t, int32_t k)            /* "CUT 50%" onto t: parame
     kl_param_t d;
     char v[12];
     kl_param(eng_cur(), k, work[set.part][eng_cur()], &d);
-    value_text(&d, work[set.part][eng_cur()][k], v);
+    value_text(&d, k, k < KL_NV ? work[set.part][eng_cur()][k] : 0, v);
     text_cat(t, d.label);
     text_cat(t, " ");
     text_cat(t, v);
+}
+
+/* the env's tab (VA, PD, ORGAN: ENV; FM6: its EDIT 2, ENV), and MORE */
+static int env_page(void) { return ui.edit && (kl_env(eng_cur()) ? ui.page >= 2 : eng_cur() == KL_FM6 && ui.page == 1); }
+
+static int param_none(int e, int32_t k)              /* no value on that knob (MORE's K3, K4; ORGAN's ENV > FILTER) */
+{
+    kl_param_t d;
+    if (k >= KL_NV)
+        return 1;
+    kl_param(e, (int)k, work[set.part][e], &d);
+    return !d.label[0];
 }
 
 static void announce(const char *t)                  /* to a screen reader only (the screen shows it already) */
@@ -2024,10 +2088,11 @@ static void speak(void)
         if (ui.edit) {                               /* the page and what its knobs hold */
             text_cat(t, ". EDIT ");
             text_cat(t, kl_page_title(eng_cur(), ui.page));
-            for (k = 0; k < 4; k++) {
-                text_cat(t, ". ");
-                param_cat(t, ui.page * 4 + k);
-            }
+            for (k = 0; k < 4; k++)
+                if (!param_none(eng_cur(), ui.page * 4 + k)) {
+                    text_cat(t, ". ");
+                    param_cat(t, ui.page * 4 + k);
+                }
         }
         ann_say(t, 0, ANN_NOW);
     }
@@ -2088,15 +2153,28 @@ static void preset_step(int32_t d)
     announce(sound_name(set.part, e));
 }
 
-static void page_show(uint32_t page)                 /* EDIT 1 (0) or EDIT 2 (1) of the engine playing */
+static void page_show(uint32_t page)                 /* a page of the engine playing: EDIT 1 (0), EDIT 2 (1), ENV (2),
+                                                     * MORE (3) */
 {
     char t[24] = "EDIT ";
     ui.edit = 1;
     ui.mix = ui.loop = ui.fx = ui.lfo = ui.arp = 0;
-    ui.page = (uint8_t)page;
+    ui.page = (uint8_t)(page % (uint32_t)kl_pages(eng_cur()));
     ui.redraw = 1;
     text_cat(t, kl_page_title(eng_cur(), (int)page));
     announce(t);
+}
+
+static void env_show(void)                           /* ENV: the chosen part's envelope, its edit pages on ENV (there:
+                                                     * MORE, and back); FM6 its EDIT 2 (ENV); DRUMS has none */
+{
+    int e = eng_cur();
+    if (e == KL_DRUMS)
+        app_say("NO", "ENV");
+    else if (!kl_env(e))
+        page_show(1);
+    else
+        page_show(ui.edit && ui.page == 2 ? 3u : 2u);
 }
 
 static void edit_close(void)
@@ -2113,6 +2191,8 @@ static void param_step(int32_t k, int32_t d)         /* K1..K4 on an edit page: 
     kl_param_t p;
     int32_t v;
     char t[32];
+    if (param_none(e, k))
+        return;
     kl_param(e, k, w, &p);
     v = clamp(w[k] + d, p.min, p.max);
     if (v == w[k])
@@ -2131,7 +2211,7 @@ static void param_reset(int32_t k)                   /* HOME + K1..K4 on an edit
 {
     int e = eng_cur();
     char t[32];
-    if (work[set.part][e][k] == orig[set.part][e][k])
+    if (param_none(e, k) || work[set.part][e][k] == orig[set.part][e][k])
         return;
     work[set.part][e][k] = orig[set.part][e][k];
     edited_update(set.part, e);
@@ -2986,7 +3066,7 @@ static void save(void)
             user_t *u = &set.user[e];
             if (!edited[p][e])
                 continue;
-            for (k = 0; k < 8u; k++)
+            for (k = 0; k < (uint32_t)KL_NV; k++)
                 u->v[k] = orig[p][e][k] = work[p][e][k];
             u->base = (uint8_t)sound_base((int)p, (int)e);
             u->saved = 1;
@@ -3125,7 +3205,7 @@ static void input(void)
         else if (k == B_OCTDN)
             octave_step(-1);
         else if (k == B_EDIT || (k == B_OCTUP && ui.edit))
-            page_show(ui.edit ? ui.page ^ 1u : 0u);  /* the edit pages, then the other one */
+            page_show(ui.edit ? ui.page + 1u : 0u);  /* the edit pages, then the next one */
         else if (k == B_OCTUP)
             octave_step(1);
         else if (k == B_SAVE)
@@ -3134,6 +3214,8 @@ static void input(void)
             part_step(1);
         else if (k == B_ENV && eng_cur() == KL_ACID)
             announce("ACCENT");                      /* held: the keys pressed now are accented */
+        else if (k == B_ENV)
+            env_show();
         else if (k == B_HOME && (ui.edit || ui.mix || ui.loop || ui.fx || ui.lfo || ui.arp))
             app_say("RESET", "TURN K1-K4");          /* held: a knob turned goes back to its sound's value */
         else if (k == B_HOME)
@@ -3189,6 +3271,7 @@ static void input(void)
     plat_play_red(lp.rec);                           /* PLAY green while it plays, red while it records */
     plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u) | (ui.mix ? 1u << B_GLO : 0u) | (ui.loop ? 1u << B_SEQ : 0u) |
                   (ui.fx ? 1u << B_FX : 0u) | (ui.lfo ? 1u << B_LFO : 0u) | (ui.arp ? 1u << B_ARP : 0u) |
+                  (env_page() ? 1u << B_ENV : 0u) |
                   (lp.state != LP_STOP ? 1u << B_PLAY : 0u) |
                   (lp.rec ? 1u << B_REC : 0u),
               ui.loop && ui.tab ? step_lights() : keys);   /* STEP: the steps set, a running light */
@@ -3489,7 +3572,8 @@ static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
     int e = eng_cur();
     int32_t i;
     for (i = 0; i < 4; i++) {
-        int32_t k = ui.page * 4 + i, x = work[set.part][e][k], o = orig[set.part][e][k];
+        int32_t k = ui.page * 4 + i, none = param_none(e, k), x = none ? 0 : work[set.part][e][k];
+        int32_t o = none ? 0 : orig[set.part][e][k];
         kl_param_t d;
         kl_param(e, k, work[set.part][e], &d);
         lab[i][0] = 'K';
@@ -3497,9 +3581,9 @@ static void footer_edit(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
         lab[i][2] = ' ';
         lab[i][3] = 0;
         text_cat(lab[i], d.label);
-        value_text(&d, x, v[i]);
-        frac[i] = d.max > d.min ? (x - d.min) * 256 / (d.max - d.min) : 0;
-        mark[i] = o != x && d.max > d.min ? (o - d.min) * 256 / (d.max - d.min) : -1;
+        value_text(&d, k, x, v[i]);
+        frac[i] = !none && d.max > d.min ? (x - d.min) * 256 / (d.max - d.min) : 0;
+        mark[i] = !none && o != x && d.max > d.min ? (o - d.min) * 256 / (d.max - d.min) : -1;
     }
 }
 
@@ -3783,18 +3867,368 @@ static void draw_pads(int32_t y0, uint16_t col)
         draw_pad(13 + i * 31, 123 - y0, 28, 79, WHITE[i], col, lit == WHITE[i]);
 }
 
-/* the page's rows y0 .. y0 + 92 of the screen (it is drawn in two strips): the tabs (the two pages' titles, this
- * one lit), and the sound's glyph large in its ring, each spoke named, the four on the knobs in the engine's colour
- * (DRUMS: its pads instead) */
+/* ------------------------------------------------------------ the envelope --- */
+#define EV_X 12                                      /* the envelope's picture: from x, this wide; its top and base */
+#define EV_W 216
+#define EV_TOP 66
+#define EV_BASE 128
+#define FM6_ATK 4                                    /* FM6's ATK, DEC, SUS, REL (eng_fm6.c FM_ATK ..): rates 0..99, the
+                                                     * other way round (0 the fastest), SUS a level */
+
+/* the envelope's corners (x[0] its start .. x[4] the release's end): attack, decay and release as wide as the square
+ * roots of their times (a short one still shows), the sustain what is left, 40 px at least; FM6's rates as if each
+ * step were 25 ms. Its level at each column, Q15, into lv */
+static void env_shape(int e, const int8_t *v, int32_t x[5], int16_t lv[EV_W])
+{
+    static const uint8_t K[3] = {KL_ATK, KL_DEC, KL_REL}, FM6K[3] = {FM6_ATK, FM6_ATK + 1, FM6_ATK + 3};
+    int32_t w[3], i, sum = 0, sus;
+    for (i = 0; i < 3; i++) {
+        int32_t ms = kl_env(e) ? kl_env_ms(K[i], v[K[i]]) : v[FM6K[i]] * 25;
+        w[i] = 3 + (int32_t)fm_sqrtf((float)ms) * 2;
+        sum += w[i];
+    }
+    for (i = 0; sum > EV_W - 40 && i < 3; i++)       /* too long together: each shorter alike */
+        w[i] = w[i] * (EV_W - 40) / sum;
+    sus = kl_env(e) ? v[KL_SUS] * 32767 / 127 : v[FM6_ATK + 2] * 32767 / 99;
+    x[0] = 0;
+    x[1] = w[0];
+    x[2] = x[1] + w[1];
+    x[4] = EV_W - 1;
+    x[3] = x[4] - w[2];
+    for (i = 0; i < EV_W; i++) {
+        int32_t l;
+        if (i < x[1]) {                              /* attack: straight up */
+            l = 32767 * i / (x[1] ? x[1] : 1);
+        } else if (i < x[2]) {                       /* decay and release: curved, as they fall */
+            int32_t t = 256 - 256 * (i - x[1]) / (x[2] - x[1]);
+            l = sus + (32767 - sus) * ((t * t >> 8) * t >> 8) / 256;   /* (1 - x)^3; 32767 * 256 fits */
+        } else if (i < x[3]) {
+            l = sus;
+        } else {
+            int32_t t = 256 - 256 * (i - x[3]) / (x[4] - x[3] ? x[4] - x[3] : 1);
+            l = sus * (t * t >> 8) / 256 * t / 256;
+        }
+        lv[i] = (int16_t)l;
+    }
+}
+
+static int32_t env_y(int32_t l, int32_t top, int32_t base) { return base - (base - top) * l / 32767; }
+
+/* the curve over its fill, from lv: each column a line to the last's */
+static void env_curve(const int16_t lv[EV_W], int32_t y0, int32_t top, int32_t base, uint16_t col)
+{
+    int32_t i, last = base;
+    for (i = 0; i < EV_W; i++) {
+        int32_t y = env_y(lv[i], top, base), y1 = y < last ? y : last, y2 = y > last ? y : last;
+        cv_rect(EV_X + i, y - y0, 1, base - y + 1, mix565(col, K_SURF, 96));
+        cv_rect(EV_X + i, y1 - y0, 1, y2 - y1 + 2, col);
+        last = y;
+    }
+}
+
+static void live_glyph(int32_t y0, uint16_t col)      /* the sound's glyph small, LIVE under it (ENV, MORE) */
+{
+    uint8_t sh[8];
+    kl_shape(eng_cur(), work[set.part][eng_cur()], sh);
+    ring_draw(212, 171 - y0, 21, K_LINE);
+    glyph_draw(212, 171 - y0, 19, sh, col, K_SURF);
+    cv_text(212 - text_w(&FONT_T, "LIVE") / 2, 194 - y0, &FONT_T, "LIVE", K_MUTED);
+}
+
+/* ENV: the curve (VA, PD, ORGAN: as it plays, kl_env_ms; FM6: its carriers' rates), A D S R under it, a dot where the
+ * part's latest note is (not FM6's: its level is the voice's own); below ENV > FILTER (VA, PD) and the live glyph */
+static void draw_env(int32_t y0, uint16_t col)
+{
+    static const char *const WHAT[KL_NENG] = {"ENV - AMP + FILTER", "ENV - AMP + DCW", "ENV - AMP", "ENV - CARRIERS",
+                                              "", ""};
+    int e = eng_cur(), stage;
+    const int8_t *v = work[set.part][e];
+    int32_t x[5], i, lvl = kl_env_now(set.part, &stage), dot = -1, ks = kl_env(e) ? KL_SUS : FM6_ATK + 2;
+    int16_t lv[EV_W];
+    char t[24] = "";
+    kl_param_t d;
+    env_shape(e, v, x, lv);
+    cv_rect(1, 44 - y0, 238, 100, K_SURF);
+    cv_text(7, 47 - y0, &FONT_XS, WHAT[e], K_TEXT);
+    param_cat(t, ks);                                /* "SUS 79%" */
+    cv_text(232 - text_w(&FONT_XS, t), 47 - y0, &FONT_XS, t, col);
+    cv_rect(EV_X, EV_BASE - y0, EV_W, 1, K_LINE);
+    for (i = 1; i < 4; i++)                          /* where each part ends */
+        cv_rect(EV_X + x[i], EV_TOP - 4 - y0, 1, EV_BASE - EV_TOP + 4, K_LINE);
+    env_curve(lv, y0, EV_TOP, EV_BASE, col);
+    for (i = 0; i < 4; i++) {                        /* A D S R under their parts */
+        static const char *const N[4] = {"A", "D", "S", "R"};
+        cv_text(EV_X + (x[i] + x[i + 1]) / 2 - 2, EV_BASE + 3 - y0, &FONT_T, N[i], K_MUTED);
+    }
+    if (lvl >= 0 && stage == 1) {                    /* the latest note: where its level is on its part */
+        for (i = 0; i < x[1] && lv[i] < lvl; i++)
+            ;
+        dot = i;
+    } else if (lvl >= 0 && stage == 2) {
+        for (i = x[1]; i < x[2] && lv[i] > lvl; i++)
+            ;
+        dot = i >= x[2] ? (x[2] + x[3]) / 2 : i;
+    } else if (lvl >= 0 && stage == 3) {
+        for (i = x[3]; i < x[4] && lv[i] > lvl; i++)
+            ;
+        dot = i;
+    }
+    if (dot >= 0)
+        disc(EV_X + dot, env_y(lv[dot < EV_W ? dot : EV_W - 1], EV_TOP, EV_BASE) - y0, 3, K_TEXT);
+    cv_rect(1, 148 - y0, 238, 58, K_SURF);
+    kl_param(e, KL_FENV, v, &d);
+    if (kl_env(e) && d.label[0]) {                   /* ENV > FILTER: a bar from the middle */
+        int32_t f = v[KL_FENV], m = 8 + 70;
+        char b[8];
+        cv_text(7, 151 - y0, &FONT_XS, e == KL_PHASE ? "ENV > DCW" : "ENV > FILTER", K_TEXT);
+        value_text(&d, KL_FENV, f, b);
+        cv_text(7, 167 - y0, &FONT_XS, b, K_MUTED);
+        cv_rect(8, 188 - y0, 140, 2, K_LINE);
+        cv_rect(f < 0 ? m + f * 70 / 64 : m, 188 - y0, (f < 0 ? -f : f) * 70 / 64, 2, col);
+        cv_rect(m, 184 - y0, 1, 10, K_MUTED);
+    } else {
+        cv_text(7, 151 - y0, &FONT_XS, e == KL_FM6 ? "THE CARRIERS' ENVELOPES" : "NO FILTER", K_MUTED);
+    }
+    live_glyph(y0, col);
+}
+
+/* MORE: ENV > FILTER as the cutoff (PD: DCW) over a note, its value dashed; VOICE POLY or MONO; the live glyph */
+static void draw_more(int32_t y0, uint16_t col)
+{
+    int e = eng_cur(), mono;
+    const int8_t *v = work[set.part][e];
+    int32_t x[5], i, base = e == KL_PHASE ? v[2] : v[4], yc, last, f = v[KL_FENV];   /* PD's DCW, VA's CUT */
+    int16_t lv[EV_W];
+    char t[24] = "", b[8];
+    kl_param_t d;
+    cv_rect(1, 44 - y0, 238, 100, K_SURF);
+    kl_param(e, KL_FENV, v, &d);
+    if (!d.label[0]) {                               /* ORGAN: no filter */
+        cv_text(7, 47 - y0, &FONT_XS, "ENV > FILTER", K_MUTED);
+        cv_text(7, 86 - y0, &FONT_XS, "ORGAN: NO FILTER", K_MUTED);
+    } else {
+        cv_text(7, 47 - y0, &FONT_XS, e == KL_PHASE ? "ENV > DCW" : "ENV > FILTER", K_TEXT);
+        value_text(&d, KL_FENV, f, b);
+        cv_text(232 - text_w(&FONT_XS, b), 47 - y0, &FONT_XS, b, col);
+        env_shape(e, v, x, lv);
+        yc = EV_BASE - (EV_BASE - EV_TOP) * base / 127;
+        for (i = 0; i < EV_W; i += 6)                /* the knob's own value, dashed */
+            cv_rect(EV_X + i, yc - y0, 3, 1, K_TEXT);
+        last = yc;
+        for (i = 0; i < EV_W; i++) {                 /* plus the envelope's share: ENV > FILTER steps of 127 at its top */
+            int32_t y = clamp(yc - f * lv[i] / 32767 * (EV_BASE - EV_TOP) / 127, EV_TOP, EV_BASE);
+            int32_t y1 = y < last ? y : last, y2 = y > last ? y : last;
+            cv_rect(EV_X + i, (y < yc ? y : yc) - y0, 1, (y < yc ? yc - y : y - yc) + 1, mix565(col, K_SURF, 96));
+            cv_rect(EV_X + i, y1 - y0, 1, y2 - y1 + 2, col);
+            last = y;
+        }
+        param_cat(t, e == KL_PHASE ? 2 : 4);         /* "CUT 50%", "DCW 47%" */
+        cv_text(232 - text_w(&FONT_T, t), (yc + 15 > EV_BASE ? yc - 13 : yc + 3) - y0, &FONT_T, t, K_MUTED);
+        cv_text(7, EV_BASE + 3 - y0, &FONT_T, e == KL_PHASE ? "DCW OVER A NOTE" : "CUTOFF OVER A NOTE", K_MUTED);
+    }
+    cv_rect(1, 148 - y0, 238, 58, K_SURF);
+    cv_text(7, 151 - y0, &FONT_XS, "VOICE", K_TEXT);
+    mono = v[KL_MONO] != 0;
+    for (i = 0; i < 2; i++) {
+        const char *n = i ? "MONO" : "POLY";
+        int32_t bx = 8 + i * 46;
+        if (i == mono)
+            cv_rect(bx, 167 - y0, 42, 16, col);
+        else
+            box_edge(bx, 167 - y0, 42, 16, 1, K_LINE);
+        cv_text(bx + (42 - text_w(&FONT_T, n)) / 2, 169 - y0, &FONT_T, n, i == mono ? K_GROUND : K_MUTED);
+    }
+    cv_text(7, 189 - y0, &FONT_T, mono ? "ONE VOICE, LEGATO" : "SIX VOICES", K_MUTED);
+    live_glyph(y0, col);
+}
+
+/* VA's FLT: the filter's response, 20 Hz .. 20 kHz over the picture (three decades, 72 px each), -42 .. +18 dB, as
+ * ANALOG has it (Felucca-Engines: dsp.c tsvf_*, tools/gen_engine_tables.py cutoff_hz): a two-pole low-pass (12 dB an
+ * octave), its cutoff 30 Hz * (16000 / 30)^(CUT / 127), its damping k = 2 - RES * 1.86 / 127 (the peak 1 / k at the
+ * cutoff). Each column |H|^2 = 1 / ((1 - r^2)^2 + (k r)^2), r = f / cutoff. Below: the envelope small with ENV >
+ * FILTER, DRV, KTR and the live glyph */
+#define FL_ZERO 80                                   /* 0 dB's row; 1.1 px a dB, from EV_TOP - 6 to EV_BASE */
+static void draw_flt(int32_t y0, uint16_t col)
+{
+    static const char *const AX[4] = {"20", "200", "2K", "20K HZ"};
+    const int8_t *v = work[set.part][KL_ANALOG];
+    float lc = 9.0589f * v[4] / 127.0f, k = 2.0f - v[5] * 1.8555f / 127.0f;   /* log2 (16000 / 30) */
+    float fc = 30.0f * fm_exp2f(lc);
+    int32_t i, last = 0, xc = (int32_t)((fm_log2f(fc / 20.0f) * 0.30103f) * 72.0f), x[5];
+    int16_t lv[EV_W];
+    char t[24] = "", b[12];
+    kl_param_t d;
+    cv_rect(1, 44 - y0, 238, 100, K_SURF);
+    cv_text(7, 47 - y0, &FONT_XS, "LOW PASS 12 DB", K_TEXT);
+    if (fc < 1000.0f) {                              /* the cutoff in Hz */
+        int_text((int32_t)(fc + 0.5f), t);
+        text_cat(t, " HZ");
+    } else {
+        int32_t h = (int32_t)(fc / 100.0f + 0.5f);
+        int_text(h / 10, t);
+        text_cat(t, ".");
+        int_text(h % 10, b);
+        text_cat(t, b);
+        text_cat(t, " KHZ");
+    }
+    cv_text(232 - text_w(&FONT_XS, t), 47 - y0, &FONT_XS, t, col);
+    for (i = 1; i < 3; i++)                          /* 200 Hz, 2 kHz */
+        cv_rect(EV_X + i * 72, EV_TOP - 6 - y0, 1, EV_BASE - EV_TOP + 6, K_LINE);
+    cv_rect(EV_X, FL_ZERO - y0, EV_W, 1, K_LINE);    /* 0 dB */
+    for (i = 0; i < EV_W; i++) {
+        float lr = (float)i * (9.9658f / 216.0f) - 0.585f - lc;   /* log2 (f / cutoff): f = 20 * 1000^(i / 216) */
+        float r2 = fm_exp2f(2.0f * lr), a = 1.0f - r2, db = -3.0103f * fm_log2f(a * a + k * k * r2);
+        int32_t y = clamp(FL_ZERO - (int32_t)(db * 1.1f), EV_TOP - 6, EV_BASE), y1, y2;
+        if (!i)
+            last = y;
+        y1 = y < last ? y : last;
+        y2 = y > last ? y : last;
+        cv_rect(EV_X + i, y - y0, 1, EV_BASE - y + 1, mix565(col, K_SURF, 96));
+        cv_rect(EV_X + i, y1 - y0, 1, y2 - y1 + 2, col);
+        last = y;
+    }
+    for (i = EV_TOP - 6; i < EV_BASE; i += 6)        /* the cutoff, dashed */
+        cv_rect(EV_X + clamp(xc, 0, EV_W - 1), i - y0, 1, 3, K_TEXT);
+    for (i = 0; i < 4; i++)
+        cv_text(EV_X + i * 72 - (i == 3 ? text_w(&FONT_T, AX[i]) : i ? text_w(&FONT_T, AX[i]) / 2 : 0),
+                EV_BASE + 3 - y0, &FONT_T, AX[i], K_MUTED);
+    cv_rect(1, 148 - y0, 238, 58, K_SURF);          /* the envelope small, ENV > FILTER, DRV, KTR */
+    t[0] = 0;
+    text_cat(t, "ENV > FILTER ");
+    kl_param(KL_ANALOG, KL_FENV, v, &d);
+    value_text(&d, KL_FENV, v[KL_FENV], b);
+    text_cat(t, b);
+    cv_text(7, 151 - y0, &FONT_XS, t, K_TEXT);
+    env_shape(KL_ANALOG, v, x, lv);
+    for (i = 0; i < 132; i++) {                      /* 132 px of the envelope's EV_W */
+        int32_t y = 201 - 30 * lv[i * EV_W / 132] / 32767, y1 = y < last ? y : last, y2 = y > last ? y : last;
+        if (!i)
+            y1 = y2 = y;
+        cv_rect(8 + i, y1 - y0, 1, y2 - y1 + 1, col);
+        last = y;
+    }
+    for (i = 0; i < 2; i++) {
+        t[0] = 0;
+        param_cat(t, 6 + i);                         /* DRV, KTR */
+        cv_text(148, (167 + i * 18) - y0, &FONT_XS, t, K_MUTED);
+    }
+    live_glyph(y0, col);
+}
+
+/* FM6's ALGO: the algorithm as the DX7 draws it (kl_fm6_algo, from msfa's buses): the carriers in a row at the bottom
+ * (filled), each modulator above the lowest operator it modulates (framed), a line to each; the feedback as a loop
+ * on the right; the carriers to OUT. Below: each operator's level as it plays (kl_fm6_levels: MOD moves the
+ * modulators') */
+#define AL_ROW 17                                    /* a row of operators: this far apart, a box this high */
+#define AL_BOX 13
+static int al_place(int op, int32_t s, const uint8_t own[6], int32_t w[6], int32_t pos[6])   /* op's tree from slot
+                                                                                               * s: its width */
+{
+    int32_t c, x = s;
+    for (c = 0; c < 6; c++)                          /* its own modulators side by side, OP1 first */
+        if (own[c] == op + 1)
+            x += al_place((int)c, x, own, w, pos);
+    w[op] = x > s ? x - s : 1;
+    pos[op] = 2 * s + w[op] - 1;                     /* its middle, in half slots */
+    return (int)w[op];
+}
+
+static void draw_algo(int32_t y0, uint16_t col)
+{
+    const int8_t *v = work[set.part][KL_FM6];
+    uint8_t mods[6], own[6], ol[6];
+    int32_t row[6], w[6], pos[6], cx[6], cy[6], i, j, slots = 0, sw, bw, x0, deep, lo = 999, hi = -1;
+    int fb;
+    uint32_t car = kl_fm6_algo(v[0] - 1, mods, &fb);
+    char t[16] = "ALG ";
+    cv_rect(1, 44 - y0, 238, 100, K_SURF);
+    cv_text(7, 47 - y0, &FONT_XS, "ALGORITHM", K_TEXT);
+    t[4] = (char)('0' + v[0] / 10);
+    t[5] = (char)('0' + v[0] % 10);
+    t[6] = 0;
+    cv_rect(228 - text_w(&FONT_XS, t), 45 - y0, text_w(&FONT_XS, t) + 6, 14, col);
+    cv_text(231 - text_w(&FONT_XS, t), 46 - y0, &FONT_XS, t, K_GROUND);
+    for (i = 0; i < 6; i++) {                        /* who each one belongs to: the lowest it modulates */
+        own[i] = 0;
+        for (j = 5; j >= 0; j--)
+            if (mods[j] >> i & 1u)
+                own[i] = (uint8_t)(j + 1);
+    }
+    for (deep = 0; deep < 6; deep++)                 /* its row: a carrier 0, a modulator one over its owner's */
+        for (i = 0; i < 6; i++)
+            row[i] = car >> i & 1u ? 0 : own[i] ? (deep ? row[own[i] - 1] + 1 : 1) : 0;
+    for (i = 0; i < 6; i++)
+        if (car >> i & 1u)
+            slots += al_place((int)i, slots, own, w, pos);
+    sw = clamp(216 / (slots ? slots : 1), 0, 38);
+    bw = sw - 8 < 26 ? sw - 8 : 26;
+    x0 = 12 + (216 - slots * sw) / 2;
+    for (i = 0; i < 6; i++) {
+        cx[i] = x0 + pos[i] * sw / 2 + sw / 2;
+        cy[i] = 112 - row[i] * AL_ROW;               /* a box's top */
+    }
+    for (i = 0; i < 6; i++)                          /* the lines: modulator to each it modulates */
+        for (j = 0; j < 6; j++)
+            if (mods[j] >> i & 1u)
+                cv_line(cx[i], cy[i] + AL_BOX - y0, cx[j], cy[j] - y0, col);
+    for (i = 0; i < 6; i++)
+        if (car >> i & 1u) {                         /* the carriers to OUT */
+            cv_rect(cx[i], cy[i] + AL_BOX - y0, 1, 129 - cy[i] - AL_BOX, K_MUTED);
+            lo = cx[i] < lo ? cx[i] : lo;
+            hi = cx[i] > hi ? cx[i] : hi;
+        }
+    cv_rect(lo, 129 - y0, hi - lo + 1, 1, K_MUTED);
+    cv_rect((lo + hi) / 2, 129 - y0, 1, 3, K_MUTED);
+    cv_text((lo + hi) / 2 + 4, 131 - y0, &FONT_T, "OUT", K_MUTED);
+    if (fb) {                                        /* the feedback (FEEDBK on K2): from the lower box's right, up,
+                                                     * into the top one's */
+        int32_t f = (fb >> 4) - 1, to = (fb & 15) - 1, rx = cx[f] + bw / 2 + 5, ty = cy[to] - 4;
+        cv_rect(cx[f] + bw / 2, cy[f] + AL_BOX / 2 - y0, 5, 1, col);
+        cv_rect(rx, ty - y0, 1, cy[f] + AL_BOX / 2 - ty + 1, col);
+        cv_rect(cx[to], ty - y0, rx - cx[to] + 1, 1, col);
+        cv_rect(cx[to], ty - y0, 1, 4, col);
+    }
+    for (i = 0; i < 6; i++) {                        /* the boxes over the lines */
+        char n[2] = {(char)('1' + i), 0};
+        int c = car >> i & 1u;
+        if (c)
+            cv_rect(cx[i] - bw / 2, cy[i] - y0, bw, AL_BOX, col);
+        else {
+            cv_rect(cx[i] - bw / 2, cy[i] - y0, bw, AL_BOX, K_SURF);
+            box_edge(cx[i] - bw / 2, cy[i] - y0, bw, AL_BOX, 1, col);
+        }
+        cv_text(cx[i] - text_w(&FONT_XS, n) / 2, cy[i] - 1 - y0, &FONT_XS, n, c ? K_GROUND : K_TEXT);
+    }
+    cv_rect(1, 148 - y0, 238, 58, K_SURF);          /* OP LEVEL */
+    kl_fm6_levels(sound_base(set.part, KL_FM6), v, ol);
+    for (i = 0; i < 6; i++) {
+        int32_t x = 7 + (i % 3) * 78, y = 152 + (i / 3) * 18;
+        char n[8] = "OP";
+        int c = car >> i & 1u;
+        n[2] = (char)('1' + i);
+        n[3] = 0;
+        cv_text(x, y - y0, &FONT_XS, n, K_TEXT);
+        cv_text(x + 22, y + 2 - y0, &FONT_T, c ? "C" : "M", K_MUTED);
+        cv_rect(x + 31, y + 6 - y0, 24, 3, K_LINE);
+        cv_rect(x + 31, y + 6 - y0, 24 * ol[i] / 99, 3, c ? col : mix565(col, K_SURF, 140));
+        int_text(ol[i], n);
+        cv_text(x + 72 - text_w(&FONT_XS, n), y - y0, &FONT_XS, n, K_TEXT);
+    }
+    cv_text(7, 191 - y0, &FONT_T, "C CARRIER - M MODULATOR", K_MUTED);
+}
+
+/* the page's rows y0 .. y0 + 92 of the screen (it is drawn in two strips): the tabs (the pages' titles, this one
+ * lit), and the sound's glyph large in its ring, each spoke named, the four on the knobs in the engine's colour
+ * (DRUMS: its pads instead; ENV and MORE: the envelope; VA's FLT: the filter; FM6's ALGO: the algorithm) */
 static void draw_edit(int32_t y0)
 {
     const tile_t *tl = &TILES[TILE_OF[eng_cur()]];
-    int e = eng_cur();
+    int e = eng_cur(), np = kl_pages(e);
     int32_t i, x = 8, cy = EDIT_CY - y0;
     uint8_t sh[8];
     char t[4];
     cv_begin(240, 93, K_GROUND);
-    for (i = 0; i < 2; i++) {
+    for (i = 0; i < np; i++) {
         const char *s = kl_page_title(e, (int)i);
         int32_t w = text_w(&FONT_XS, s);
         cv_text(x, 23 - y0, &FONT_XS, s, i == ui.page ? tl->col : K_MUTED);
@@ -3804,12 +4238,21 @@ static void draw_edit(int32_t y0)
     }
     t[0] = (char)('1' + ui.page);
     t[1] = '/';
-    t[2] = '2';
+    t[2] = (char)('0' + np);
     t[3] = 0;
     cv_text(232 - text_w(&FONT_XS, t), 23 - y0, &FONT_XS, t, K_MUTED);
     cv_rect(0, 40 - y0, 240, 1, K_LINE);
-    if (e == KL_DRUMS) {
-        draw_pads(y0, tl->col);
+    if (e == KL_DRUMS || env_page() || (e == KL_ANALOG && ui.page == 1) || (e == KL_FM6 && ui.page == 0)) {
+        if (e == KL_DRUMS)
+            draw_pads(y0, tl->col);
+        else if (e == KL_FM6 && ui.page == 0)
+            draw_algo(y0, tl->col);
+        else if (!env_page())
+            draw_flt(y0, tl->col);
+        else if (ui.page == 3)
+            draw_more(y0, tl->col);
+        else
+            draw_env(y0, tl->col);
         cv_blit(0, (uint32_t)y0);
         return;
     }
@@ -3830,7 +4273,7 @@ static void draw_edit(int32_t y0)
             ly -= FONT_XS.h;
         else if (GDIR[i][1] == 0)
             ly -= FONT_XS.h / 2;
-        cv_text(lx, ly, &FONT_XS, d.label, i / 4 == ui.page ? tl->col : K_MUTED);
+        cv_text(lx, ly, &FONT_XS, d.label, i / 4 == (int32_t)ui.page ? tl->col : K_MUTED);
     }
     cv_blit(0, (uint32_t)y0);
 }
@@ -4733,6 +5176,15 @@ void app_frame(void)
         ui.loop_at = now;
         ui.redraw_lfo = 1;
     }
+    if (env_page() && now - ui.loop_at >= 40u) {    /* ENV: the latest note's dot, while it sounds (and once after) */
+        int st;
+        kl_env_now(set.part, &st);
+        if (st || ui.env_stage) {
+            ui.loop_at = now;
+            ui.redraw_pads = 1;
+        }
+        ui.env_stage = (uint8_t)st;
+    }
     if (ui.arp && now - ui.loop_at >= 40u && (arp[set.part].steps != ui.arp_steps || arp[set.part].n != ui.arp_n)) {
         ui.loop_at = now;                            /* the arp's steps, alike, as they play */
         ui.arp_steps = arp[set.part].steps;
@@ -4786,9 +5238,36 @@ void app_host_reboot(void)
     set_dirty = 0;
 }
 
+static void user_to8(user8_t *o, const user_t *u)    /* a USER sound as KLSA and before had it */
+{
+    uint32_t k;
+    for (k = 0; k < 8u; k++)
+        o->v[k] = u->v[k];
+    o->base = u->base;
+    o->saved = u->saved;
+}
+
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
 {
     (void)a, (void)b, (void)c, (void)d;
+    if (!strcmp(cmd, "klsa")) {                      /* the settings into the store as KLSA (USER sounds without
+                                                     * their envelope) */
+        settingsA_t old;
+        uint32_t i, e;
+        memset(&old, 0, sizeof old);
+        old.magic = SET_MAGICA;
+        old.part = set.part;
+        for (i = 0; i < KL_NPART; i++) {
+            old.parts[i] = set.parts[i];
+            old.mod[i] = set.mod[i];
+        }
+        for (e = 0; e < KL_NENG; e++)
+            user_to8(&old.user[e], &set.user[e]);
+        for (i = 0; i < 8u; i++)
+            old.fx[i / 4u][i % 4u] = set.fx[i / 4u][i % 4u];
+        plat_store_save(OBJ_SETTINGS, &old, sizeof old);
+        return 1;
+    }
     if (!strcmp(cmd, "kls8")) {                      /* the settings into the store as KLS8 (four parts) */
         settings8_t old;
         uint32_t i, e;
@@ -4798,7 +5277,7 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         for (i = 0; i < OLD_NPART; i++)
             old.parts[i] = set.parts[i];
         for (e = 0; e < KL_NENG; e++)
-            old.user[e] = set.user[e];
+            user_to8(&old.user[e], &set.user[e]);
         for (i = 0; i < 8u; i++)
             old.fx[i / 4u][i % 4u] = set.fx[i / 4u][i % 4u];
         plat_store_save(OBJ_SETTINGS, &old, sizeof old);
@@ -4822,7 +5301,7 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
             old.parts[i].solo = ps->solo;
         }
         for (e = 0; e < KL_NENG; e++)
-            old.user[e] = set.user[e];
+            user_to8(&old.user[e], &set.user[e]);
         plat_store_save(OBJ_SETTINGS, &old, sizeof old);
         return 1;
     }
@@ -4955,6 +5434,37 @@ int app_expect(const char *what, int *got)
                                                      * RATE): 1/256 of a turn */
         uint32_t t = LFO_SYNC[set.mod[set.part].lfo_rate[0]], d = kl_lfo_phase_now(set.part) - ((lp.pos16 % (t << 16)) / t << 16);
         *got = (int)((d < 0x80000000u ? d : 0u - d) >> 24);
+    }
+    else if (!strcmp(what, "fmcar") || !strcmp(what, "fmfb")) {   /* FM6's algorithm as the sound has it: the
+                                                                   * carriers (bit i: OP i + 1), the feedback (from
+                                                                   * << 4 | to) */
+        uint8_t mods[6];
+        int fb;
+        uint32_t car = kl_fm6_algo(work[set.part][KL_FM6][0] - 1, mods, &fb);
+        *got = what[2] == 'c' ? (int)car : fb;
+    } else if ((k = expect_k(what, "fmmod")) >= 0 && k < 6) {   /* the modulators of OP k + 1 */
+        uint8_t mods[6];
+        int fb;
+        kl_fm6_algo(work[set.part][KL_FM6][0] - 1, mods, &fb);
+        *got = mods[k];
+    } else if ((k = expect_k(what, "fmol")) >= 0 && k < 6) {    /* OP k + 1's output level as it plays */
+        uint8_t ol[6];
+        kl_fm6_levels(sound_base(set.part, KL_FM6), work[set.part][KL_FM6], ol);
+        *got = ol[k];
+    } else if (!strcmp(what, "fc"))                  /* VA's cutoff as FLT shows it, Hz */
+        *got = (int)(30.0f * fm_exp2f(9.0589f * work[set.part][KL_ANALOG][4] / 127.0f) + 0.5f);
+    else if (!strcmp(what, "pages"))                 /* the chosen part's engine's edit pages */
+        *got = kl_pages(eng_cur());
+    else if (!strcmp(what, "atk") || !strcmp(what, "dec") || !strcmp(what, "sus") || !strcmp(what, "rel") ||
+             !strcmp(what, "fenv") || !strcmp(what, "mono")) {   /* its sound's envelope, ENV > FILTER, VOICE */
+        static const char *const N[6] = {"atk", "dec", "sus", "rel", "fenv", "mono"};
+        for (k = 0; strcmp(what, N[k]); k++)
+            ;
+        *got = work[set.part][eng_cur()][KL_ATK + k];
+    } else if (!strcmp(what, "envst") || !strcmp(what, "envq")) {   /* the DSP's latest note: its stage (1 A, 2 D/S,
+                                                                     * 3 R, 0 none), its envelope in % */
+        int st, l = kl_env_now(set.part, &st);
+        *got = what[3] == 's' ? st : l * 100 / 32767;
     }
     else if (!strcmp(what, "arp"))                   /* the arp's page open */
         *got = ui.arp;
