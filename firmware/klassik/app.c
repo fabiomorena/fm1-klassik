@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
-/* KLASSIK v0.6 (parts, mixer, looper, step sequencer, effects): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
+/* KLASSIK v0.7 (parts, mixer, looper, step sequencer, effects, LFOs, arpeggiators): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
  * Felucca-Engines (ANALOG, PHASE, WHEEL), DRUMS (four kits on Plaits' drum models) and ACID (Open303's TB-303), on
  * six parts that play at once, each its own sound and octave: SEL, or SELECT turned, goes to the next part (SELECT
  * to the left: the one before), and the keys, K1 (the engine, in the rack's order), PRESET (its sound), OCT- / OCT+
@@ -19,6 +19,9 @@
  * FX opens the effects' page: DELAY (a ping-pong delay in time with the looper's TEMPO: TIME, FDBK, TONE, LEVEL),
  * FX or OCT+ HALL (Rings' reverb: PRE, DECAY, TONE, LEVEL). Both are send effects: the parts' sends feed them (after
  * LEVEL, MUTE and SOLO, before PAN), their returns go into the master before the limiter.
+ * LFO opens the chosen part's LFO (RATE, DEPTH, WAVE, DEST; LFO or OCT+ MORE: SYNC, RETRIG, FADE). ARP opens its
+ * arpeggiator (MODE, RATE, OCT, GATE; ARP there: LATCH): MODE not OFF, the part's keys and MIDI notes go to it, and it
+ * plays them one after another in time with TEMPO, into the recording and out over USB.
  * The looper records notes (not sound) on one loop for all six parts: PLAY starts and stops it, REC records the
  * chosen part on top of what it has (stopped: after a bar's count-in), the first take sets the length; HOME + REC
  * takes the last take back, HOME + PLAY empties a part. SEQ opens its page: a lane a part, TEMPO, LENGTH, QUANT and
@@ -105,11 +108,12 @@ typedef struct {
     uint8_t mute, solo;
     uint8_t send[2];                                 /* to DELAY and HALL: 0..100 */
 } part_set_t;
-typedef struct {                                     /* a part's LFO (and its arpeggiator, v0.7) */
+typedef struct {                                     /* a part's LFO and its arpeggiator (v0.7) */
     uint8_t lfo_sync, lfo_rate[2];                   /* SYNC ON (1) or OFF; RATE: LFO_SYNC's index, LFO_HZ's */
     uint8_t lfo_depth, lfo_wave, lfo_dest;           /* 0..100 (0 off), KL_SIN.., KL_LFO_* */
     uint8_t lfo_retrig, lfo_fade;                    /* 1 = KEY (each note starts the wave); FADE in tenths of a second */
-    uint8_t arp_mode, arp_rate, arp_oct, arp_gate;   /* the arpeggiator's (to come) */
+    uint8_t arp_mode, arp_rate, arp_oct, arp_gate;   /* ARP_OFF.., ARP_TICKS' index, 1..4 octaves, GATE % (10..100 in
+                                                     * fives; ARP_SLIDE past it: ACID's) */
 } mod_set_t;
 enum { FX_DELAY, FX_HALL };
 enum { FK_TIME, FK_FDBK, FK_TONE, FK_LEVEL };        /* DELAY's knobs (HALL's: PRE, DECAY, TONE, LEVEL) */
@@ -176,6 +180,11 @@ static int eng_cur(void) { return set.parts[set.part].engine; }   /* the chosen 
 #define LFO_DEF_SYNC 8                               /* 1/8 */
 #define LFO_DEF_HZ 17                                /* 5 Hz */
 #define LFO_FADE_MAX 20                              /* 2 s */
+enum { ARP_OFF, ARP_UP, ARP_DOWN, ARP_UPDN, ARP_RAND, ARP_ORDER, ARP_NMODE };
+#define ARP_NRATE 9
+#define ARP_DEF_RATE 6                               /* 1/16 */
+#define ARP_DEF_GATE 50
+#define ARP_SLIDE 105                                /* GATE past 100 % (ACID): each note slides into the next */
 static void mod_defaults(mod_set_t *m)               /* a part's LFO and arp as at first: where HOME takes them */
 {
     uint32_t i;
@@ -185,9 +194,9 @@ static void mod_defaults(mod_set_t *m)               /* a part's LFO and arp as 
     m->lfo_sync = 1;
     m->lfo_rate[0] = LFO_DEF_SYNC;
     m->lfo_rate[1] = LFO_DEF_HZ;
-    m->arp_rate = 0;                                 /* (the arp's, to come) */
+    m->arp_rate = ARP_DEF_RATE;
     m->arp_oct = 1;
-    m->arp_gate = 50;
+    m->arp_gate = ARP_DEF_GATE;
 }
 
 static void settings_defaults(void)
@@ -242,7 +251,9 @@ static int settings_ok(void)
     for (p = 0; p < KL_NPART; p++) {
         const mod_set_t *m = &set.mod[p];
         if (m->lfo_sync > 1 || m->lfo_rate[0] >= LFO_NSYNC || m->lfo_rate[1] >= LFO_NHZ || m->lfo_depth > 100 ||
-            m->lfo_wave >= KL_NWAVE || m->lfo_dest >= KL_LFO_NDEST || m->lfo_retrig > 1 || m->lfo_fade > LFO_FADE_MAX)
+            m->lfo_wave >= KL_NWAVE || m->lfo_dest >= KL_LFO_NDEST || m->lfo_retrig > 1 || m->lfo_fade > LFO_FADE_MAX ||
+            m->arp_mode >= ARP_NMODE || m->arp_rate >= ARP_NRATE || m->arp_oct < 1 || m->arp_oct > 4 ||
+            (m->arp_gate != ARP_SLIDE && (m->arp_gate < 10 || m->arp_gate > 100 || m->arp_gate % 5u)))
             return 0;
     }
     return 1;
@@ -441,8 +452,8 @@ static struct {
     int16_t c;
 } lc_q[LC_N];
 #define LK_N 64u
-static volatile uint32_t lk_w, lk_r;                 /* the keys played, for the recording */
-static uint8_t lk_part[LK_N], lk_on[LK_N], lk_note[LK_N], lk_vel[LK_N];
+static volatile uint32_t lk_w, lk_r;                 /* the keys played, for the recording (or the part's arp) */
+static uint8_t lk_part[LK_N], lk_on[LK_N], lk_note[LK_N], lk_vel[LK_N], lk_arp[LK_N];
 static int32_t ck_buf[APP_BLOCK];                    /* the click, as the render mixes it */
 static int32_t ck_s, ck_c, ck_e, ck_env;             /* its sine (Q15 steps of ck_e), its envelope (Q15) */
 
@@ -477,7 +488,8 @@ static void lp_ask_step(int cmd, int arg, uint32_t t, int a, int b, int c)
 
 static void lp_ask(int cmd, int arg) { lp_ask_step(cmd, arg, 0, 0, 0, 0); }
 
-static void lp_key(int part, int on, int note, int vel)   /* main loop: a key played, for the recording */
+static void lp_key(int part, int on, int note, int vel, int arp)   /* main loop: a key played, for the recording
+                                                                     * (arp 1: for the part's arpeggiator) */
 {
     uint32_t w = lk_w;
     if (w - lk_r >= LK_N)
@@ -486,6 +498,7 @@ static void lp_key(int part, int on, int note, int vel)   /* main loop: a key pl
     lk_on[w % LK_N] = (uint8_t)(on != 0);
     lk_note[w % LK_N] = (uint8_t)note;
     lk_vel[w % LK_N] = (uint8_t)vel;
+    lk_arp[w % LK_N] = (uint8_t)arp;
     lk_w = w + 1u;
 }
 
@@ -553,8 +566,9 @@ static void lp_remove(int p, uint32_t i)             /* an event out (the next t
 }
 
 /* a note into the part recording: its start moved to QUANT's grid, its end as far; counting in, a note just before
- * the loop starts lands on its first tick */
-static void lp_record(int p, int on, int note, int vel)
+ * the loop starts lands on its first tick. An arpeggiator's lands where at says (a tick, playing), as it is: it
+ * keeps to its own grid */
+static void lp_record_at(int p, int on, int note, int vel, int32_t at)
 {
     int32_t len = (int32_t)lp_len(), t, q = QUANT_TICKS[lp.quant], sh = 0;
     uint32_t w = (uint32_t)note >> 5, bit = 1u << (note & 31);
@@ -566,7 +580,7 @@ static void lp_record(int p, int on, int note, int vel)
             return;
         t = 0;
     } else if (lp.state == LP_PLAY) {
-        t = (int32_t)((lp.pos16 + 0x8000u) >> 16);
+        t = at >= 0 ? at : (int32_t)((lp.pos16 + 0x8000u) >> 16);
     } else {
         return;
     }
@@ -577,7 +591,7 @@ static void lp_record(int p, int on, int note, int vel)
             lp.full++;
             return;
         }
-        if (q && lp.state == LP_PLAY) {
+        if (q && lp.state == LP_PLAY && at < 0) {
             sh = (t + q / 2) / q * q - t;
             t += sh;
         }
@@ -595,31 +609,46 @@ static void lp_record(int p, int on, int note, int vel)
     lp_insert(p, (uint32_t)t, note, on ? clamp(vel, 1, 127) : 0, 1);
 }
 
-/* the first take ends (LENGTH AUTO): the length in whole bars, the nearest; what is past its end moves to its start */
+static void lp_record(int p, int on, int note, int vel) { lp_record_at(p, on, note, vel, -1); }
+
+static int lp_begins(const lp_ev_t *e, uint32_t n, uint32_t tick, int note)   /* a note begins at tick among n events
+                                                                               * in tick order */
+{
+    uint32_t i;
+    for (i = 0; i < n && e[i].tick <= tick; i++)
+        if (e[i].tick == tick && e[i].note == note && (e[i].vel & 0x7Fu))
+            return 1;
+    return 0;
+}
+
+/* the first take ends (LENGTH AUTO): the length in whole bars, the nearest; what is past its end moves to its start,
+ * each event into its place there (after those at its tick). A note that begins where the same note already begins
+ * (an arp's, played on into the next round) is left out, its end too */
 static void lp_first_end(void)
 {
     uint32_t at = lp.pos16 >> 16, bars = (uint32_t)clamp((int32_t)((at + LP_BAR / 2) / LP_BAR), 1, LP_MAXBARS);
-    uint32_t len = bars * LP_BAR, p = lp.rpart, n = lp.n[p], k = 0, i, j;
+    uint32_t len = bars * LP_BAR, p = lp.rpart, n = lp.n[p], k = 0, i, j, w, gone[4] = {0, 0, 0, 0};
     lp_ev_t *e = lp_ev[p];
     while (k < n && e[n - 1u - k].tick >= len)
         k++;
-    for (i = 0; i < k; i++)
-        e[n - k + i].tick = (uint16_t)(e[n - k + i].tick - len);
-    for (i = 0, j = n - 1u; k && i < j; i++, j--) {  /* the tail before the rest: three reversals */
+    for (i = w = n - k; i < n; i++) {                /* w: the events in place; those past it are free */
         lp_ev_t x = e[i];
-        e[i] = e[j];
+        uint32_t b = 1u << (x.note & 31u), *g = &gone[x.note >> 5];
+        x.tick = (uint16_t)(x.tick - len);
+        if ((x.vel & 0x7Fu) && lp_begins(e, w, x.tick, x.note)) {
+            *g |= b;
+            continue;
+        }
+        if (!(x.vel & 0x7Fu) && (*g & b)) {
+            *g &= ~b;
+            continue;
+        }
+        for (j = w; j && e[j - 1u].tick > x.tick; j--)
+            e[j] = e[j - 1u];
         e[j] = x;
+        w++;
     }
-    for (i = 0, j = k - 1u; k && i < j; i++, j--) {
-        lp_ev_t x = e[i];
-        e[i] = e[j];
-        e[j] = x;
-    }
-    for (i = k, j = n - 1u; k && i < j; i++, j--) {
-        lp_ev_t x = e[i];
-        e[i] = e[j];
-        e[j] = x;
-    }
+    lp.n[p] = (uint16_t)w;
     if (lp.pos16 >= len << 16)
         lp.pos16 -= len << 16;
     lp.bars = lp.first_bars = (uint8_t)bars;
@@ -938,6 +967,8 @@ static void lp_step_edit(int p, uint32_t t, uint32_t sel, int what, int v)
         lp_stepped(p);
 }
 
+static void arp_key(int p, int on, int note, int vel);   /* the arpeggiators' (below) */
+
 static void lp_asks(void)                            /* render: the main loop's asks, then the keys it played */
 {
     while (lc_r != lc_w) {
@@ -1005,7 +1036,10 @@ static void lp_asks(void)                            /* render: the main loop's 
     }
     while (lk_r != lk_w) {
         uint32_t j = lk_r % LK_N;
-        lp_record(lk_part[j], lk_on[j], lk_note[j], lk_vel[j]);
+        if (lk_arp[j])
+            arp_key(lk_part[j], lk_on[j], lk_note[j], lk_vel[j]);
+        else
+            lp_record(lk_part[j], lk_on[j], lk_note[j], lk_vel[j]);
         lk_r = lk_r + 1u;
     }
 }
@@ -1219,6 +1253,250 @@ static void lfo_loop_phase(void)                     /* render, each step: a wav
             kl_lfo_phase((int)p, (lp.pos16 % (t << 16)) / t << 16);   /* the turn, Q16, as Q32 (3072 << 16 fits) */
 }
 
+/* ------------------------------------------------------------ the arpeggiators --- */
+/* each part's (v0.7): the keys and MIDI notes it holds, one after another in time with TEMPO; on the loop's grid
+ * while it plays (counting in: the count-in's), else on the arps' own clock (arp_free16: the first arp to play
+ * starts it, the others keep to it; the loop stopped, it goes on from there). Its notes go to the part's
+ * sound, into the recording (on their ticks, past QUANT; the loop plays them back without it) and out over USB on
+ * the part's channel. The render keeps it (arp_key, arp_tick); the main loop sets MODE, RATE, OCT and GATE (set.mod)
+ * and LATCH (arp_latch) */
+#define ARP_NHELD 16
+#define ARP_GATHER 20                                /* the first key's step waits this many steps of 32 frames (14.5
+                                                     * ms) for the rest of a chord: its keys never land together */
+#define ARP_CYCLE16 (1152u << 16)                    /* the arps' clock turns over here: ticks Q16, a multiple of every
+                                                     * RATE (1152 = 6 * 192 = 8 * 144 = 9 * 128) */
+static const uint8_t ARP_TICKS[ARP_NRATE] = {192, 144, 128, 96, 72, 64, 48, 32, 24};
+static const char *const ARP_RATE_NAME[ARP_NRATE] = {"1/4", "1/8.", "1/4T", "1/8", "1/16.", "1/8T", "1/16", "1/16T",
+                                                     "1/32"};
+static const char *const ARP_MODE_NAME[ARP_NMODE] = {"OFF", "UP", "DOWN", "UP-DN", "RAND", "ORDER"};
+typedef struct {
+    uint8_t note[ARP_NHELD], vel[ARP_NHELD];         /* the notes it holds, in the order they came */
+    volatile uint8_t n;                              /* how many */
+    uint8_t ndown, latch, clk, kick, restart;        /* the keys still down; LATCH as last seen; the clock it last
+                                                     * followed (LP_*); the first key's step due in this many steps
+                                                     * (ARP_GATHER), 0 none; that step starts the arps' clock */
+    uint32_t down[4];                                /* the keys still down, a bit a note (LATCH keeps the others) */
+    uint32_t ph16, on16;                             /* where it is in its step, where its note began there: ticks,
+                                                     * Q16 */
+    volatile uint32_t steps;                         /* the steps played since it began */
+    volatile int16_t snd;                            /* the note sounding, -1 none */
+    uint8_t sent, last;                              /* its note-on went out over USB; RAND's last place */
+    volatile int8_t hist[16];                        /* each step's note (step % 16; the screen's), -1 none */
+} arp_t;
+static arp_t arp[KL_NPART];
+static volatile uint8_t arp_latch[KL_NPART];         /* the main loop's: LATCH, each part's (not saved) */
+static uint32_t arp_rnd = 0x2545F491u;
+static uint32_t arp_free16;                          /* the arps' clock: ticks Q16 (to ARP_CYCLE16); the loop running,
+                                                     * its place */
+
+static void arp_init(void)
+{
+    uint32_t p, i;
+    for (p = 0; p < KL_NPART; p++) {
+        uint8_t *b = (uint8_t *)&arp[p];
+        for (i = 0; i < sizeof arp[p]; i++)
+            b[i] = 0;
+        arp[p].snd = -1;
+        for (i = 0; i < 16u; i++)
+            arp[p].hist[i] = -1;
+        arp_latch[p] = 0;
+    }
+}
+
+static uint32_t arp_gate(int p)                      /* GATE as it plays: SLIDE is ACID's (elsewhere 100 %) */
+{
+    uint32_t g = set.mod[p].arp_gate;
+    return g == ARP_SLIDE && set.parts[p].engine != KL_ACID ? 100u : g;
+}
+
+/* place k of the notes held (n of them, in the order they came) over the octaves: low to high (ORDER: as they came),
+ * then an octave up; *at: which of them */
+static int arp_place(const uint8_t *note, int n, int mode, int k, int *at)
+{
+    uint8_t ord[ARP_NHELD];
+    int i, j, x;
+    for (i = 0; i < n; i++)
+        ord[i] = (uint8_t)i;
+    for (i = 1; mode != ARP_ORDER && i < n; i++)
+        for (j = i; j > 0 && note[ord[j - 1]] > note[ord[j]]; j--) {
+            uint8_t t = ord[j];
+            ord[j] = ord[j - 1];
+            ord[j - 1] = t;
+        }
+    *at = ord[k % n];
+    x = note[*at] + 12 * (k / n);
+    while (x > 127)
+        x -= 12;
+    return x;
+}
+
+/* the place of step i, not RAND: UP, ORDER around; DOWN from the top; UP-DN up and down, each end once */
+static int arp_place_of(int mode, int m, uint32_t i)
+{
+    int k;
+    if (mode == ARP_DOWN)
+        return m - 1 - (int)(i % (uint32_t)m);
+    if (mode != ARP_UPDN || m < 2)
+        return (int)(i % (uint32_t)m);
+    k = (int)(i % (uint32_t)(2 * m - 2));
+    return k < m ? k : 2 * m - 2 - k;
+}
+
+static void arp_midi(int p, int on, int note, int vel)   /* out over USB, on the part's channel */
+{
+    plat_midi_send(on ? 0x09u | (0x90u | (uint32_t)p) << 8 | (uint32_t)note << 16 | (uint32_t)vel << 24
+                      : 0x08u | (0x80u | (uint32_t)p) << 8 | (uint32_t)note << 16, TO_USB);
+}
+
+static void arp_end(int p, int note, int sent, uint32_t at16)   /* a note of the arp's ends (at16: the loop's place,
+                                                                 * for the recording) */
+{
+    kl_key_now(p, 0, note, 0);
+    if (lp.state == LP_PLAY)
+        lp_record_at(p, 0, note, 0, (int32_t)(at16 >> 16));
+    if (sent)
+        arp_midi(p, 0, note, 0);
+}
+
+static void arp_drop(arp_t *a, int i)                /* held note i out */
+{
+    for (; i + 1 < a->n; i++) {
+        a->note[i] = a->note[i + 1];
+        a->vel[i] = a->vel[i + 1];
+    }
+    a->n--;
+}
+
+/* render: a key or a MIDI note for part p's arp. LATCH: a key let go stays held, and the first key after all were let
+ * go begins anew. The first step begins once the chord is down (ARP_GATHER), and with it the arps' clock; another arp
+ * playing, or the loop, it keeps to their grid (early in a step: there and then, else at the next) */
+static void arp_key(int p, int on, int note, int vel)
+{
+    arp_t *a = &arp[p];
+    uint32_t w = (uint32_t)note >> 5, bit = 1u << (note & 31);
+    int i;
+    if (note < 0 || note > 127)
+        return;
+    if (!on) {
+        if (a->down[w] & bit) {
+            a->down[w] &= ~bit;
+            a->ndown--;
+        }
+        for (i = 0; !arp_latch[p] && i < a->n; i++)
+            if (a->note[i] == note) {
+                arp_drop(a, i);
+                break;
+            }
+        return;
+    }
+    if (a->down[w] & bit)
+        return;
+    if (arp_latch[p] && !a->ndown)                   /* LATCH: a new chord */
+        a->n = 0;
+    a->down[w] |= bit;
+    a->ndown++;
+    if (!a->n) {
+        uint32_t r16 = (uint32_t)ARP_TICKS[set.mod[p].arp_rate] << 16;
+        uint32_t g = lp.state == LP_PLAY ? lp.pos16 : lp.state == LP_COUNT ? lp.count16 : arp_free16;
+        int alone = lp.state == LP_STOP;
+        for (i = 0; alone && i < KL_NPART; i++)
+            alone = i == p || !arp[i].n;
+        a->steps = 0;
+        a->restart = (uint8_t)alone;
+        a->kick = alone || g % r16 < r16 / 4u ? ARP_GATHER : 0u;
+    }
+    for (i = 0; i < a->n && a->note[i] != note; i++)
+        ;
+    if (i == a->n) {
+        if (a->n >= ARP_NHELD)
+            return;
+        a->n++;
+    }
+    a->note[i] = (uint8_t)note;
+    a->vel[i] = (uint8_t)clamp(vel, 1, 127);
+}
+
+/* render, each step of 32 frames: part p's arp on. A step begins where the loop's place (the count-in's; stopped,
+ * the arps' clock) passes a multiple of RATE, and as the loop starts.
+ * GATE ends a note within its step; at 100 % the next one ends it, SLIDE (ACID) only once that one has begun: Open303
+ * slides (MONO's legato) */
+static void arp_tick(int p)
+{
+    arp_t *a = &arp[p];
+    const mod_set_t *m = &set.mod[p];
+    uint32_t r16 = (uint32_t)ARP_TICKS[m->arp_rate] << 16, gate = arp_gate(p), ph, at16, g;
+    uint32_t gate16 = r16 / 100u * (gate < 100u ? gate : 100u);
+    int fire, old, i, k, note, mm, due = a->kick && !--a->kick;   /* the first key's step */
+    if (a->latch && !arp_latch[p])                   /* LATCH off: the notes let go, out */
+        for (i = a->n - 1; i >= 0; i--)
+            if (!(a->down[a->note[i] >> 5] >> (a->note[i] & 31u) & 1u))
+                arp_drop(a, i);
+    a->latch = arp_latch[p];
+    if (!m->arp_mode)
+        a->n = 0;
+    if (due && a->restart && lp.state == LP_STOP)
+        arp_free16 = 0;                              /* the first arp to play: the arps' clock begins with it */
+    g = lp.state == LP_PLAY ? lp.pos16 : lp.state == LP_COUNT ? lp.count16 : arp_free16;
+    ph = g % r16;
+    fire = due || ((ph < a->ph16 || (a->clk != lp.state && lp.state != LP_STOP)) && !(a->kick && a->restart));
+    at16 = g - ph;                                   /* the step's start */
+    a->ph16 = ph;
+    a->clk = lp.state;
+    if (fire)
+        a->kick = a->restart = 0;
+    if (a->snd >= 0 && !fire && gate < 100u && ph >= a->on16 + gate16) {   /* GATE (recorded to the nearest tick) */
+        arp_end(p, a->snd, a->sent, at16 + gate16 + 0x8000u);
+        a->snd = -1;
+    }
+    if (!fire)
+        return;
+    old = a->snd;
+    if (old >= 0 && (gate <= 100u || !a->n)) {       /* the note before ends as the step begins */
+        arp_end(p, old, a->sent, at16);
+        a->snd = -1;
+        old = -1;
+    }
+    if (!a->n)
+        return;
+    mm = a->n * m->arp_oct;
+    if (m->arp_mode == ARP_RAND) {                   /* any place but the last one's */
+        arp_rnd ^= arp_rnd << 13;
+        arp_rnd ^= arp_rnd >> 17;
+        arp_rnd ^= arp_rnd << 5;
+        k = mm > 1 ? (int)(arp_rnd % (uint32_t)(mm - 1)) : 0;
+        k += mm > 1 && k >= a->last;
+    } else {
+        k = arp_place_of(m->arp_mode, mm, a->steps);
+    }
+    a->last = (uint8_t)k;
+    note = arp_place(a->note, a->n, m->arp_mode, k, &i);
+    a->hist[a->steps % 16u] = (int8_t)note;
+    a->steps++;
+    a->on16 = ph;
+    if (note == old)                                 /* SLIDE onto the same note: it goes on */
+        return;
+    kl_key_now(p, 1, note, a->vel[i]);
+    if (lp.state == LP_PLAY)
+        lp_record_at(p, 1, note, a->vel[i], (int32_t)(at16 >> 16));
+    if (old >= 0)                                    /* SLIDE: the note before ends now */
+        arp_end(p, old, a->sent, at16);
+    a->sent = plat_midi_out_room(TO_USB) >= 3u;      /* room kept for its note-off (and a slide's) */
+    if (a->sent)
+        arp_midi(p, 1, note, a->vel[i]);
+    a->snd = (int16_t)note;
+}
+
+static void arp_ticks(void)                          /* render, each step: the arps' clock, every part's arp */
+{
+    int p;
+    if (lp.state == LP_STOP)
+        arp_free16 = (arp_free16 + LP_STEP16(lp.tempo)) % ARP_CYCLE16;
+    else
+        arp_free16 = (lp.state == LP_PLAY ? lp.pos16 : lp.count16) % ARP_CYCLE16;
+    for (p = 0; p < KL_NPART; p++)
+        arp_tick(p);
+}
+
 /* ------------------------------------------------------------------ audio --- */
 static int32_t part_buf[KL_NPART][APP_BLOCK];
 static int32_t gain_q8;                              /* MASTER's gain, gliding: no step at a block's edge */
@@ -1246,14 +1524,17 @@ static __attribute__((noinline)) int32_t mul_q16(int32_t a, int32_t g) { return 
 static int32_t clamp30(int64_t v) { return v > (1 << 30) ? 1 << 30 : v < -(1 << 30) ? -(1 << 30) : (int32_t)v; }
 
 static void midi_in(void)                            /* audio interrupt: the packets that came in, channel 1..6 to part
-                                                     * 1..6, the others to the part chosen (and to the looper) */
+                                                     * 1..6, the others to the part chosen (and to the looper; a part
+                                                     * whose ARP is on: to its arp) */
 {
     uint32_t pkt;
     int port;
     while (plat_midi_in(&pkt, &port)) {
         uint32_t st = (pkt >> 8) & 0xFFu, d1 = (pkt >> 16) & 0x7Fu, d2 = (pkt >> 24) & 0x7Fu;
         int part = (st & 0x0Fu) < KL_NPART ? (int)(st & 0x0Fu) : set.part;
-        if ((st & 0xF0u) == 0x90u && d2) {
+        if (((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u) && set.mod[part].arp_mode) {
+            arp_key(part, (st & 0xF0u) == 0x90u && d2, (int)d1, (int)d2);
+        } else if ((st & 0xF0u) == 0x90u && d2) {
             kl_key_now(part, 1, (int)d1, (int)d2);
             lp_record(part, 1, (int)d1, (int)d2);
         } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u) {
@@ -1282,6 +1563,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         for (p = 0; p < KL_NPART; p++)
             out[p] = part_buf[p] + b;
         lp_step(ck_buf + b);
+        arp_ticks();
         lfo_loop_phase();
         kl_render(out, 32u);
     }
@@ -1373,6 +1655,7 @@ void app_init(void)
     }
     mix_update();
     loop_init();
+    arp_init();
     step_init();
     fx_init(fx_dly_buf, fx_pre_buf, fx_hall_buf);
     fx_apply();
@@ -1396,6 +1679,10 @@ static struct {
     uint8_t ask, ask_part;                           /* HOME + PLAY asks before a part is emptied (OCT+ yes) */
     uint8_t fx;                                      /* the effects' page is open */
     uint8_t lfo, redraw_lfo;                         /* the LFO's page is open; its picture again (the wave moved) */
+    uint8_t arp, redraw_arp, arp_n;                  /* the arp's page is open; its picture again (a step played);
+                                                     * the notes it held, as last drawn */
+    uint32_t karp, arp_steps;                        /* the keys that went down to their part's arp; its steps, as
+                                                     * last drawn */
     uint8_t tab, bar, turned;                        /* the tab of the page open: the looper's LOOP (0) or STEP (1),
                                                      * the mixer's MIX or SEND, the effects' DELAY or HALL; STEP's bar
                                                      * shown; a knob turned while a step was held */
@@ -1636,6 +1923,25 @@ static void loop_state_text(char *t)                 /* what the looper does: "R
     }
 }
 
+static const char *const ARP_LABEL[4] = {"MODE", "RATE", "OCT", "GATE"};
+
+static void arp_text(int p, int32_t k, char *b)      /* a knob's value: "UP", "1/16", "2", "50%", "SLIDE" */
+{
+    const mod_set_t *m = &set.mod[p];
+    b[0] = 0;
+    if (k == 0) {
+        text_cat(b, ARP_MODE_NAME[m->arp_mode]);
+    } else if (k == 1) {
+        text_cat(b, ARP_RATE_NAME[m->arp_rate]);
+    } else if (k == 2) {
+        int_text(m->arp_oct, b);
+    } else if (arp_gate(p) == ARP_SLIDE) {
+        text_cat(b, "SLIDE");
+    } else {
+        int_text((int32_t)arp_gate(p), b);
+        text_cat(b, "%");
+    }
+}
 
 /* a screen reader that has just started listening (or asks) hears the whole screen */
 static void speak(void)
@@ -1676,6 +1982,18 @@ static void speak(void)
                 fx_text(ui.tab, k, v);
                 text_cat(t, v);
             }
+        }
+        if (ui.arp) {                                /* the arp: what its knobs hold, LATCH */
+            text_cat(t, ". ARP");
+            for (k = 0; k < 4; k++) {
+                char v[12];
+                text_cat(t, ". ");
+                text_cat(t, ARP_LABEL[k]);
+                text_cat(t, " ");
+                arp_text(set.part, k, v);
+                text_cat(t, v);
+            }
+            text_cat(t, arp_latch[set.part] ? ". LATCH ON" : ". LATCH OFF");
         }
         if (ui.loop && ui.tab) {                     /* the step sequencer: the bar, the steps set */
             char v[8];
@@ -1774,7 +2092,7 @@ static void page_show(uint32_t page)                 /* EDIT 1 (0) or EDIT 2 (1)
 {
     char t[24] = "EDIT ";
     ui.edit = 1;
-    ui.mix = ui.loop = ui.fx = ui.lfo = 0;
+    ui.mix = ui.loop = ui.fx = ui.lfo = ui.arp = 0;
     ui.page = (uint8_t)page;
     ui.redraw = 1;
     text_cat(t, kl_page_title(eng_cur(), (int)page));
@@ -1841,7 +2159,7 @@ static void mix_show(int on)                         /* GLO: the mixer open on M
                                                      * (OCT-) */
 {
     ui.mix = (uint8_t)(on != 0);
-    ui.edit = ui.loop = ui.fx = ui.lfo = ui.tab = 0;
+    ui.edit = ui.loop = ui.fx = ui.lfo = ui.arp = ui.tab = 0;
     ui.redraw = 1;
     announce(on ? "MIX" : "RACK");
 }
@@ -1917,7 +2235,7 @@ static void fx_show(int on)                          /* FX: the effects' page op
                                                      * shut (OCT-) */
 {
     ui.fx = (uint8_t)(on != 0);
-    ui.edit = ui.mix = ui.loop = ui.lfo = ui.tab = 0;
+    ui.edit = ui.mix = ui.loop = ui.lfo = ui.arp = ui.tab = 0;
     ui.redraw = 1;
     announce(on ? "DELAY" : "RACK");
 }
@@ -2017,7 +2335,7 @@ static void lfo_show(int on)                         /* LFO: the chosen part's L
                                                      * (OCT-) */
 {
     ui.lfo = (uint8_t)(on != 0);
-    ui.edit = ui.mix = ui.loop = ui.fx = ui.tab = 0;
+    ui.edit = ui.mix = ui.loop = ui.fx = ui.arp = ui.tab = 0;
     ui.redraw = 1;
     announce(on ? "LFO" : "RACK");
 }
@@ -2097,6 +2415,70 @@ static void lfo_reset(int32_t k)                     /* HOME + K1..K4 */
     lfo_changed(k);
 }
 
+/* ----------------------------------------------------------- the arp's page --- */
+static void arp_said(int32_t k)                      /* "RATE 1/16" */
+{
+    char t[32], v[12];
+    t[0] = 0;
+    text_cat(t, ARP_LABEL[k]);
+    text_cat(t, " ");
+    arp_text(set.part, k, v);
+    text_cat(t, v);
+    announce(t);
+}
+
+static void arp_show(int on)                         /* ARP: the chosen part's arp open (another page closes), or shut
+                                                     * (OCT-) */
+{
+    ui.arp = (uint8_t)(on != 0);
+    ui.edit = ui.mix = ui.loop = ui.fx = ui.lfo = ui.tab = 0;
+    ui.redraw = 1;
+    announce(on ? "ARP" : "RACK");
+}
+
+static void arp_latch_flip(void)                     /* ARP on its page: the chosen part's LATCH */
+{
+    arp_latch[set.part] ^= 1u;
+    ui.redraw = 1;
+    announce(arp_latch[set.part] ? "LATCH ON" : "LATCH OFF");
+}
+
+static void arp_changed(int32_t k)
+{
+    dirty_update();
+    ui.redraw = 1;
+    arp_said(k);
+}
+
+static void arp_knob(int32_t k, int32_t d)           /* K1..K4 on the arp's page: a step a detent (GATE 5 %; ACID past
+                                                     * 100 %: SLIDE) */
+{
+    mod_set_t *m = &set.mod[set.part];
+    if (k == 0)
+        m->arp_mode = (uint8_t)clamp(m->arp_mode + d, 0, ARP_NMODE - 1);
+    else if (k == 1)
+        m->arp_rate = (uint8_t)clamp(m->arp_rate + d, 0, ARP_NRATE - 1);
+    else if (k == 2)
+        m->arp_oct = (uint8_t)clamp(m->arp_oct + d, 1, 4);
+    else
+        m->arp_gate = (uint8_t)clamp((int32_t)arp_gate(set.part) + 5 * d, 10, eng_cur() == KL_ACID ? ARP_SLIDE : 100);
+    arp_changed(k);
+}
+
+static void arp_reset(int32_t k)                     /* HOME + K1..K4: OFF, 1/16, 1, 50 % */
+{
+    mod_set_t *m = &set.mod[set.part];
+    if (k == 0)
+        m->arp_mode = ARP_OFF;
+    else if (k == 1)
+        m->arp_rate = ARP_DEF_RATE;
+    else if (k == 2)
+        m->arp_oct = 1;
+    else
+        m->arp_gate = ARP_DEF_GATE;
+    arp_changed(k);
+}
+
 /* -------------------------------------------------------- the looper's page --- */
 static void loop_said(int32_t k)                     /* "TEMPO 98 BPM" */
 {
@@ -2113,7 +2495,7 @@ static void loop_show(int on)                        /* SEQ: the looper's page o
                                                      * shut (OCT-) */
 {
     ui.loop = (uint8_t)(on != 0);
-    ui.edit = ui.mix = ui.fx = ui.lfo = ui.tab = 0;
+    ui.edit = ui.mix = ui.fx = ui.lfo = ui.arp = ui.tab = 0;
     ui.held = ui.held_new = 0;
     ui.cur = 0;
     ui.redraw = 1;
@@ -2667,15 +3049,25 @@ static void input(void)
                 v = btn & 1u << B_ENV ? 127u : 64u;
             ui.knote[k] = (int8_t)note;
             ui.kpart[k] = set.part;
-            kl_key(set.part, 1, note, (int)v);
-            lp_key(set.part, 1, note, (int)v);
-            plat_midi_send(0x09u | (0x90u | set.part) << 8 | (uint32_t)note << 16 | v << 24, TO_USB);   /* its
+            if (set.mod[set.part].arp_mode) {        /* to the part's arp: its notes play, record and go out */
+                ui.karp |= bit;
+                lp_key(set.part, 1, note, (int)v, 1);
+            } else {
+                ui.karp &= ~bit;
+                kl_key(set.part, 1, note, (int)v);
+                lp_key(set.part, 1, note, (int)v, 0);
+                plat_midi_send(0x09u | (0x90u | set.part) << 8 | (uint32_t)note << 16 | v << 24, TO_USB);   /* its
                                                                                                          * channel */
+            }
         } else if (!(keys & bit) && (ui.keys & bit)) {
             int32_t note = ui.knote[k];
-            kl_key(ui.kpart[k], 0, note, 0);
-            lp_key(ui.kpart[k], 0, note, 0);
-            plat_midi_send(0x08u | (0x80u | ui.kpart[k]) << 8 | (uint32_t)note << 16, TO_USB);
+            if (ui.karp & bit) {
+                lp_key(ui.kpart[k], 0, note, 0, 1);
+            } else {
+                kl_key(ui.kpart[k], 0, note, 0);
+                lp_key(ui.kpart[k], 0, note, 0, 0);
+                plat_midi_send(0x08u | (0x80u | ui.kpart[k]) << 8 | (uint32_t)note << 16, TO_USB);
+            }
         }
     }
     for (k = 0; k < NB; k++) {
@@ -2702,6 +3094,14 @@ static void input(void)
             fx_show(0);
         else if (k == B_OCTDN && ui.lfo)
             lfo_show(0);
+        else if (k == B_OCTDN && ui.arp)
+            arp_show(0);
+        else if (k == B_ARP && ui.arp)
+            arp_latch_flip();                        /* on its page: LATCH */
+        else if (k == B_ARP)
+            arp_show(1);
+        else if (k == B_OCTUP && ui.arp)
+            continue;                                /* one tab: nothing */
         else if ((k == B_LFO || k == B_OCTUP) && ui.lfo)
             page_tab(!ui.tab);                       /* LFO and MORE */
         else if (k == B_LFO)
@@ -2734,7 +3134,7 @@ static void input(void)
             part_step(1);
         else if (k == B_ENV && eng_cur() == KL_ACID)
             announce("ACCENT");                      /* held: the keys pressed now are accented */
-        else if (k == B_HOME && (ui.edit || ui.mix || ui.loop || ui.fx || ui.lfo))
+        else if (k == B_HOME && (ui.edit || ui.mix || ui.loop || ui.fx || ui.lfo || ui.arp))
             app_say("RESET", "TURN K1-K4");          /* held: a knob turned goes back to its sound's value */
         else if (k == B_HOME)
             app_say("HOME", "+ REC UNDO");           /* held: REC takes the last take back, PLAY empties a part */
@@ -2760,6 +3160,10 @@ static void input(void)
             loop_step((int32_t)(k - EN_K1), e);
         else if (ui.lfo && k >= EN_K1 && (btn & 1u << B_HOME))
             lfo_reset((int32_t)(k - EN_K1));
+        else if (ui.arp && k >= EN_K1 && (btn & 1u << B_HOME))
+            arp_reset((int32_t)(k - EN_K1));
+        else if (ui.arp && k >= EN_K1)
+            arp_knob((int32_t)(k - EN_K1), e);
         else if (ui.lfo && k >= EN_K1)
             lfo_step((int32_t)(k - EN_K1), e);
         else if (ui.fx && k >= EN_K1 && (btn & 1u << B_HOME))
@@ -2784,7 +3188,8 @@ static void input(void)
     plat_glow(1);                                    /* the unlit buttons glow, readable in the dark */
     plat_play_red(lp.rec);                           /* PLAY green while it plays, red while it records */
     plat_leds(btn | (set_dirty ? 1u << B_SAVE : 0u) | (ui.mix ? 1u << B_GLO : 0u) | (ui.loop ? 1u << B_SEQ : 0u) |
-                  (ui.fx ? 1u << B_FX : 0u) | (ui.lfo ? 1u << B_LFO : 0u) | (lp.state != LP_STOP ? 1u << B_PLAY : 0u) |
+                  (ui.fx ? 1u << B_FX : 0u) | (ui.lfo ? 1u << B_LFO : 0u) | (ui.arp ? 1u << B_ARP : 0u) |
+                  (lp.state != LP_STOP ? 1u << B_PLAY : 0u) |
                   (lp.rec ? 1u << B_REC : 0u),
               ui.loop && ui.tab ? step_lights() : keys);   /* STEP: the steps set, a running light */
 }
@@ -2908,15 +3313,16 @@ static void draw_header(void)
     if (msg) {
         int32_t x = cv_text(8, 3, &FONT_B, ui.msg[0], K_TEXT);
         cv_text(x + 6, 3, &FONT_B, ui.msg[1], tl->col);
-    } else if (ui.mix || ui.loop || ui.fx || ui.lfo) {   /* the mixer, the looper, the effects, the LFO */
-        const char *c = ui.mix ? "MIX" : ui.fx ? "FX" : ui.lfo ? "LFO" : ui.tab ? "STEP" : "LOOP";
+    } else if (ui.mix || ui.loop || ui.fx || ui.lfo || ui.arp) {   /* the mixer, the looper, the effects, the LFO,
+                                                                    * the arp */
+        const char *c = ui.mix ? "MIX" : ui.fx ? "FX" : ui.lfo ? "LFO" : ui.arp ? "ARP" : ui.tab ? "STEP" : "LOOP";
         char st[24] = "";
         int32_t w = text_w(&FONT_XS, c) + 8;
         if (ui.mix) {
             text_cat(st, set.part < 3 ? "PARTS 1-3" : "PARTS 4-6");   /* the page: the chosen part's three */
         } else if (ui.fx) {
             text_cat(st, "DELAY + HALL");
-        } else if (ui.lfo) {
+        } else if (ui.lfo || ui.arp) {
             part_name(set.part, st);
         } else if (ui.tab) {                         /* STEP: the part whose steps the keys are (DRUMS: and the
                                                      * instrument) */
@@ -3203,6 +3609,29 @@ static void footer_lfo(char lab[4][16], char v[4][12], int32_t frac[4], int32_t 
     }
 }
 
+/* K1..K4 on the arp's page, each marked where HOME takes it (OFF, 1/16, 1, 50 %) while it is elsewhere */
+static void footer_arp(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
+{
+    const mod_set_t *m = &set.mod[set.part];
+    int32_t i, top = eng_cur() == KL_ACID ? ARP_SLIDE : 100, g = (int32_t)arp_gate(set.part);
+    for (i = 0; i < 4; i++) {
+        lab[i][0] = 'K';
+        lab[i][1] = (char)('1' + i);
+        lab[i][2] = ' ';
+        lab[i][3] = 0;
+        text_cat(lab[i], ARP_LABEL[i]);
+        arp_text(set.part, i, v[i]);
+    }
+    frac[0] = m->arp_mode * 256 / (ARP_NMODE - 1);
+    mark[0] = m->arp_mode ? 0 : -1;
+    frac[1] = m->arp_rate * 256 / (ARP_NRATE - 1);
+    mark[1] = m->arp_rate != ARP_DEF_RATE ? ARP_DEF_RATE * 256 / (ARP_NRATE - 1) : -1;
+    frac[2] = (m->arp_oct - 1) * 256 / 3;
+    mark[2] = m->arp_oct != 1 ? 0 : -1;
+    frac[3] = (g - 10) * 256 / (top - 10);
+    mark[3] = g != ARP_DEF_GATE ? (ARP_DEF_GATE - 10) * 256 / (top - 10) : -1;
+}
+
 /* K1..K4: TEMPO, LENGTH, QUANT, CLICK, each marked where HOME takes it (120 BPM, the first take's length, 1/16,
  * REC) while it is elsewhere */
 static void footer_loop(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
@@ -3275,6 +3704,8 @@ static void draw_footer(void)                        /* what the controls hold, 
         footer_fx(lab, v, frac, mark);
     else if (ui.lfo)
         footer_lfo(lab, v, frac, mark);
+    else if (ui.arp)
+        footer_arp(lab, v, frac, mark);
     else if (ui.loop && ui.tab)
         footer_step(lab, v, frac, mark);
     else if (ui.loop)
@@ -3808,6 +4239,127 @@ static void draw_lfo(int32_t y0)
     cv_blit(0, (uint32_t)y0);
 }
 
+/* the arp's page, the rows y0 .. y0 + 92 of the screen: MODE, RATE, OCT and LATCH; 16 steps, each its note (higher
+ * up higher, as long as GATE), the line on the step playing: those played bright (what it played), those to come dim
+ * (what it will play; RAND: what it played a round before); the notes held and GATE; then each part's MODE and RATE */
+#define AS_X 20                                      /* the steps: from x, each this wide */
+#define AS_W 13
+static const char *const TABS_ARP[2] = {"ARP", ""};
+static void draw_arp(int32_t y0)
+{
+    const mod_set_t *m = &set.mod[set.part];
+    const arp_t *a = &arp[set.part];
+    const tile_t *ct = &TILES[TILE_OF[eng_cur()]];
+    uint8_t note[ARP_NHELD];
+    int8_t at[16];
+    int32_t n = a->n, steps = (int32_t)a->steps, cur = steps ? (steps - 1) % 16 : -1;
+    int32_t base = steps ? (steps - 1) / 16 * 16 : 0;
+    int32_t p, i, lo = 127, hi = 0, gate = (int32_t)arp_gate(set.part), mm;
+    char t[64] = "", v[12];
+    for (i = 0; i < n && i < ARP_NHELD; i++)         /* the render's, as it is now */
+        note[i] = a->note[i];
+    n = i;
+    mm = n * m->arp_oct;
+    for (i = 0; i < 16; i++) {                       /* each step's note: played, or to come */
+        int which;
+        at[i] = a->hist[i];
+        if (i > cur && n && m->arp_mode && m->arp_mode != ARP_RAND)
+            at[i] = (int8_t)arp_place(note, n, m->arp_mode, arp_place_of(m->arp_mode, mm, (uint32_t)(base + i)), &which);
+        if (at[i] >= 0) {
+            lo = at[i] < lo ? at[i] : lo;
+            hi = at[i] > hi ? at[i] : hi;
+        }
+    }
+    cv_begin(240, 93, K_GROUND);
+    int_text(lp.tempo, v);
+    text_cat(v, " BPM");
+    draw_tabs(y0, TABS_ARP, v);
+    cv_rect(1, 44 - y0, 238, 82, K_SURF);
+    if (m->arp_mode) {
+        text_cat(t, ARP_MODE_NAME[m->arp_mode]);
+        text_cat(t, " - ");
+        text_cat(t, ARP_RATE_NAME[m->arp_rate]);
+        text_cat(t, " - ");
+        int_text(m->arp_oct, v);
+        text_cat(t, v);
+        text_cat(t, " OCT");
+    } else {
+        text_cat(t, "ARP OFF");
+    }
+    cv_text(7, 47 - y0, &FONT_XS, t, K_TEXT);
+    {   /* LATCH: lit while on */
+        int32_t w = text_w(&FONT_T, "LATCH") + 12, x = 232 - w;
+        if (arp_latch[set.part]) {
+            cv_rect(x, 46 - y0, w, 14, K_TEXT);
+            cv_text(x + 6, 48 - y0, &FONT_T, "LATCH", K_GROUND);
+        } else {
+            box_edge(x, 46 - y0, w, 14, 1, K_LINE);
+            cv_text(x + 6, 48 - y0, &FONT_T, "LATCH", K_MUTED);
+        }
+    }
+    if (m->arp_mode) {
+        for (i = 0; i <= 16; i += 4)                 /* every fourth step */
+            cv_rect(AS_X + i * AS_W - 1, 64 - y0, 1, 44, K_LINE);
+        for (i = 0; i < 16; i++) {
+            int32_t y, w = gate >= ARP_SLIDE ? AS_W : 2 + (AS_W - 4) * gate / 100;
+            if (at[i] < 0)
+                continue;
+            y = hi > lo ? 102 - (at[i] - lo) * 36 / (hi - lo) : 84;
+            cv_rect(AS_X + i * AS_W + 1, y - y0, w, 4, i <= cur && n ? ct->col : mix565(ct->col, K_SURF, 90));
+        }
+        if (cur >= 0 && n)                           /* the step playing */
+            cv_rect(AS_X + cur * AS_W - 1, 62 - y0, 2, 48, K_TEXT);
+        {   /* the notes held (low to high; ORDER: as they came), as many as fit before GATE */
+            char g[16] = " - GATE ";
+            int32_t room = 224 - text_w(&FONT_T, " - GATE SLIDE") - text_w(&FONT_T, " ..");
+            arp_text(set.part, 3, v);
+            text_cat(g, v);
+            t[0] = 0;
+            text_cat(t, n ? "HELD" : arp_latch[set.part] ? "PLAY A CHORD: IT STAYS" : "HOLD KEYS");
+            for (i = 0; i < n; i++) {
+                int which;
+                arp_place(note, n, m->arp_mode, (int)i, &which);
+                note_text(note[which], v);
+                if (text_w(&FONT_T, t) + text_w(&FONT_T, v) + 4 > room) {
+                    text_cat(t, " ..");
+                    break;
+                }
+                text_cat(t, " ");
+                text_cat(t, v);
+            }
+            text_cat(t, g);
+            cv_text(8, 113 - y0, &FONT_T, t, K_MUTED);
+        }
+    } else {
+        t[0] = 0;
+        part_name(set.part, t);
+        text_cat(t, ": KEYS PLAY AS ALWAYS");
+        cv_text(8, 80 - y0, &FONT_XS, t, K_MUTED);
+    }
+    for (p = 0; p < KL_NPART; p++) {                 /* the parts' arps: MODE and RATE */
+        const part_set_t *ps = &set.parts[p];
+        const mod_set_t *mp = &set.mod[p];
+        const tile_t *tl = &TILES[TILE_OF[ps->engine]];
+        int32_t tx = 1 + (p % 3) * 80, y = 129 + (p / 3) * 40 - y0;
+        int sel = p == set.part;
+        uint16_t bg = sel ? K_SURF2 : K_SURF;
+        uint8_t sh[8];
+        cv_rect(tx, y, 78, 37, bg);
+        if (sel)
+            box_edge(tx, y, 78, 37, 2, tl->col);
+        kl_shape(ps->engine, work[p][ps->engine], sh);
+        glyph_draw(tx + 11, y + 11, 6, sh, tl->col, bg);
+        t[0] = 0;
+        part_name(p, t);
+        text_fit(tx + 20, y + 4, 55, &FONT_XS, t, sel ? tl->col : K_TEXT);
+        cv_text(tx + 6, y + 23, &FONT_T, ARP_MODE_NAME[mp->arp_mode], mp->arp_mode ? K_TEXT : K_MUTED);
+        if (mp->arp_mode)
+            cv_text(tx + 73 - text_w(&FONT_XS, ARP_RATE_NAME[mp->arp_rate]), y + 20, &FONT_XS,
+                    ARP_RATE_NAME[mp->arp_rate], K_TEXT);
+    }
+    cv_blit(0, (uint32_t)y0);
+}
+
 /* ------------------------------------------------------- the looper's lanes --- */
 #define LT_X 60                                      /* the lanes' time line: from x, this wide */
 #define LT_W 176
@@ -4083,6 +4635,9 @@ static void draw(void)
     } else if (ui.lfo) {
         draw_lfo(22);
         draw_lfo(115);
+    } else if (ui.arp) {
+        draw_arp(22);
+        draw_arp(115);
     } else if (ui.loop && ui.tab) {
         draw_step(22);
         draw_step(115);
@@ -4178,8 +4733,15 @@ void app_frame(void)
         ui.loop_at = now;
         ui.redraw_lfo = 1;
     }
+    if (ui.arp && now - ui.loop_at >= 40u && (arp[set.part].steps != ui.arp_steps || arp[set.part].n != ui.arp_n)) {
+        ui.loop_at = now;                            /* the arp's steps, alike, as they play */
+        ui.arp_steps = arp[set.part].steps;
+        ui.arp_n = arp[set.part].n;
+        ui.redraw_arp = 1;
+    }
     if (ui.redraw) {
         ui.redraw = ui.redraw_pads = ui.redraw_mix = ui.redraw_loop = ui.redraw_head = ui.redraw_lfo = 0;
+        ui.redraw_arp = 0;
         draw();
         return;
     }
@@ -4199,6 +4761,10 @@ void app_frame(void)
         ui.redraw_lfo = 0;
         draw_lfo(22);
         draw_lfo(115);
+    } else if (ui.redraw_arp) {                      /* the arp's page: a step played */
+        ui.redraw_arp = 0;
+        draw_arp(22);
+        draw_arp(115);
     } else if (ui.redraw_mix) {                      /* the strips alone: the meters moved */
         ui.redraw_mix = 0;
         draw_mix(22);
@@ -4389,6 +4955,58 @@ int app_expect(const char *what, int *got)
                                                      * RATE): 1/256 of a turn */
         uint32_t t = LFO_SYNC[set.mod[set.part].lfo_rate[0]], d = kl_lfo_phase_now(set.part) - ((lp.pos16 % (t << 16)) / t << 16);
         *got = (int)((d < 0x80000000u ? d : 0u - d) >> 24);
+    }
+    else if (!strcmp(what, "arp"))                   /* the arp's page open */
+        *got = ui.arp;
+    else if (!strcmp(what, "arpmode"))               /* the chosen part's arp: MODE, RATE (ARP_TICKS' index), OCT,
+                                                     * GATE (as it plays: 105 SLIDE), LATCH */
+        *got = set.mod[set.part].arp_mode;
+    else if (!strcmp(what, "arprate"))
+        *got = set.mod[set.part].arp_rate;
+    else if (!strcmp(what, "arpoct"))
+        *got = set.mod[set.part].arp_oct;
+    else if (!strcmp(what, "arpgate"))
+        *got = (int)arp_gate(set.part);
+    else if (!strcmp(what, "arplatch"))
+        *got = arp_latch[set.part];
+    else if (!strcmp(what, "arpn"))                  /* the render's: the notes it holds, the note sounding (-1
+                                                     * none), the steps played, the last step's note */
+        *got = arp[set.part].n;
+    else if (!strcmp(what, "arpsnd"))
+        *got = arp[set.part].snd;
+    else if (!strcmp(what, "arpsteps"))
+        *got = (int)arp[set.part].steps;
+    else if (!strcmp(what, "arpph"))                 /* where it is in its step: % */
+        *got = (int)(arp[set.part].ph16 / (((uint32_t)ARP_TICKS[set.mod[set.part].arp_rate] << 16) / 100u));
+    else if (!strcmp(what, "arplast"))
+        *got = arp[set.part].steps ? arp[set.part].hist[(arp[set.part].steps - 1u) % 16u] : -1;
+    else if (!strcmp(what, "arprep") || !strcmp(what, "arpkinds")) {   /* its last 16 steps: notes the same as the
+                                                                         * one before; notes not the same */
+        const arp_t *a = &arp[set.part];
+        uint32_t s = a->steps, i0 = s > 16u ? s - 16u : 0u, i, seen[4] = {0, 0, 0, 0};
+        int rep = 0, kinds = 0;
+        for (i = i0; i < s; i++) {
+            int x = a->hist[i % 16u];
+            rep += i > i0 && x == a->hist[(i - 1u) % 16u];
+            if (x >= 0 && !(seen[x >> 5] >> (x & 31) & 1u)) {
+                seen[x >> 5] |= 1u << (x & 31);
+                kinds++;
+            }
+        }
+        *got = what[3] == 'r' ? rep : kinds;
+    } else if (!strcmp(what, "lgrid") || !strcmp(what, "lslide")) {   /* the chosen part's notes in the loop: those
+                                                                     * that begin off its arp's grid (RATE); those
+                                                                     * the end of another follows at their tick (a
+                                                                     * slide) */
+        const lp_ev_t *e = lp_ev[set.part];
+        uint32_t i, n = lp.n[set.part], r = ARP_TICKS[set.mod[set.part].arp_rate];
+        int c = 0;
+        for (i = 0; i < n; i++)
+            if (e[i].vel & 0x7Fu)
+                c += what[1] == 'g' ? e[i].tick % r != 0u
+                                    : i + 1u < n && !(e[i + 1u].vel & 0x7Fu) && e[i + 1u].tick == e[i].tick &&
+                                          e[i + 1u].note != e[i].note;
+        *got = c;
     }
     else if (!strcmp(what, "smask"))                 /* the chosen part's steps with a note in the bar shown (DRUMS:
                                                      * the instrument's), bit 0 step 1 */

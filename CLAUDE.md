@@ -72,7 +72,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (`base/bsp/docs/CPU.md`). Stattdessen 32 Bit mit Rechenweg, oder eine `noinline`-Hilfsfunktion. Kein `double`.
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
-## Klang (Stand v0.6)
+## Klang (Stand v0.7)
 - Parts: sechs gleichzeitig (am Anfang VA, DRUMS, ACID, FM6, PD, ORGAN: `PART_ENGINE`; das Rack (`TILES`) seit 29.10. in
   derselben Reihenfolge, Part 1–6 von links oben nach rechts unten; K1 wählt die Engines in dieser Reihenfolge), SEL (Taster) oder SELECT
   (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem gewählten (`set.part`, `part_cur()`, `eng_cur()` in
@@ -88,6 +88,14 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   FM6 PITCH/AMP, ACID PITCH/FILTER, DRUMS keins), RETRIG, FADE. VA/PD/ORGAN über `vmod_t`, FM6 über
   `fm_note_compute(…, pitch_add)` und eine Verstärkungsrampe, ACID über `acid_set_pitch_mod`/`acid_set_cutoff`.
   Speicherformat `KLSA` (KLS9 wird übernommen).
+- ARP (Taster ARP; auf der offenen Seite schaltet ARP LATCH, `arp_latch`, nicht gespeichert; `arp_*` in `app.c`):
+  je Part einer, im Render (`arp_tick` je 32 Frames nach `lp_step`; Tasten über `lp_key(…, 1)`, MIDI-In direkt in
+  `arp_key`). MODE OFF/UP/DOWN/UP-DN/RAND/ORDER, RATE (`ARP_TICKS`, 1/4 … 1/32), OCT 1–4, GATE 10–100 % (ACID
+  darüber `ARP_SLIDE`: Note-on vor Note-off = Legato). Takt: läuft die Schleife, ihr Raster (`lp.pos16`, beim
+  Vorzählen `lp.count16`), sonst die gemeinsame Uhr der Arps (`arp_free16`, startet mit dem ersten Arp, die anderen
+  reihen sich ein); der erste Schritt wartet `ARP_GATHER` (14,5 ms) auf den Akkord. REC
+  nimmt die Arp-Noten auf ihren Ticks auf (`lp_record_at`, ohne QUANT); USB-MIDI-Out auf dem Kanal des Parts.
+  Felder in `mod_set_t` (`KLSA`).
 - Effekte (FX; FX/OCT+ wechselt DELAY/HALL; `set.fx[2][4]`, `fx_*` in `app.c`, `dsp/fx.c`): Send-Effekte, die Sends
   mono summiert, die Rückwege stereo vor dem Limiter. DELAY Ping-Pong (erstes Echo links), höchstens 0,5 s je Seite
   (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
@@ -157,7 +165,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
 | v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | erledigt (Simulator) |
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts; dazu Step-Cursor, DOUBLE/HALF | erledigt (Simulator; Emulator-Protokolle 29.10.) |
-| v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | LFO erledigt (Simulator), ARP offen |
+| v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | erledigt (Simulator) |
 | v0.8 | Edit-Seiten nach den Mockups 02 `Edit-VA` und 03 `Edit-FM6` (mehr Seiten je Engine: Hüllkurve, LFO, Filterkurve, Algorithmus-Grafik) | offen |
 | v0.9 | Preset-Liste und Glyphen-Browser (früher v0.4, dann v0.7) | offen |
 | v1.0 | Klang-Atlas, Klang-Stammbaum (früher v0.6, dann v0.8) | offen |

@@ -31,7 +31,7 @@ gerade halten).
 | v0.3 | DRUMS (Kits im Stil von 606, 707, 808, 909; Plaits, MIT, und eigener Code; ersetzt STRINGS), ACID (Open303, MIT) | erledigt (Simulator) |
 | v0.5 | Parts (4, je eine Engine), Mixer mit Limiter, Noten-Looper | erledigt (Simulator) |
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts; dazu Step-Cursor, DOUBLE/HALF | erledigt (Simulator; Emulator-Protokolle 29.10.) |
-| v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | LFO erledigt (Simulator), ARP offen |
+| v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | erledigt (Simulator) |
 | v0.8 | Edit-Seiten nach den Mockups 02 `Edit-VA` und 03 `Edit-FM6` (mehr Seiten je Engine: Hüllkurve, LFO, Filterkurve, Algorithmus-Grafik) | offen |
 | v0.9 | Preset-Liste und Glyphen-Browser (früher v0.4, dann v0.7) | offen |
 | v1.0 | Klang-Atlas, Klang-Stammbaum (früher v0.6, dann v0.8) | offen |

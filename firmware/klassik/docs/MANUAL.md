@@ -1,4 +1,4 @@
-# KLASSIK – Bedienung (v0.6: Parts, Mixer, Looper, Step-Sequencer, Effekte)
+# KLASSIK – Bedienung (v0.7: Parts, Mixer, Looper, Step-Sequencer, Effekte, LFO, ARP)
 
 ## Parts
 
@@ -138,6 +138,41 @@ Pulsbreite); PD PITCH, DCW (die Tiefe der Phasenverzerrung), AMP; ORGAN PITCH, A
 seines Presets), AMP; ACID PITCH, FILTER; DRUMS keins (seine Kachel ist grau). Wechselt ein Part die Engine, gilt
 deren erstes Ziel, bis K4 ein anderes wählt. SAVE speichert jeden LFO.
 
+## ARP
+
+Jeder Part hat einen Arpeggiator. ARP öffnet die Seite des gewählten Parts (die anderen Seiten schließen sich), OCT−
+zurück zum Rack; ARP leuchtet, solange die Seite offen ist. Auf der offenen Seite schaltet ARP **LATCH** des gewählten
+Parts (OCT+ tut dort nichts). Steht MODE nicht auf OFF, spielen die Tasten und MIDI-In dieses Parts nicht mehr
+selbst, sondern der Arp: die gehaltenen Noten nacheinander, im TEMPO des Loopers. Die Tasten spielen auf jeder Seite
+in den Arp, nur nicht auf dem Tab STEP (dort sind sie Steps). Was die Schleife abspielt, geht nicht durch den Arp.
+
+| Regler | Was er tut |
+| --- | --- |
+| K1 MODE | OFF (die Tasten spielen wie immer), UP (tief nach hoch), DOWN, UP-DN (hoch und wieder runter, die Enden einmal), RAND (zufällig, nie zweimal dieselbe Note hintereinander), ORDER (in der Reihenfolge, in der die Tasten kamen) |
+| K2 RATE | 1/4, 1/8., 1/4T, 1/8, 1/16., 1/8T, 1/16, 1/16T, 1/32 im TEMPO des Loopers; nach rechts schneller; am Anfang 1/16 |
+| K3 OCT | 1–4: das Muster noch einmal je eine Oktave höher (C E G, dann C E G eine Oktave höher …) |
+| K4 GATE | 10–100 % des Schritts in 5er-Schritten; am Anfang 50 %. Nur ACID: über 100 % **SLIDE**, jede Note gleitet in die nächste (wie gehaltene Tasten bei Open303); wechselt der Part die Engine, spielt SLIDE wie 100 % |
+| HOME + K1–K4 | OFF, 1/16, 1, 50 %; eine helle Marke im Balken zeigt den Wert, solange der Regler woanders steht |
+| ARP (auf der Seite) | LATCH an/aus (`LATCH ON`): losgelassene Tasten bleiben gehalten; die erste Taste, nachdem alle los waren, beginnt ein neues Muster. LATCH aus lässt los, was keine Taste mehr hält |
+
+**Takt:** Alle Arps laufen auf einem gemeinsamen Raster. Läuft die Schleife (oder zählt sie vor), ist es ihres; am
+Anfang der Schleife beginnt ein Schritt. Steht sie, haben die Arps eine eigene Uhr im TEMPO: Der erste Arp, der
+spielt, startet sie mit seiner ersten Taste (14,5 ms danach, damit ein Akkord beisammen ist); hält die Schleife an,
+läuft sie von dort weiter. Ein Arp, der dazukommt, während schon einer spielt (oder die Schleife läuft), hält sich an
+das Raster: Seine erste Taste wartet bis zum nächsten Schritt, außer sie kommt früh in einem Schritt (im ersten
+Viertel), dann spielt sie gleich. Punktierte RATEs passen nicht in einen Takt: am Anfang der Schleife beginnt ihr
+Raster neu.
+
+**Aufnehmen:** REC nimmt die Noten des Arps auf, jede auf dem Tick ihres Schritts (QUANT verschiebt sie nicht, damit
+z. B. 1/16T bei QUANT 1/16 triolisch bleibt). Die Schleife spielt sie danach ohne Arp ab: MODE OFF lässt sie stehen.
+**MIDI:** Die Noten des Arps gehen per USB auf dem Kanal des Parts hinaus, die gedrückten Tasten selbst nicht.
+SAVE speichert MODE, RATE, OCT und GATE jedes Parts, LATCH nicht (nach dem Einschalten aus).
+
+Die Seite: oben MODE, RATE, OCT und LATCH (hell, wenn an), darunter 16 Schritte, je Schritt ein Balken in der
+Tonhöhe seiner Note und so lang wie GATE; die weiße Linie steht auf dem Schritt, der gerade spielt. Hell, was er
+gespielt hat, dunkel, was kommt (RAND: was er eine Runde vorher gespielt hat). Darunter die gehaltenen Noten und GATE,
+dann je Part MODE und RATE.
+
 ## Looper
 
 Der Looper nimmt Noten auf, keinen Klang: was die Tasten und MIDI dem gewählten Part spielen. Alle sechs Parts teilen
@@ -156,7 +191,8 @@ dem Ausschalten weg; Tempo, QUANT und CLICK auch (sie stehen dann wieder auf 120
 
 **Die erste Aufnahme** (alle Spuren leer, LENGTH AUTO) legt die Länge fest: REC beendet sie, auf ganze Takte gerundet
 (der nächste, 1–16), und die Schleife spielt weiter; PLAY beendet sie und stoppt. Was nach dem Ende gespielt wurde,
-rückt an den Anfang. Nach 16 Takten steht die Länge von selbst fest.
+rückt an den Anfang, jede Note an ihren Platz; beginnt dort dieselbe Note schon (ein Arp, der weitergespielt hat),
+fällt sie weg. Nach 16 Takten steht die Länge von selbst fest.
 
 **Die Looper-Seite** (SEQ öffnet sie auf dem Tab LOOP; SEQ oder OCT+ wechselt zum Tab STEP, wie EDIT und OCT+ auf den
 Edit-Seiten; OCT− zurück; EDIT, GLO und FX wechseln zu ihren Seiten): alle sechs Parts je eine Spur mit Glyphe und
