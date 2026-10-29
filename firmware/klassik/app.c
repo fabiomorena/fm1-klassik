@@ -9,8 +9,8 @@
  * channel 1..6 plays part 1..6 (others the chosen part), the keys send on their part's channel. On ACID a key
  * pressed while ENV is held is accented (ACC in the header). EDIT opens the engine's pages of four values on K1..K4
  * (EDIT or OCT+ the next page, OCT- back to the rack): two of its eight parameters; VA, PD and ORGAN then ENV (ATK,
- * DEC, SUS, REL, as times) and MORE (ENV > FILTER, VOICE POLY / MONO), which ENV opens too (FM6: its ENV page; DRUMS
- * has none). VA's FLT shows the filter's response, FM6's ALGO the algorithm and the operators' levels, ENV and MORE the
+ * DEC, SUS, REL, as times) and MORE (ENV > FILTER, VOICE POLY / MONO); ENV opens them on ENV (FM6: its ENV page;
+ * DRUMS has none), and goes on through them as EDIT. VA's FLT shows the filter's response, FM6's ALGO the algorithm and the operators' levels, ENV and MORE the
  * envelope; the other pages the glyph large. An edit plays at once (FM6's MOD, DTUN, ATK, DEC, SUS and REL and ACID's
  * DECAY and ACCENT from the next note). HOME held, a knob turned goes back to its sound's value (the preset's, or the
  * USER sound's), marked on its bar while it is elsewhere.
@@ -2161,20 +2161,20 @@ static void page_show(uint32_t page)                 /* a page of the engine pla
     ui.mix = ui.loop = ui.fx = ui.lfo = ui.arp = 0;
     ui.page = (uint8_t)(page % (uint32_t)kl_pages(eng_cur()));
     ui.redraw = 1;
-    text_cat(t, kl_page_title(eng_cur(), (int)page));
+    text_cat(t, kl_page_title(eng_cur(), ui.page));
     announce(t);
 }
 
-static void env_show(void)                           /* ENV: the chosen part's envelope, its edit pages on ENV (there:
-                                                     * MORE, and back); FM6 its EDIT 2 (ENV); DRUMS has none */
+static void env_show(void)                           /* ENV: the chosen part's envelope, its edit pages on ENV (FM6 its
+                                                     * EDIT 2); open, the next page as EDIT; DRUMS has none */
 {
     int e = eng_cur();
     if (e == KL_DRUMS)
         app_say("NO", "ENV");
-    else if (!kl_env(e))
-        page_show(1);
+    else if (ui.edit)
+        page_show(ui.page + 1u);
     else
-        page_show(ui.edit && ui.page == 2 ? 3u : 2u);
+        page_show(kl_env(e) ? 2u : 1u);
 }
 
 static void edit_close(void)

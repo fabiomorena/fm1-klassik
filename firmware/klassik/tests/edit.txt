@@ -34,6 +34,7 @@ expect page 4
 tap OCT+
 wait 30
 expect page 1
+said EDIT OSC
 tap OCT+
 wait 30
 expect page 2

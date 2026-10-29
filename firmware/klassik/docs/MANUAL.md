@@ -255,7 +255,7 @@ vier Parameter auf K1–K4 leuchten in der Farbe der Engine. Eigene Bilder haben
 | --- | --- |
 | K1–K4 | die vier Parameter der Seite; Klang und Glyphen ändern sich sofort (bei FM6 einige erst ab der nächsten Note, siehe unten) |
 | EDIT oder OCT+ | die nächste Seite (VA: OSC, FLT, ENV, MORE, dann wieder OSC) |
-| ENV | die Hüllkurve des gewählten Parts: VA, PD, ORGAN die Seite ENV, noch einmal MORE, noch einmal ENV; FM6 seine Seite ENV; ACID: ENV bleibt der Accent; DRUMS: `NO ENV`. ENV leuchtet auf ENV und MORE |
+| ENV | die Hüllkurve des gewählten Parts: VA, PD, ORGAN die Seite ENV, FM6 seine Seite ENV; ist die Edit-Seite offen, die nächste Seite wie EDIT (VA: ENV, MORE, OSC, FLT, ENV …); ACID: ENV bleibt der Accent; DRUMS: `NO ENV`. ENV leuchtet auf ENV und MORE |
 | OCT- | zurück zum Rack |
 | HOME + K1–K4 | HOME halten und einen Regler drehen: Er springt auf den Wert seines Sounds zurück (des Presets oder des USER-Sounds) |
 | PRESET | anderen Sound laden (eine ungespeicherte Änderung geht dabei verloren) |
