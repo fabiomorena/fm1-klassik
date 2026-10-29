@@ -32,7 +32,7 @@ siehst), Anschlagdynamik.
 Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerät klicken.
 
 **Achtung Pfeiltasten:** Hast du zuletzt einen Regler angeklickt, drehen ↑ / ↓ diesen Regler (im Rack K1 = die
-Engine!) statt SELECT. Für SELECT vorher einen Taster anklicken, oder das Mausrad über SELECT nehmen.
+Engine!) statt SELECT. Für SELECT den Drehregler SELECT anklicken (das dreht ihn nicht), dann ↑ / ↓.
 
 - [ ] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Factory reset“ zweimal klicken (der zweite Klick
   bestätigt), dann „Switch on“. (Falls die Seite nicht lädt, im Terminal:

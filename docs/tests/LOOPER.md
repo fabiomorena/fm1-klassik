@@ -34,7 +34,7 @@ die Noten auf dem Gerät sitzen, die Rechenlast.
 Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerät klicken.
 
 **Achtung Pfeiltasten:** Hast du zuletzt einen Regler angeklickt, drehen ↑ / ↓ diesen Regler (im Rack K1 = die
-Engine!) statt SELECT. Für SELECT vorher einen Taster anklicken, oder das Mausrad über SELECT nehmen.
+Engine!) statt SELECT. Für SELECT den Drehregler SELECT anklicken (das dreht ihn nicht), dann ↑ / ↓.
 
 - [ x] 0.1 `http://localhost:8000` mit Cmd+Shift+R neu laden, „Factory reset“ zweimal klicken (der zweite Klick
   bestätigt), dann „Switch on“. (Falls die Seite nicht lädt, im Terminal:
@@ -136,19 +136,37 @@ Nachgemessen im Host-Simulator (Skript im Scratchpad, wie `tests/looper.txt`).
 
 Nachtest:
 
-- [ ] N1 Im Rack K1 anklicken, dann ↓ drücken: Die Engine des gewählten Parts wechselt (bestätigt die Ursache von C4).
-  Danach einen Taster (z. B. SEL) anklicken: ↑ / ↓ wählen wieder den Part.
-- [ ] N2 Part 2 (DRUMS) aufnehmen, im Rack K1 auf ORGAN und zurück auf DRUMS: Die Drum-Spur ist wieder da und spielt
+- [ !] N1 Im Rack K1 anklicken, dann ↓ drücken: Die Engine des gewählten Parts wechselt (bestätigt die Ursache von C4).
+  Danach den Drehregler SELECT anklicken: ↑ / ↓ wählen wieder den Part.
+- [ x] N2 Part 2 (DRUMS) aufnehmen, im Rack K1 auf ORGAN und zurück auf DRUMS: Die Drum-Spur ist wieder da und spielt
   Drums.
-- [ ] N3 Schleife mit PLAY starten (grünes Dreieck auf der Looper-Seite), dann OCT−: Im Rack steht rechts das grüne
+- [ x] N3 Schleife mit PLAY starten (grünes Dreieck auf der Looper-Seite), dann OCT−: Im Rack steht rechts das grüne
   Dreieck mit Takt.Schlag. Falls nicht: Screenshot und notieren, auf welcher Seite du PLAY gedrückt hast.
 
 Nachtest Rückgängig je Part (neu seit 29.10., deine Entscheidung zu Frage 1; Emulator vorher mit Cmd+Shift+R neu
 laden):
 
-- [ ] N4 Part 1 (VA) aufnehmen, dann Part 2 (DRUMS) dazu. SEL zurück zu Part 1, HOME + REC: Meldung `UNDO 1 VA`, Spur
+- [ x] N4 Part 1 (VA) aufnehmen, dann Part 2 (DRUMS) dazu. SEL zurück zu Part 1, HOME + REC: Meldung `UNDO 1 VA`, Spur
   1 ist leer, die Drums spielen weiter, die Länge bleibt. Noch einmal HOME + REC: `REDO 1 VA`, Spur 1 wieder da.
-- [ ] N5 SEL zu Part 2, HOME + REC: `UNDO 2 DRUMS`, nur die Drums sind weg. Auf einem Part ohne Aufnahme (z. B. 3):
+- [x ] N5 SEL zu Part 2, HOME + REC: `UNDO 2 DRUMS`, nur die Drums sind weg. Auf einem Part ohne Aufnahme (z. B. 3):
   `UNDO NOTHING`.
-- [ ] N6 Nur ein Part mit Aufnahme (die erste), HOME + REC: Spur leer, LENGTH wieder AUTO, die Schleife steht (wie
+- [ x] N6 Nur ein Part mit Aufnahme (die erste), HOME + REC: Spur leer, LENGTH wieder AUTO, die Schleife steht (wie
   bisher).
+
+
+Notizen: N1: ![LOOPER-N1.png](LOOPER-N1.png) warum hat FM& jetzt 1/4/6 zugewiesen bekommen, wie das geht habe ich noch nicht 
+verstanden
+
+
+## Auswertung Nachtest (Claude, 29.10.2026)
+
+- N2–N6 bestanden: Die Noten bleiben beim Engine-Wechsel liegen, das Rack zeigt die laufende Schleife (D3 war also
+  eine stehende Schleife), Rückgängig je Part geht wie geplant.
+- **N1 (`[!]`, warum spielen 1, 4 und 6 FM6):** Das ist die Ursache von C4, jetzt bestätigt. Mit angeklicktem K1 wechselt
+  jedes ↓ die Engine des **gewählten** Parts um eine Kachel nach links, in der Reihenfolge des Racks: FM6, VA, PD,
+  ORGAN, DRUMS, ACID, und von FM6 weiter zu ACID (`engine_step` in `app.c`). Part 4 spielt FM6 von Anfang an; Part 1
+  (VA) ist eine Kachel nach links zu FM6 geworden, Part 6 (ORGAN) drei (ORGAN → PD → VA → FM6). Wie oft du wo ↓
+  gedrückt hast, weiß ich nicht; das Ergebnis passt dazu.
+  Die Kreise auf einer Kachel sind die Parts, die diese Engine spielen (gefüllt: der gewählte). Mehrere Parts dürfen
+  dieselbe Engine haben, z. B. zwei FM6-Parts mit verschiedenen Sounds (PARTS B2). Zurück: den Part wählen und K1
+  drehen, bis seine Engine wieder stimmt, oder „Factory reset“. Auf dem Gerät passiert das nur, wenn du an K1 drehst.
