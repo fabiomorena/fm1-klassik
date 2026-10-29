@@ -2906,8 +2906,14 @@ static const char *const TABS_FX[2] = {"DELAY", "HALL"};
 static void draw_tabs(int32_t y0, const char *const TAB[2], const char *right);
 
 /* ---------------------------------------------------------------- the mixer --- */
-#define FD_TOP 73                                    /* the faders and meters: from this row, this high */
-#define FD_H 62
+#define FD_TOP 68                                    /* the faders and meters: from this row, this high */
+#define FD_H 84
+#define FD_W 5                                       /* a fader's width, its handle's height and width (LEVEL; MASTER 2,
+                                                     * a send 4 narrower), a meter's width, PAN's line */
+#define FD_HH 7
+#define FD_HW 22
+#define FD_MW 6
+#define FD_PAN 3
 
 static int32_t meter_px(int32_t pk)                  /* a peak (24 bits) as a meter's height: -48 .. 0 dBFS in FD_H
                                                      * px, 6 dB a bit of the peak, its next three bits between */
@@ -2936,31 +2942,58 @@ static void meters_read(uint32_t now)                /* the output's peaks since
     ui.redraw_mix = 1;
 }
 
-/* a send's row in a strip at x, w wide, from row y: its name, a bar of v / 256 in col; the master's returns alike */
-static void send_row(int32_t x, int32_t w, int32_t y, const char *name, int32_t v, uint16_t lab, uint16_t col)
+/* a rectangle with round corners, 2 px (their edge pixels half over bg), as the FM-1's keys: a fader's handle */
+static void rect_round(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c, uint16_t bg)
 {
-    int32_t bx = x + 6 + text_w(&FONT_T, "HALL"), bw = x + w - 3 - bx;
-    cv_text(x + 3, y, &FONT_T, name, lab);
-    cv_rect(bx, y + 5, bw, 2, K_LINE);
-    cv_rect(bx, y + 5, bw * clamp(v, 0, 256) / 256, 2, col);
+    uint16_t half = mix565(c, bg, 128);
+    int32_t e;
+    cv_rect(x, y + 2, w, h - 4, c);
+    for (e = 0; e < 2; e++) {                        /* the top rows, then the bottom ones */
+        int32_t r0 = e ? y + h - 1 : y, r1 = e ? y + h - 2 : y + 1;
+        cv_rect(x + 2, r0, w - 4, 1, c);
+        cv_rect(x + 1, r1, w - 2, 1, c);
+        cv_rect(x + 1, r0, 1, 1, half);
+        cv_rect(x + w - 2, r0, 1, 1, half);
+        cv_rect(x, r1, 1, 1, half);
+        cv_rect(x + w - 1, r1, 1, 1, half);
+    }
+}
+
+/* a fader at cx, FD_TOP .. FD_TOP + FD_H: h px of it in col from the bottom, a handle hw wide in hcol at its top (hw 0:
+ * none) over bg; the mixer's LEVEL, sends, MASTER and the effects' returns */
+static void fader(int32_t cx, int32_t y0, int32_t h, uint16_t col, int32_t hw, uint16_t hcol, uint16_t bg)
+{
+    int32_t bot = FD_TOP + FD_H, y = bot - clamp(h, 0, FD_H);
+    cv_rect(cx - FD_W / 2, FD_TOP - y0, FD_W, FD_H, K_LINE);
+    if (y < bot)
+        cv_rect(cx - FD_W / 2, y - y0, FD_W, bot - y, col);
+    if (hw)
+        rect_round(cx - hw / 2, y - FD_HH / 2 - y0, hw, FD_HH, hcol, bg);
+}
+
+/* a text centred on cx */
+static void text_mid(int32_t cx, int32_t y, const char *t, uint16_t col)
+{
+    cv_text(cx - text_w(&FONT_T, t) / 2, y, &FONT_T, t, col);
 }
 
 /* the mixer's tabs and strips, the rows y0 .. y0 + 92 of the screen: three parts a page, the chosen part's (1-3 or
- * 4-6; two marks in the tab row light the page), and the master; the tab lights what its knobs turn (MIX the faders,
- * SEND the sends) */
+ * 4-6; two marks in the tab row light the page), and the master. MIX: each part's LEVEL fader and PAN, the master's
+ * pot and meters; SEND: a fader a send (K1 DLY, K2 HALL; the chosen part's lit), the effects' returns (grey: their
+ * LEVEL on the FX page). Both: M, S and LIM */
 static void draw_mix(int32_t y0)
 {
-    int32_t p, i, solo = 0, bot = FD_TOP + FD_H, first = set.part < 3 ? 0 : 3;
+    int32_t p, i, solo = 0, first = set.part < 3 ? 0 : 3;
     cv_begin(240, 93, K_GROUND);
     draw_tabs(y0, TABS_MIX, "");
     cv_rect(222, 27 - y0, 7, 5, first ? K_LINE : K_TEXT);
     cv_rect(231, 27 - y0, 7, 5, first ? K_TEXT : K_LINE);
     for (p = 0; p < KL_NPART; p++)
         solo |= set.parts[p].solo;
-    for (p = first; p < first + 3; p++) {            /* a strip a part: glyph, name, fader, LEVEL, PAN, sends, M S */
+    for (p = first; p < first + 3; p++) {            /* a strip a part: glyph, name; LEVEL and PAN, or the sends; M S */
         const part_set_t *ps = &set.parts[p];
         const tile_t *tl = &TILES[TILE_OF[ps->engine]];
-        int32_t x = 1 + (p - first) * 64, cx = x + 31, ly = ps->level < -40 ? bot : bot - (ps->level + 40) * FD_H / 46;
+        int32_t x = 1 + (p - first) * 64, cx = x + 31;
         int sel = p == set.part, dim = ps->mute || (solo && !ps->solo);
         uint16_t bg = sel ? K_SURF2 : K_SURF, col = dim ? K_MUTED : tl->col;
         uint8_t sh[8];
@@ -2975,57 +3008,66 @@ static void draw_mix(int32_t y0)
         t[2] = 0;
         text_cat(t, tl->name);
         text_fit(x + 21, 49 - y0, 39, &FONT_T, t, sel ? tl->col : K_TEXT);
-        cv_rect(cx - 1, FD_TOP - y0, 3, FD_H, K_LINE);
-        if (ps->level >= -40)
-            cv_rect(cx - 1, ly - y0, 3, bot - ly, ui.tab ? K_MUTED : col);
-        cv_rect(cx - 9, ly - 2 - y0, 18, 5, K_TEXT);
-        mix_text(ps, 0, t, 1);
-        cv_text(cx - text_w(&FONT_T, t) / 2, 138 - y0, &FONT_T, t, K_TEXT);
-        cv_rect(cx - 23, 152 - y0, 46, 2, K_LINE);
-        disc(cx + ps->pan * 23 / 50, 153 - y0, 3, col);
-        mix_text(ps, 1, t, 1);
-        cv_text(cx - text_w(&FONT_T, t) / 2, 156 - y0, &FONT_T, t, K_MUTED);
-        for (i = 0; i < 2; i++)                      /* DLY and HALL */
-            send_row(x, 62, 167 + 11 * i - y0, i ? "HALL" : "DLY", ps->send[i] * 256 / 100,
-                     ui.tab && sel ? K_TEXT : K_MUTED, ui.tab ? col : K_MUTED);
+        if (!ui.tab) {                               /* MIX: LEVEL, PAN */
+            fader(cx, y0, ps->level < -40 ? 0 : (ps->level + 40) * FD_H / 46, col, FD_HW, K_TEXT, bg);
+            mix_text(ps, 0, t, 1);
+            text_mid(cx, 157 - y0, t, K_TEXT);
+            cv_rect(cx - 23, 172 - y0, 46, FD_PAN, K_LINE);
+            disc(cx + ps->pan * 23 / 50, 173 - y0, 3, col);
+            mix_text(ps, 1, t, 1);
+            text_mid(cx, 177 - y0, t, K_MUTED);
+        } else {
+            for (i = 0; i < 2; i++) {                /* SEND: DLY, HALL (K3, K4: room for two more) */
+                int32_t fx = x + 19 + 24 * i;
+                fader(fx, y0, ps->send[i] * FD_H / 100, col, FD_HW - 4, sel ? K_TEXT : K_MUTED, bg);
+                text_mid(fx, 157 - y0, i ? "HALL" : "DLY", sel ? tl->col : K_MUTED);
+                mix_text(ps, 4 + i, t, 1);
+                text_mid(fx, 172 - y0, t, K_TEXT);
+            }
+        }
         for (i = 0; i < 2; i++) {                    /* M and S */
             int on = i ? ps->solo : ps->mute;
             int32_t bx = cx - 22 + i * 24;
             const char *l = i ? "S" : "M";
             if (on)
-                cv_rect(bx, 190 - y0, 20, 13, K_TEXT);
+                cv_rect(bx, 191 - y0, 20, 13, K_TEXT);
             else
-                box_edge(bx, 190 - y0, 20, 13, 1, K_LINE);
-            cv_text(bx + (20 - text_w(&FONT_T, l)) / 2, 190 - y0, &FONT_T, l, on ? K_GROUND : K_MUTED);
+                box_edge(bx, 191 - y0, 20, 13, 1, K_LINE);
+            cv_text(bx + (20 - text_w(&FONT_T, l)) / 2, 191 - y0, &FONT_T, l, on ? K_GROUND : K_MUTED);
         }
     }
-    {   /* MASTER: the pot, the output's meters, the effects' returns, LIM */
-        int32_t x = 193, cx = x + 13, pct = (int32_t)(plat_master() * 100u / 4096u), my = bot - pct * FD_H / 100;
+    {   /* MASTER: the pot and the output's meters (MIX) or the effects' returns (SEND), LIM */
+        int32_t x = 193, bot = FD_TOP + FD_H, pct = (int32_t)(plat_master() * 100u / 4096u);
         int lim = plat_ms() < ui.lim_until;
         char v[8];
         cv_rect(x, 43 - y0, 46, 163, K_SURF);
-        cv_text(x + (46 - text_w(&FONT_T, "MASTER")) / 2, 49 - y0, &FONT_T, "MASTER", K_TEXT);
-        cv_rect(cx - 1, FD_TOP - y0, 3, FD_H, K_LINE);
-        cv_rect(cx - 1, my - y0, 3, bot - my, K_TEXT);
-        cv_rect(cx - 8, my - 2 - y0, 16, 5, K_TEXT);
-        for (i = 0; i < 2; i++) {
-            int32_t mx = x + 27 + i * 8;
-            cv_rect(mx, FD_TOP - y0, 5, FD_H, K_LINE);
-            cv_rect(mx, bot - ui.meter[i] - y0, 5, ui.meter[i], K_GREEN);
-            cv_text(mx, 138 - y0, &FONT_T, i ? "R" : "L", K_MUTED);
+        text_mid(x + 23, 49 - y0, "MASTER", K_TEXT);
+        if (!ui.tab) {
+            fader(x + 13, y0, pct * FD_H / 100, K_TEXT, FD_HW - 2, K_TEXT, K_SURF);
+            for (i = 0; i < 2; i++) {
+                int32_t mx = x + 26 + i * (FD_MW + 2);
+                cv_rect(mx, FD_TOP - y0, FD_MW, FD_H, K_LINE);
+                cv_rect(mx, bot - ui.meter[i] - y0, FD_MW, ui.meter[i], K_GREEN);
+                cv_text(mx, 157 - y0, &FONT_T, i ? "R" : "L", K_MUTED);
+            }
+            v[0] = 0;
+            int_text(pct, v);
+            text_cat(v, "%");
+            text_mid(x + 23, 174 - y0, v, K_TEXT);
+        } else {
+            for (i = 0; i < 2; i++) {                /* the returns: the effects' LEVEL */
+                int32_t fx = x + 12 + 22 * i;
+                fader(fx, y0, (set.fx[i][FK_LEVEL] - LEVEL_OFF) * FD_H / (6 - LEVEL_OFF), K_MUTED, 0, 0, K_SURF);
+                text_mid(fx, 157 - y0, i ? "HALL" : "DLY", K_MUTED);
+                db_text(set.fx[i][FK_LEVEL], v, 1);
+                text_mid(fx, 172 - y0, v, K_MUTED);
+            }
         }
-        v[0] = 0;
-        int_text(pct, v);
-        text_cat(v, "%");
-        cv_text(x + (46 - text_w(&FONT_T, v)) / 2, 152 - y0, &FONT_T, v, K_TEXT);
-        for (i = 0; i < 2; i++)                      /* the returns: the effects' LEVEL */
-            send_row(x, 46, 167 + 11 * i - y0, i ? "HALL" : "DLY",
-                     (set.fx[i][FK_LEVEL] - LEVEL_OFF) * 256 / (6 - LEVEL_OFF), K_MUTED, K_MUTED);
         if (lim)
-            cv_rect(x + 8, 190 - y0, 30, 13, K_TEXT);
+            cv_rect(x + 8, 191 - y0, 30, 13, K_TEXT);
         else
-            box_edge(x + 8, 190 - y0, 30, 13, 1, K_MUTED);
-        cv_text(x + 8 + (30 - text_w(&FONT_T, "LIM")) / 2, 190 - y0, &FONT_T, "LIM", lim ? K_GROUND : K_MUTED);
+            box_edge(x + 8, 191 - y0, 30, 13, 1, K_MUTED);
+        cv_text(x + 8 + (30 - text_w(&FONT_T, "LIM")) / 2, 191 - y0, &FONT_T, "LIM", lim ? K_GROUND : K_MUTED);
     }
     cv_blit(0, (uint32_t)y0);
 }

@@ -40,9 +40,11 @@ Browser keine Wirkung.
 | `Looper-6-Pages` | 25 Sechs Parts, Variante B (nicht gewählt): drei Spuren je Seite wie beim Mixer (49 px hoch), die anderen drei sind dann nicht zu sehen |
 | `Step-6` | 26 Sechs Parts (umgesetzt): Step-Sequencer mit sechs Reihen (16 statt 22 px), die Angaben zum gehaltenen Step etwas kleiner |
 | `FX-6` | 27 Sechs Parts (umgesetzt): FX-Seite mit den Sends als 3 × 2 Kacheln (78 × 36 px) |
+| `Mixer-6-Mix` | 28a **Entschieden** (29.10.2026, aus Fabios MIXER-Notiz A1, umgesetzt): Tab MIX ohne DLY und HALL (auch nicht im MASTER), die Fader 84 statt 62 px lang, 5 px breit, Griffe mit runden Ecken (wie die Tasten des FM-1); spätere Effekte brauchen hier keinen Platz |
+| `Mixer-6-Send` | 28b **Entschieden** (29.10.2026, umgesetzt): Tab SEND mit einem senkrechten Regler je Effekt in jedem Zug (K1 DLY, K2 HALL, Platz für K3/K4), der gewählte Part hell; MASTER zeigt die Rückwege (LEVEL der FX-Seite) grau |
 
 `png/`: Renderings vom 26.10.2026, ohne die Webfonts des Canvas erstellt (daher breitere Ersatzschrift und vereinzelt
-Umbrüche); `Main.png`, `Edit-DRUMS.png`, `Edit-ACID.png`, `Edit-Reset.png`, `Rack-Parts.png`, `Mixer-Parts.png`, `Looper.png`, `Looper-Rack.png` (27.10.2026), `Step.png`, `Step-DRUMS.png` und `Looper.png` (Tab-Zeile, 28.10.2026), `Mixer-Send.png`, `FX-Delay.png`, `FX-Hall.png` (28.10.2026), `Mixer-6-Page1.png`, `Mixer-6.png`, `Looper-6.png`, `Looper-6-Pages.png`, `Step-6.png`, `FX-6.png` (28.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
+Umbrüche); `Main.png`, `Edit-DRUMS.png`, `Edit-ACID.png`, `Edit-Reset.png`, `Rack-Parts.png`, `Mixer-Parts.png`, `Looper.png`, `Looper-Rack.png` (27.10.2026), `Step.png`, `Step-DRUMS.png` und `Looper.png` (Tab-Zeile, 28.10.2026), `Mixer-Send.png`, `FX-Delay.png`, `FX-Hall.png` (28.10.2026), `Mixer-6-Page1.png`, `Mixer-6.png`, `Looper-6.png`, `Looper-6-Pages.png`, `Step-6.png`, `FX-6.png` (28.10.2026), `Mixer-6-Mix.png`, `Mixer-6-Send.png` (29.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
 
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --hide-scrollbars \
         --user-data-dir=/tmp/chrome-mockups --window-size=480,480 \

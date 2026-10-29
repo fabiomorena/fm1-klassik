@@ -43,7 +43,8 @@ MIDI-In über USB und TRS spielt ebenfalls.
 
 GLO öffnet den Mixer auf dem Tab MIX (GLO leuchtet); GLO oder OCT+ wechselt zum Tab SEND und zurück (wie SEQ auf
 der Looper-Seite), OCT− schließt ihn, EDIT, SEQ und FX wechseln zu ihren Seiten. Für jeden Part gibt es einen
-Kanalzug: Glyphe, Part und Engine, Fader, Pegel, Pan, die Sends DLY und HALL als Balken, M (Mute) und S (Solo).
+Kanalzug: Glyphe, Part und Engine, auf MIX Fader, Pegel und Pan, auf SEND ein Fader je Effekt (DLY, HALL); auf
+beiden M (Mute) und S (Solo).
 Der Mixer zeigt drei Parts auf einmal, dazu MASTER: die Seite des gewählten Parts, 1–3 oder 4–6 (Kopfzeile
 `PARTS 1-3` bzw. `PARTS 4-6`; zwei kleine Marken rechts in der Tab-Zeile, die helle ist die Seite). SEL oder
 SELECT wechselt den Part und damit, wenn nötig, die Seite. Der Zug des gewählten Parts ist umrandet. Farbig ist, was die Regler des Tabs gerade drehen (MIX:
@@ -66,14 +67,14 @@ die Fader, SEND: die Sends). Die Tasten spielen weiter.
 | K1 DELAY | wie viel der Part ans Delay schickt, 0–100; am Anfang 0 |
 | K2 HALL | wie viel er an den Hall schickt, 0–100; am Anfang 0 |
 | K3, K4 | frei (später für weitere Effekte) |
-| HOME + K1, K2 | zurück auf 0; eine helle Marke am Anfang des Balkens, solange der Send woanders steht |
+| HOME + K1, K2 | zurück auf 0; eine helle Marke am Anfang des Balkens in der Fußzeile, solange der Send woanders steht |
 
 Die Sends kommen nach LEVEL, MUTE und SOLO, aber vor PAN: Die Effekte bekommen die Parts mono. Ein stummer Part
 schickt also auch nichts an die Effekte; sein Hall und seine Echos klingen aus. 50 ist etwa −12 dB, 100 der volle
 Pegel des Parts.
 
-Ein stummer Part erscheint grau. MASTER zeigt den MASTER-Regler, den Pegel des Ausgangs für links und rechts, wie
-laut die Effekte zurückkommen (DLY, HALL: LEVEL der Effekt-Seite) und `LIM`. Der Limiter hält den Ausgang unter −0,5 dBFS: Er greift sofort ein, wenn es lauter würde, und lässt in etwa
+Ein stummer Part erscheint grau. MASTER zeigt auf MIX den MASTER-Regler und den Pegel des Ausgangs für links und
+rechts, auf SEND grau, wie laut die Effekte zurückkommen (DLY, HALL: LEVEL der Effekt-Seite), auf beiden `LIM`. Der Limiter hält den Ausgang unter −0,5 dBFS: Er greift sofort ein, wenn es lauter würde, und lässt in etwa
 50 ms wieder los. Solange er arbeitet, leuchtet `LIM`. Änderungen gleiten in wenigen Millisekunden, ohne Knacken.
 SAVE speichert den Mixer mit.
 
