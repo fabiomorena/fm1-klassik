@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Edit ENV – a sound's envelope</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- v0.8 (proposed 29.10.2026): the envelope (ADSR) is the sound's (its preset's, the USER sound's): the last tab of the edit pages (VA OSC, FLT, ENV, MORE; PD PHS, LINE, ENV, MORE; ORGAN BARS, TONE, ENV, MORE; FM6 ALGO, ENV). ENV opens the chosen part's edit pages on it (EDIT on the first tab); EDIT or OCT+ the next tab, OCT- back. ACID: ENV stays its accent; DRUMS: NO ENV. K1 ATK, K2 DEC, K3 SUS, K4 REL, ATK/DEC/REL shown as times; HOME + K1..K4: the sound's values, marked on the bar while elsewhere. The picture: the curve as it plays (decay and release curved), a dot where the latest note is; below ENV > FILTER (set on MORE, mockup 34b; VA: to the cutoff, PD: to DCW; ORGAN and FM6 none) and the live glyph. Here part 1 VA SAW LEAD (ATK 4, DEC 70, SUS 100, REL 50 of 127; times are examples). -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #FFB454; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">1 VA</span>
+<svg width="22" height="22" viewBox="0 0 100 100" role="img" aria-label="Glyph of SAW LEAD" style="flex: none"><circle cx="50" cy="50" r="46" fill="none" stroke="#2A3242" stroke-width="3"></circle><polygon points="50.0,38.5 60.2,39.8 78.8,50.0 58.1,58.1 50.0,86.0 36.1,63.9 35.8,50.0 29.6,29.6" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="5" stroke-linejoin="round"></polygon><circle cx="50" cy="50" r="5" fill="#FFB454"></circle></svg>
+<span style="font-size: 17px; font-weight: 700; white-space: nowrap; letter-spacing: 0.04em">SAW LEAD</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #9AA3B2">OCT +0</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="Edit ENV – a sound's envelope" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#9AA3B2">OSC</text>
+<text x="66" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#9AA3B2">FLT</text>
+<text x="122" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">ENV</text>
+<rect x="122" y="28" width="34" height="3" fill="#FFB454"/>
+<text x="178" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#9AA3B2">MORE</text>
+<text x="470" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">3/4</text>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<rect x="2" y="44" width="476" height="196" rx="8" fill="#151922"/>
+<text x="16" y="72" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">ENV · AMP + FILTER</text>
+<text x="464" y="72" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="16" fill="#FFB454">SUS 79%</text>
+<path d="M24 214 H456" stroke="#2A3242" stroke-width="1"/>
+<path d="M42.0 86 V220 M138.0 86 V220 M308.0 86 V220" stroke="#2A3242" stroke-width="1" stroke-dasharray="3 4"/>
+<path d="M28.0 214.0 L42.0 92.0 C66.0 115.1 85.2 117.6 138.0 117.6 L308.0 117.6 C338.0 208.0 375.5 214.0 458.0 214.0 L28.0 214.0 Z" fill="#FFB454" fill-opacity="0.14"/>
+<path d="M28.0 214.0 L42.0 92.0 C66.0 115.1 85.2 117.6 138.0 117.6 L308.0 117.6 C338.0 208.0 375.5 214.0 458.0 214.0" fill="none" stroke="#FFB454" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="42.0" cy="92.0" r="5" fill="#151922" stroke="#FFB454" stroke-width="2"/>
+<circle cx="138.0" cy="117.6" r="5" fill="#151922" stroke="#FFB454" stroke-width="2"/>
+<circle cx="308.0" cy="117.6" r="5" fill="#151922" stroke="#FFB454" stroke-width="2"/>
+<circle cx="198.0" cy="117.6" r="6" fill="#E8EAED"/>
+<text x="39.0" y="234" text-anchor="middle" font-size="15" font-weight="700" fill="#9AA3B2">A</text>
+<text x="90.0" y="234" text-anchor="middle" font-size="15" font-weight="700" fill="#9AA3B2">D</text>
+<text x="223.0" y="234" text-anchor="middle" font-size="15" font-weight="700" fill="#9AA3B2">S</text>
+<text x="383.0" y="234" text-anchor="middle" font-size="15" font-weight="700" fill="#9AA3B2">R</text>
+<rect x="2" y="248" width="476" height="130" rx="8" fill="#151922"/>
+<text x="16" y="276" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">ENV &gt; FILTER</text>
+<text x="16" y="300" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">+20 (SAW LEAD)</text>
+<rect x="16" y="318" width="300" height="4" rx="2" fill="#2A3242"/>
+<rect x="166" y="318" width="47" height="4" rx="2" fill="#FFB454"/>
+<rect x="165" y="312" width="2" height="16" fill="#9AA3B2"/>
+<g transform="translate(386 262)"><svg width="72" height="72" viewBox="0 0 100 100" role="img" aria-label="Live glyph of Saw Lead" style="flex: none"><circle cx="50" cy="50" r="46" fill="none" stroke="#2A3242" stroke-width="3"></circle><polygon points="50.0,38.5 60.2,39.8 78.8,50.0 58.1,58.1 50.0,86.0 36.1,63.9 35.8,50.0 29.6,29.6" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="5" stroke-linejoin="round"></polygon><circle cx="50" cy="50" r="5" fill="#FFB454"></circle></svg></g>
+<text x="422" y="356" text-anchor="middle" font-size="15" fill="#9AA3B2">LIVE</text>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 ATK</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">2 MS</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 3%; background: #FFB454"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 DEC</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">120 MS</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 55%; background: #FFB454"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 SUS</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">79%</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 79%; background: #FFB454"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4 REL</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">400 MS</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 39%; background: #FFB454"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

@@ -426,6 +426,47 @@ expect arprate 3
 expect arpoct 2
 expect arpgate 70
 expect arplatch 0
+# from the arp's page EDIT, GLO, SEQ, FX and LFO go to theirs, and ARP from theirs back here
+tap EDIT
+wait 30
+expect arp 0
+expect edit 1
+tap ARP
+wait 30
+expect arp 1
+expect edit 0
+tap GLO
+wait 30
+expect arp 0
+expect mix 1
+tap ARP
+wait 30
+expect arp 1
+expect mix 0
+tap SEQ
+wait 30
+expect arp 0
+expect loop 1
+tap ARP
+wait 30
+expect arp 1
+expect loop 0
+tap FX
+wait 30
+expect arp 0
+expect fx 1
+tap ARP
+wait 30
+expect arp 1
+expect fx 0
+tap LFO
+wait 30
+expect arp 0
+expect lfo 1
+tap ARP
+wait 30
+expect arp 1
+expect lfo 0
 # OCT- closes the page
 tap OCT-
 wait 30

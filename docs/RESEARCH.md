@@ -456,6 +456,24 @@ Wert, ohne LFO → mit LFO): VA PITCH Nulldurchgänge 2,1 → 5,2, FILTER Pegel 
 Nulldurchgänge 4,4 → 12,6, PITCH Periode bis 86 statt 168 Samples (eine Oktave). Helligkeit = Effektivwert der
 ersten Differenz durch den Effektivwert. Nach Gehör noch nicht geprüft.
 
+## Hüllkurve von VA, PD, ORGAN: Auflösung (Stand 29.10.2026, aus dem Code)
+
+Quelle: `env_tick` in `firmware/klassik/dsp/engines.c`, einmal je Block (32 Samples = 32 / 44 100 s = 0,7256 ms);
+die Werte ATK, DEC, SUS, REL (0–127) und ENV > FILTER (`fenv`, −64 … 63) stehen im Preset (`preset_t.env[4]`,
+`preset_t.fenv` in `engines/src/felucca_engine.h`).
+
+- ATK: je Block `+ 2^24 / (1 + ATK² / 8)`, also 1 + ATK²/8 Blöcke bis oben: ATK 0 → 1 Block (0,7 ms), 64 → 513
+  Blöcke (372 ms), 127 → 2017 Blöcke (1,46 s). Fein, jeder Schritt ändert etwas.
+- DEC: je Block `− (env − SUS) >> (1 + DEC / 16)`: die Zeitkonstante ist 2^(1 + DEC/16) Blöcke, DEC/16 ganzzahlig,
+  also **8 Stufen**: 2 … 256 Blöcke = 1,5 … 186 ms. 16 Reglerschritte klingen gleich.
+- REL: je Block `− env >> (2 + REL / 16)`: 2^(2…9) Blöcke = 2,9 … 371 ms, ebenfalls **8 Stufen**; bis −66 dB
+  (`2^24 / 2000`) dauert es ln(2000) ≈ 7,6 Zeitkonstanten, höchstens etwa 2,8 s.
+- SUS: `SUS << 17`, 127 → 99,2 % von 2^24. Fein.
+
+Folge für v0.8: Werden die Hüllkurven einstellbar, brauchen DEC und REL eine feine Kurve (eine Zeitkonstante je
+Wert, z. B. aus einer Tabelle), sonst ändert sich bei 15 von 16 Reglerschritten nichts. Welche Längen (bis wie viele
+Sekunden) gut klingen, nach Gehör; mit Gerät nachmessen (CONCEPT.md „eigene Hüllkurve verfeinern“).
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

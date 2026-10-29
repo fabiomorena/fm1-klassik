@@ -73,24 +73,24 @@ SELECT den Drehregler SELECT anklicken (das dreht ihn nicht), dann ↑ / ↓.
 
 MODE `UP`.
 
-- [ ] C1 ARP (auf der Seite): `LATCH` wird hell (`LATCH ON`). C-Dur kurz anschlagen und loslassen: der Arp spielt
+- [ x] C1 ARP (auf der Seite): `LATCH` wird hell (`LATCH ON`). C-Dur kurz anschlagen und loslassen: der Arp spielt
   weiter.
-- [ ] C2 Einen neuen Akkord anschlagen (z. B. `R` B3, `U` E4): er ersetzt den alten. Während du ihn hältst, kommt eine
+- [x ] C2 Einen neuen Akkord anschlagen (z. B. `R` B3, `U` E4): er ersetzt den alten. Während du ihn hältst, kommt eine
   weitere Taste dazu, statt neu anzufangen.
-- [ ] C3 ARP noch einmal: `LATCH` dunkel (`LATCH OFF`), der Arp hört auf (keine Taste gehalten).
-- [ ] C4 Zwei Parts zugleich (Schleife gestoppt): Part 1 mit LATCH spielen lassen, SEL zu Part 5 (PD), dort MODE
+- [ x] C3 ARP noch einmal: `LATCH` dunkel (`LATCH OFF`), der Arp hört auf (keine Taste gehalten).
+- [ x] C4 Zwei Parts zugleich (Schleife gestoppt): Part 1 mit LATCH spielen lassen, SEL zu Part 5 (PD), dort MODE
   `UP`, LATCH, einen anderen Akkord: beide Arps laufen nebeneinander, im selben Takt (der zweite setzt auf dem
   nächsten Schritt des ersten ein, nicht versetzt). Das LATCH-Kästchen zeigt den gewählten Part. Beide wieder aus
   (LATCH aus oder MODE `OFF`).
 
 ## D ACID: SLIDE und Accent
 
-- [ ] D1 SEL zu Part 3 (ACID), MODE `UP`, LATCH, zwei Töne (`T`, `A`). K4 GATE über `100%` hinaus: `SLIDE`. Jetzt
+- [x ] D1 SEL zu Part 3 (ACID), MODE `UP`, LATCH, zwei Töne (`T`, `A`). K4 GATE über `100%` hinaus: `SLIDE`. Jetzt
   gleiten die Töne ineinander (Portamento), statt neu anzusetzen; die Balken im Bild berühren sich. Zurück auf `50%`:
   wieder einzelne Töne.
-- [ ] D2 ENV festhalten und dabei den Akkord neu anschlagen (Kopfzeile zeigt `ACC`): die Arp-Noten klingen mit Accent
+- [x ] D2 ENV festhalten und dabei den Akkord neu anschlagen (Kopfzeile zeigt `ACC`): die Arp-Noten klingen mit Accent
   (lauter, heller), auch nachdem ENV losgelassen ist. Ohne ENV neu angeschlagen: wieder ohne.
-- [ ] D3 Part 3 auf eine andere Engine stellen (Rack, K1), Arp-Seite: GATE zeigt `100%` statt `SLIDE`. Zurück auf
+- [x ] D3 Part 3 auf eine andere Engine stellen (Rack, K1), Arp-Seite: GATE zeigt `100%` statt `SLIDE`. Zurück auf
   ACID: wieder `SLIDE`. Danach LATCH aus.
 
 ## E Mit dem Looper
@@ -133,18 +133,24 @@ MODE `UP`.
 
 ### Nachtest
 
-- [ ] A3 OCT− schließt die Seite (zurück zum Rack). Von der ARP-Seite springen EDIT, GLO, SEQ, FX und LFO direkt zu
+- [x ] A3 OCT− schließt die Seite (zurück zum Rack). Von der ARP-Seite springen EDIT, GLO, SEQ, FX und LFO direkt zu
   ihrer Seite, und von dort ARP hierher.
-- [ ] B1 Part 1 VA, MODE `UP`, C-Dur halten (`T`, `U`, `A`): C4, E4, G4, C4 … in 1/16; im Bild 16 Balken, die weiße
+- [ x] B1 Part 1 VA, MODE `UP`, C-Dur halten (`T`, `U`, `A`): C4, E4, G4, C4 … in 1/16; im Bild 16 Balken, die weiße
   Linie wandert, links hell, rechts dunkel; darunter `HELD C4 E4 G4 - GATE 50%`; Kachel `1 VA`: `UP` und `1/16`.
   Loslassen: der Arp hört auf, unten `HOLD KEYS`.
-- [ ] C2 LATCH an, C-Dur anschlagen, loslassen; dann einen neuen Akkord (`R` B3, `U` E4): er ersetzt den alten. Während
+- [ x] C2 LATCH an, C-Dur anschlagen, loslassen; dann einen neuen Akkord (`R` B3, `U` E4): er ersetzt den alten. Während
   du ihn hältst, kommt eine weitere Taste dazu, statt neu anzufangen.
-- [ ] C4 Schleife gestoppt: Part 1 mit LATCH spielen lassen, SEL zu Part 5 (PD), MODE `UP`, LATCH, ein anderer
+- [ x] C4 Schleife gestoppt: Part 1 mit LATCH spielen lassen, SEL zu Part 5 (PD), MODE `UP`, LATCH, ein anderer
   Akkord: beide Arps im selben Takt (der zweite setzt auf dem nächsten Schritt des ersten ein). Beide wieder aus.
-- [ ] D1 Part 3 (ACID), MODE `UP`, LATCH, zwei Töne (`T`, `A`). K4 GATE über `100%` hinaus: `SLIDE`, die Töne
+- [x ] D1 Part 3 (ACID), MODE `UP`, LATCH, zwei Töne (`T`, `A`). K4 GATE über `100%` hinaus: `SLIDE`, die Töne
   gleiten ineinander; zurück auf `50%`: einzelne Töne.
-- [ ] D2 ENV festhalten und den Akkord neu anschlagen (`ACC` in der Kopfzeile): die Arp-Noten mit Accent, auch nach
+- [x ] D2 ENV festhalten und den Akkord neu anschlagen (`ACC` in der Kopfzeile): die Arp-Noten mit Accent, auch nach
   dem Loslassen von ENV; ohne ENV neu angeschlagen: wieder ohne.
-- [ ] D3 Part 3 im Rack (K1) auf eine andere Engine: GATE zeigt `100%` statt `SLIDE`; zurück auf ACID: wieder
-  `SLIDE`. Danach LATCH aus.
+  - [x  ] D3 Part 3 im Rack (K1) auf eine andere Engine: GATE zeigt `100%` statt `SLIDE`; zurück auf ACID: wieder
+    `SLIDE`. Danach LATCH aus.
+
+**Nachtest ausgewertet (Claude, 29.10.2026):** C1–C4 und D1–D3 bestanden (oben in C und D abgehakt): LATCH, ein neuer
+Akkord ersetzt den alten, zwei Arps im selben Takt, ACID mit SLIDE und Accent, SLIDE nur auf ACID. A3 und B1 sind
+wieder nicht markiert. B1 (UP mit Akkord, Bild) steckt in C1–C4 und E1; A3 (die Sprünge von der ARP-Seite zu EDIT,
+GLO, SEQ, FX, LFO und zurück) prüft jetzt der Host-Test (`tests/arp.txt`, 169 Prüfungen). Damit ist das
+ARP-Protokoll fertig, kein weiterer Nachtest.
