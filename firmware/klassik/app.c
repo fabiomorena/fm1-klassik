@@ -336,8 +336,11 @@ static void mix_update(void)
 #define LP_STEP16(bpm) ((uint32_t)(bpm) * 152174u / 1000u)   /* ticks a step, Q16: bpm / 60 * 192 * 32 / 44100 *
                                                              * 65536 = bpm * 152.174 */
 enum { LP_STOP, LP_COUNT, LP_PLAY };                 /* stopped, counting in (a bar), playing */
-enum { LC_PLAY, LC_STOP, LC_REC, LC_UNREC, LC_PART, LC_UNDO, LC_CLEAR, LC_BARS,   /* the main loop's asks */
+enum { LC_PLAY, LC_STOP, LC_REC, LC_UNREC, LC_PART, LC_UNDO, LC_CLEAR, LC_BARS, LC_DOUBLE,   /* the main loop's
+                                                                                          * asks */
        LC_SSET, LC_SCLR, LC_SEDIT };                 /* the step sequencer's: a step set, cleared, changed */
+enum { DB_DONE, DB_NONE, DB_TAKE, DB_MAX, DB_FULL }; /* LC_DOUBLE: doubled; no loop yet; a take or a count-in runs;
+                                                     * past LP_MAXBARS; a part without room for its copy */
 enum { SE_NOTE, SE_VEL, SE_GATE };                   /* LC_SEDIT: what */
 #define LP_STEP (LP_PPQN / 4)                        /* a step: 1/16 */
 #define LP_ANY 0xFFu                                 /* a step's notes, all of them (else those of one semitone: a
@@ -373,6 +376,9 @@ static struct {
                                                      * goes with it, while no other part has notes */
     uint8_t click_now;                               /* a click due at the next step (the loop starts) */
     volatile uint8_t full;                           /* notes left out, the part full: a count (the main loop says so) */
+    volatile uint8_t stepped;                        /* the steps changed: a count (a step's note, velocity or length
+                                                     * leaves the events' count as it was; the screen follows this) */
+    volatile uint8_t doubled, double_res;            /* HOME + SEQ done: a count, and how (DB_*; the main loop says so) */
 } lp;
 #define LC_N 16u
 static volatile uint32_t lc_w, lc_r;                 /* main loop writes lc_w, the render lc_r */
@@ -685,6 +691,76 @@ static void lp_set_bars(uint32_t bars)               /* K2: shorter hides the ba
         lp.cur[p] = (uint16_t)lp_lower(p, lp.pos16);
 }
 
+/* HOME + SEQ: the loop twice as long, every part's notes again in the new bars. What a shorter LENGTH hid goes
+ * first; a note it hid the end of ends with the bars shown (as it plays now). Every part or none: not with no loop,
+ * while a take or a count-in runs, past LP_MAXBARS, or when a part has no room. HOME + REC has no older take after */
+static void lp_stepped(int p);                       /* (below) */
+
+static void lp_double(void)
+{
+    uint32_t len = lp_len(), k[KL_NPART], end[KL_NPART][4], p, i, w;
+    int res = DB_DONE;
+    if (!lp.bars)
+        res = DB_NONE;
+    else if (lp.first || lp.rec || lp.state == LP_COUNT)
+        res = DB_TAKE;
+    else if (2u * lp.bars > LP_MAXBARS)
+        res = DB_MAX;
+    for (p = 0; res == DB_DONE && p < KL_NPART; p++) {   /* each part's notes shown, and those to end at len - 1 */
+        const lp_ev_t *e = lp_ev[p];
+        uint32_t hid[4] = {0, 0, 0, 0}, off[4] = {0, 0, 0, 0}, m;
+        for (i = 0; i < lp.n[p] && e[i].tick < len; i++)
+            ;
+        k[p] = i;
+        for (; i < lp.n[p]; i++)                     /* the notes with an end in the bars hidden */
+            if (!(e[i].vel & 0x7Fu))
+                hid[e[i].note >> 5] |= 1u << (e[i].note & 31u);
+        for (w = 0; w < 4u; w++)
+            end[p][w] = 0;
+        for (i = k[p]; i-- > 0;) {                   /* backwards: an on with no end after it in the bars shown,
+                                                     * its end hidden (lp_end_of's: the next off of its note) */
+            uint32_t ww = e[i].note >> 5u, b = 1u << (e[i].note & 31u);
+            if (!(e[i].vel & 0x7Fu))
+                off[ww] |= b;
+            else if (!(off[ww] & b) && (hid[ww] & b))
+                end[p][ww] |= b;
+        }
+        for (m = k[p], w = 0; w < 4u; w++)
+            for (i = 0; i < 32u; i++)
+                m += end[p][w] >> i & 1u;
+        if (2u * m > LP_EV)
+            res = DB_FULL;
+        k[p] = m;                                    /* the part's notes, doubled: twice this many */
+    }
+    if (res == DB_DONE) {
+        for (p = 0; p < KL_NPART; p++) {
+            lp_ev_t *e = lp_ev[p];
+            uint32_t n, m = k[p];
+            for (n = 0; n < lp.n[p] && e[n].tick < len; n++)
+                ;
+            for (w = 0; w < 4u; w++)                 /* the hidden ends: at the end of the bars shown */
+                for (i = 0; i < 32u; i++)
+                    if (end[p][w] >> i & 1u) {
+                        e[n].tick = (uint16_t)(len - 1u);
+                        e[n].note = (uint8_t)(w * 32u + i);
+                        e[n++].vel = 0;
+                    }
+            for (i = 0; i < m; i++) {                /* again, a loop later (in tick order still) */
+                e[m + i].tick = (uint16_t)(e[i].tick + len);
+                e[m + i].note = e[i].note;
+                e[m + i].vel = (uint8_t)(e[i].vel & 0x7Fu);
+            }
+            lp.n[p] = (uint16_t)(2u * m);
+            lp_stepped((int)p);
+        }
+        lp.bars = (uint8_t)(2u * lp.bars);
+        for (p = 0; p < KL_NPART; p++)
+            lp.cur[p] = (uint16_t)lp_lower((int)p, lp.pos16);
+    }
+    lp.double_res = (uint8_t)res;
+    lp.doubled++;
+}
+
 /* ------------------------------------------------- the step sequencer's steps --- */
 /* a step is 1/16 of the loop at tick t; a note starting within half a step of it (either side, round the loop's end)
  * is the step's. sel: LP_ANY, or a semitone (DRUMS: one instrument) */
@@ -721,10 +797,11 @@ static void lp_unsound(int p, int note)              /* the note off now, if the
 }
 
 /* a step's notes changed: the part's last take can no longer be taken back on its own (HOME + REC would undo these
- * too) */
+ * too), and the screen draws them anew */
 static void lp_stepped(int p)
 {
     lp.undo_has &= (uint8_t)~(1u << p);
+    lp.stepped++;
 }
 
 static void lp_step_set(int p, uint32_t t, int note, int vel, int gate)   /* a note on the step, as long as gate */
@@ -855,6 +932,9 @@ static void lp_asks(void)                            /* render: the main loop's 
             break;
         case LC_BARS:
             lp_set_bars((uint32_t)a);
+            break;
+        case LC_DOUBLE:
+            lp_double();
             break;
         case LC_SSET:
             lp_step_set(a, lc_q[j].t, lc_q[j].a, lc_q[j].b, lc_q[j].c);
@@ -1184,9 +1264,11 @@ static struct {
                                                      * the mixer's MIX or SEND, the effects' DELAY or HALL; STEP's bar
                                                      * shown; a knob turned while a step was held */
     uint16_t held, held_new;                         /* the steps held (white keys), those set as they went down */
+    uint8_t cur;                                     /* STEP's cursor (ALGO): 0 none (NEW STEPS), 1..16 a step of the
+                                                     * bar shown */
     uint32_t kstep;                                  /* the keys that went down as steps (their release is a step's) */
     uint32_t loop_at, lp_sig;                        /* the lanes last drawn; what the looper did, as last seen */
-    uint8_t full_seen;                               /* lp.full as last said */
+    uint8_t full_seen, doubled_seen;                 /* lp.full, lp.doubled as last said */
     char ind[8];                                     /* the header's bar and beat, as last drawn */
     uint32_t meter_at, lim_until;                    /* the meters last read; LIM lit until */
     int32_t meter[2];                                /* the output's meters, L and R, in pixels */
@@ -1747,8 +1829,40 @@ static void loop_show(int on)                        /* SEQ: the looper's page o
     ui.loop = (uint8_t)(on != 0);
     ui.edit = ui.mix = ui.fx = ui.tab = 0;
     ui.held = ui.held_new = 0;
+    ui.cur = 0;
     ui.redraw = 1;
     announce(on ? "LOOP" : "RACK");
+}
+
+/* HOME + SEQ on the looper's page: the loop doubled, every part's notes copied (the render does it: LC_DOUBLE; the
+ * screen says how it went) */
+static void loop_double(void)
+{
+    lp_ask(LC_DOUBLE, 0);
+}
+
+/* HOME + OCT- on the looper's page: the loop half as long (rounded up, a bar at least), as K2 LENGTH would make it:
+ * the bars after are hidden, a DOUBLE after it writes over them */
+static void loop_half(void)
+{
+    uint32_t b = (lp.bars + 1u) / 2u;
+    char t[16] = "";
+    if (!lp.bars) {
+        app_say("HALF", "NO LOOP");
+        return;
+    }
+    if (lp.first) {
+        app_say("HALF", "AFTER TAKE");
+        return;
+    }
+    if (lp.bars == 1u) {
+        app_say("HALF", "MIN 1 BAR");
+        return;
+    }
+    lp_ask(LC_BARS, (int)b);
+    int_text((int32_t)b, t);
+    text_cat(t, b == 1u ? " BAR" : " BARS");
+    app_say("HALF", t);
 }
 
 /* K1..K4 on the looper's page: TEMPO a BPM a detent, LENGTH a bar (AUTO only while it is empty; not while the first
@@ -1880,7 +1994,7 @@ static int loop_ind(char *t)
 static uint32_t loop_sig(void)                       /* what the looper did, for the screen to follow */
 {
     uint32_t h = lp.state | (uint32_t)lp.rec << 2 | (uint32_t)lp.rpart << 3 | (uint32_t)lp.bars << 6 |
-                 (uint32_t)lp.first << 11 | (uint32_t)lp.undone << 12;
+                 (uint32_t)lp.first << 11 | (uint32_t)lp.undone << 12 | (uint32_t)lp.stepped << 18;
     int p;
     for (p = 0; p < KL_NPART; p++)
         h = h * 31u + lp.n[p];
@@ -1972,11 +2086,21 @@ static int step_get(int s, int *note, int *vel, int *len)
     return 0;
 }
 
-static int step_first_held(void)                     /* the lowest step held, -1 none */
+/* the steps K2..K4 change: those held, else the cursor's if it has a note (DRUMS: the instrument's); 0: a new step's
+ * values */
+static uint32_t step_edit_mask(void)
 {
+    if (ui.held)
+        return ui.held;
+    return ui.cur ? step_mask(set.part, step_sel()) & 1u << (ui.cur - 1u) : 0u;
+}
+
+static int step_edit_first(void)                     /* the lowest of those, -1 none */
+{
+    uint32_t m = step_edit_mask();
     int s;
     for (s = 0; s < 16; s++)
-        if (ui.held & 1u << s)
+        if (m & 1u << s)
             return s;
     return -1;
 }
@@ -2043,7 +2167,7 @@ static void step_key(int s, int down)                /* a white key on STEP: its
 static void step_tab(int t)                          /* the looper's page: LOOP or STEP */
 {
     ui.tab = (uint8_t)t;
-    ui.held = ui.held_new = 0;
+    ui.held = ui.held_new = ui.cur = 0;
     ui.turned = 0;
     ui.redraw = 1;
     announce(t ? "STEP" : "LOOP");
@@ -2070,10 +2194,11 @@ static void step_knob(int32_t k, int32_t d)
         announce(v);
         return;
     }
-    if (ui.held) {
+    if (step_edit_mask()) {
+        uint32_t em = step_edit_mask();
         for (s = 0; s < 16; s++) {
             int note, vel, len;
-            if (!(ui.held & 1u << s) || !step_get(s, &note, &vel, &len))
+            if (!(em & 1u << s) || !step_get(s, &note, &vel, &len))
                 continue;
             if (k == 1)
                 lp_ask_step(LC_SEDIT, p, step_tick(s), LP_ANY, SE_NOTE, clamp(note + d, 24, 96) - note);
@@ -2083,7 +2208,7 @@ static void step_knob(int32_t k, int32_t d)
                 lp_ask_step(LC_SEDIT, p, step_tick(s), (int)step_sel(), SE_GATE,
                             LEN_TICKS[clamp(len + d, 0, 8)] - STEP_GAP);
         }
-        ui.turned = 1;
+        ui.turned = ui.held != 0;                    /* a key let go keeps its step */
         announce(k == 1 ? "NOTE" : k == 2 ? "VEL" : "LEN");
         return;
     }
@@ -2114,9 +2239,10 @@ static void step_reset(int32_t k)
         step_knob(1, -(int32_t)stp.inst[p]);
         return;
     }
-    if (ui.held) {
+    if (step_edit_mask()) {
+        uint32_t em = step_edit_mask();
         for (s = 0; s < 16; s++)
-            if ((ui.held & 1u << s) && step_get(s, &note, &vel, &len)) {
+            if ((em & 1u << s) && step_get(s, &note, &vel, &len)) {
                 if (k == 1)
                     lp_ask_step(LC_SEDIT, p, step_tick(s), LP_ANY, SE_NOTE, step_home_note() - note);
                 else if (k == 2)
@@ -2124,7 +2250,7 @@ static void step_reset(int32_t k)
                 else
                     lp_ask_step(LC_SEDIT, p, step_tick(s), (int)step_sel(), SE_GATE, LEN_TICKS[1] - STEP_GAP);
             }
-        ui.turned = 1;
+        ui.turned = ui.held != 0;
         ui.redraw = 1;
         return;
     }
@@ -2134,6 +2260,33 @@ static void step_reset(int32_t k)
         step_knob(2, 100 - stp.vel[p]);
     else
         step_knob(3, 1 - stp.len[p]);
+}
+
+/* ALGO on STEP: the cursor a step a detent, through the bars (K1's BAR follows); left of the first bar's step 1:
+ * none, K2..K4 a new step's again. HOME + ALGO: none */
+static void step_cursor(int32_t d)
+{
+    int32_t at = ui.cur ? ui.bar * 16 + ui.cur : 0;
+    int note, vel, len;
+    char v[8];
+    ui.redraw = 1;
+    at = d == 0 ? 0 : clamp(at + d, 0, (int32_t)step_bars() * 16);
+    if (at == 0) {
+        ui.cur = 0;
+        announce("NEW STEPS");
+        return;
+    }
+    ui.bar = (uint8_t)((at - 1) / 16);
+    ui.cur = (uint8_t)((at - 1) % 16 + 1);
+    if (!step_get(ui.cur - 1, &note, &vel, &len)) {
+        v[0] = 0;
+        text_cat(v, "EMPTY");
+    } else if (eng_cur() == KL_DRUMS) {
+        inst_text((int)step_sel(), v);
+    } else {
+        note_text(note, v);
+    }
+    step_said(ui.cur - 1, v);
 }
 
 static uint32_t step_play(void)                      /* the step playing in the bar shown: its bit, 0 none */
@@ -2247,8 +2400,12 @@ static void input(void)
             loop_answer(k == B_OCTUP);               /* HOME + PLAY's question */
         else if (k == B_OCTDN && ui.edit)
             edit_close();                            /* back, as on Felucca's pages */
+        else if (k == B_OCTDN && ui.loop && (btn & 1u << B_HOME))
+            loop_half();
         else if (k == B_OCTDN && ui.loop)
             loop_show(0);                            /* back */
+        else if (k == B_SEQ && ui.loop && (btn & 1u << B_HOME))
+            loop_double();
         else if ((k == B_SEQ || k == B_OCTUP) && ui.loop)
             step_tab(!ui.tab);                       /* the other tab, as EDIT and OCT+ on the edit pages */
         else if (k == B_SEQ)
@@ -2299,6 +2456,8 @@ static void input(void)
             preset_step(e);
         else if (k == EN_SELECT)
             part_step(e);                            /* the part, as SEL: to the right the next */
+        else if (k == EN_ALGO && ui.loop && ui.tab)
+            step_cursor(btn & 1u << B_HOME ? 0 : e);   /* HOME + ALGO: back to NEW STEPS */
         else if (ui.loop && ui.tab && k >= EN_K1 && (btn & 1u << B_HOME))
             step_reset((int32_t)(k - EN_K1));
         else if (ui.loop && ui.tab && k >= EN_K1)
@@ -2730,7 +2889,7 @@ static void footer_loop(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
 static void footer_step(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
 {
     static const char *const LAB[4] = {"K1 BAR", "K2 NOTE", "K3 VEL", "K4 LEN"};
-    int p = set.part, drums = eng_cur() == KL_DRUMS, s0 = step_first_held();
+    int p = set.part, drums = eng_cur() == KL_DRUMS, s0 = step_edit_first();
     int note = stp.note[p], vel = stp.vel[p], len = stp.len[p], home = step_home_note();
     int32_t i, bars = (int32_t)step_bars();
     char t[8];
@@ -3308,7 +3467,8 @@ static void draw_step(int32_t y0)
 {
     const tile_t *ct = &TILES[TILE_OF[eng_cur()]];
     uint32_t play = step_play(), sel = step_sel();
-    int drums = eng_cur() == KL_DRUMS, s0 = step_first_held();
+    int drums = eng_cur() == KL_DRUMS, s0 = step_edit_first();
+    uint32_t cur = ui.cur ? 1u << (ui.cur - 1u) : 0u;   /* ALGO's step */
     int32_t p, i;
     char t[24] = "", v[12];
     cv_begin(240, 93, K_GROUND);
@@ -3320,15 +3480,18 @@ static void draw_step(int32_t y0)
     int_text((int32_t)step_bars(), v);
     text_cat(t, v);
     draw_tabs(y0, TABS_LOOP, t);
-    for (i = 0; i < 16; i++) {                       /* the step numbers: 1, 5, 9, 13, and the one playing */
+    for (i = 0; i < 16; i++) {                       /* the step numbers: 1, 5, 9, 13, the one playing, the cursor's
+                                                     * (underlined) */
         int32_t cx = SX0 + i * SXW / 16 + SXW / 32;
         int_text(i + 1, v);
         if (play & 1u << i) {
             cv_rect(cx - text_w(&FONT_T, v) / 2 - 2, 42 - y0, text_w(&FONT_T, v) + 4, 11, K_TEXT);
             cv_text(cx - text_w(&FONT_T, v) / 2, 42 - y0, &FONT_T, v, K_GROUND);
-        } else if (i % 4 == 0) {
-            cv_text(cx - text_w(&FONT_T, v) / 2, 42 - y0, &FONT_T, v, K_MUTED);
+        } else if (i % 4 == 0 || (cur & 1u << i)) {
+            cv_text(cx - text_w(&FONT_T, v) / 2, 42 - y0, &FONT_T, v, cur & 1u << i ? K_TEXT : K_MUTED);
         }
+        if (cur & 1u << i)
+            cv_rect(cx - text_w(&FONT_T, v) / 2 - 1, 53 - y0, text_w(&FONT_T, v) + 2, 1, K_TEXT);
     }
     for (p = 0; p < KL_NPART; p++) {                 /* a row a part */
         const part_set_t *ps = &set.parts[p];
@@ -3350,7 +3513,7 @@ static void draw_step(int32_t y0)
         for (i = 0; i < 16; i++) {
             int32_t x = SX0 + i * SXW / 16;
             draw_step_cell(x, y + 2, 11, (int)(m >> i & 1u), (int)(play >> i & 1u), (int)i, col, chosen ? bg : K_SURF);
-            if (chosen && (ui.held & 1u << i))
+            if (chosen && ((ui.held | cur) & 1u << i))
                 box_edge(x, y, SXW / 16, 15, 1, K_TEXT);
         }
     }
@@ -3400,7 +3563,11 @@ static void draw_step(int32_t y0)
         text_fit(8, 154 - y0, 150, &FONT_XS, t, ct->col);
         t[0] = 0;
         part_name(set.part, t);
-        cv_text(232 - text_w(&FONT_T, held ? "HELD" : t), 156 - y0, &FONT_T, held ? "HELD" : t, K_MUTED);
+        if (held) {                                  /* a key held, or ALGO's cursor on it */
+            t[0] = 0;
+            text_cat(t, ui.held ? "HELD" : "ALGO");
+        }
+        cv_text(232 - text_w(&FONT_T, t), 156 - y0, &FONT_T, t, K_MUTED);
         for (i = 0; i < 3; i++) {
             int32_t x = 8 + i * 75;
             if (i == 0)
@@ -3414,7 +3581,8 @@ static void draw_step(int32_t y0)
             cv_text(x, 174 - y0, &FONT_T, LAB[i], K_MUTED);  /* the label, its value beside it */
             cv_text(x + text_w(&FONT_T, LAB[i]) + 4, 171 - y0, &FONT_B, v, K_TEXT);
         }
-        cv_text(8, 193 - y0, &FONT_T, "WHITE KEYS: STEPS. HOLD ONE, TURN K2-K4", K_MUTED);
+        cv_text(8, 193 - y0, &FONT_T, held && !ui.held ? "ALGO: A STEP. K2-K4 CHANGE IT. KEYS: SET, CLEAR" :
+                "WHITE KEYS: STEPS. HOLD ONE, TURN K2-K4", K_MUTED);
     }
     cv_blit(0, (uint32_t)y0);
 }
@@ -3489,6 +3657,18 @@ void app_frame(void)
         if (sig != ui.lp_sig) {                      /* the looper did something: the whole screen */
             ui.lp_sig = sig;
             ui.redraw = 1;
+        }
+        if (lp.doubled != ui.doubled_seen) {         /* HOME + SEQ: DOUBLE 4 BARS, or why not */
+            static const char *const WHY[5] = {"", "NO LOOP", "AFTER TAKE", "MAX 16 BARS", "FULL"};
+            char t[16] = "";
+            ui.doubled_seen = lp.doubled;
+            if (lp.double_res == DB_DONE) {
+                int_text(lp.bars, t);
+                text_cat(t, " BARS");
+            } else {
+                text_cat(t, WHY[lp.double_res]);
+            }
+            app_say("DOUBLE", t);
         }
         if (lp.full != ui.full_seen) {               /* a note left out: the part is full */
             char t[24] = "";
@@ -3682,6 +3862,8 @@ int app_expect(const char *what, int *got)
         *got = ui.tab + 1;
     else if (!strcmp(what, "sbar"))                  /* STEP: the bar shown, 1.. */
         *got = ui.bar + 1;
+    else if (!strcmp(what, "scur"))                  /* STEP: ALGO's cursor, 0 none (NEW STEPS), 1..16 */
+        *got = ui.cur;
     else if (!strcmp(what, "smask"))                 /* the chosen part's steps with a note in the bar shown (DRUMS:
                                                      * the instrument's), bit 0 step 1 */
         *got = (int)step_mask(set.part, step_sel());

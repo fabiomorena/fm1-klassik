@@ -104,14 +104,21 @@ kreuz und quer wie gerade - umsetzen!
 
 Nachtest Rack-Reihenfolge (seit 29.10.; Emulator vorher mit Cmd+Shift+R neu laden, Factory reset zweimal, „Switch on“):
 
-- [ ] N1 Nach dem Start: oben VA `1` (gefüllt), DRUMS `2`, ACID `3`, unten FM6 `4`, PD `5`, ORGAN `6`. Kopfzeile
+- [x ] N1 Nach dem Start: oben VA `1` (gefüllt), DRUMS `2`, ACID `3`, unten FM6 `4`, PD `5`, ORGAN `6`. Kopfzeile
   `1 VA`, Sound `SAW LEAD`.
-- [ ] N2 Auf Part 1 K1 Raste für Raste nach rechts: `1 DRUMS`, `1 ACID`, `1 FM6`, `1 PD`, `1 ORGAN`, wieder `1 VA`
+- [x ] N2 Auf Part 1 K1 Raste für Raste nach rechts: `1 DRUMS`, `1 ACID`, `1 FM6`, `1 PD`, `1 ORGAN`, wieder `1 VA`
   (die umrandete Kachel wandert mit). Von VA eine Raste nach links: `1 ORGAN`. Danach zurück auf VA.
-- [ ] N3 Auf Part 4 (FM6) K1 drei Rasten nach links: `4 VA`, die VA-Kachel zeigt `1` und `4`. Part 1 bleibt VA mit
+- [ x] N3 Auf Part 4 (FM6) K1 drei Rasten nach links: `4 VA`, die VA-Kachel zeigt `1` und `4`. Part 1 bleibt VA mit
   `SAW LEAD`.
-- [ ] N4 (= C3) Auf Part 3 (ACID) eine Taste festhalten, SEL zu Part 4, dort Akkorde spielen: Bass und Akkorde
+- [ x] N4 (= C3) Auf Part 3 (ACID) eine Taste festhalten, SEL zu Part 4, dort Akkorde spielen: Bass und Akkorde
   gleichzeitig.
-- [ ] N5 (= C4) Viele Noten auf mehreren Parts gleichzeitig festhalten (z. B. Part 1 und 4 je sechs Tasten, dazu der
+- [x ] N5 (= C4) Viele Noten auf mehreren Parts gleichzeitig festhalten (z. B. Part 1 und 4 je sechs Tasten, dazu der
   ACID-Bass): Irgendwann verstummen die ältesten Noten (die Obergrenze). Kein Absturz, kein Dauer-Knistern.
   (unsicher: Beim Abschneiden kann es kurz knacken, das ist bekannt.)
+
+## Auswertung Nachtest (Claude, 29.10.2026)
+
+- N1–N5 ohne Befund (`[x ]` und `[ x]` als bestanden gewertet): Das Rack zeigt nach dem Start 1–6 von links oben nach
+  rechts unten, K1 geht in dieser Reihenfolge (auch rückwärts von VA zu ORGAN), Part 4 wird mit drei Rasten VA. Bass
+  und Akkorde klingen zusammen (C3), die Obergrenze schneidet die ältesten Noten ohne Absturz (C4).
+- Damit ist PARTS fertig: alle Punkte bestanden, die Notiz A1 umgesetzt (`84a81bd`).

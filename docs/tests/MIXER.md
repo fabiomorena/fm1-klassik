@@ -82,7 +82,12 @@ Wir werden bestimmt noch weiter Effekte hinzufügen und die würde man dann ja a
 
 Nachtest neuer Mixer (seit 29.10., Mockups 28a/28b; Emulator vorher mit Cmd+Shift+R neu laden):
 
-- [ ] N1 GLO, Tab MIX: je Part Glyphe und Name, ein langer, fetter Fader (Griff mit runden Ecken), darunter Pegel,
+- [x ] N1 GLO, Tab MIX: je Part Glyphe und Name, ein langer, fetter Fader (Griff mit runden Ecken), darunter Pegel,
   PAN und M S; **keine** DLY/HALL. MASTER: Fader, L/R-Pegel, Prozent, LIM. Alles aus A und B geht wie vorher.
-- [ ] N2 GLO (oder OCT+), Tab SEND: je Part zwei senkrechte Fader `DLY` und `HALL` mit Wert darunter, beim umrandeten
+- [ x] N2 GLO (oder OCT+), Tab SEND: je Part zwei senkrechte Fader `DLY` und `HALL` mit Wert darunter, beim umrandeten
   Part hell. K1 und K2 bewegen sie, SEL wandert, Seite 4–6 genauso. MASTER zeigt grau die Rückwege und LIM.
+
+## Auswertung Nachtest (Claude, 29.10.2026)
+
+- N1 und N2 ohne Befund (`[x ]` und `[ x]` als bestanden gewertet): Tab MIX ohne Sends mit den längeren, runden
+  Fadern, Tab SEND mit einem Fader je Effekt. Damit ist MIXER fertig.

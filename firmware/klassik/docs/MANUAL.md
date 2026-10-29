@@ -129,6 +129,8 @@ dem Ausschalten weg; Tempo, QUANT und CLICK auch (sie stehen dann wieder auf 120
 | SEL, SELECT | beim Aufnehmen wandert die Aufnahme mit zum nächsten Part |
 | HOME + REC | die letzte Aufnahme des gewählten Parts zurücknehmen (`UNDO 2 DRUMS`), auch wenn danach andere Parts aufgenommen haben; noch einmal: wieder da (`REDO`). Eine Stufe je Part. War es die erste Aufnahme und hat sonst kein Part Noten, geht die Länge mit (LENGTH AUTO, gestoppt) |
 | HOME + PLAY | den gewählten Part leeren; fragt erst (`CLEAR 2 DRUMS? OCT+`): OCT+ leert, OCT− behält. HOME + REC holt ihn zurück |
+| HOME + SEQ | auf der Looper-Seite (LOOP und STEP): die Schleife verdoppeln, die Noten aller Parts in die neuen Takte kopiert (1 → 2 → 4 → 8 → 16 Takte; `DOUBLE 4 BARS`). Was ein kürzeres LENGTH ausgeblendet hatte, wird dabei überschrieben. Nichts geschieht ohne Schleife (`DOUBLE NO LOOP`), beim Vorzählen oder Aufnehmen (`DOUBLE AFTER TAKE`), über 16 Takte (`DOUBLE MAX 16 BARS`) oder wenn ein Part keinen Platz hat (`DOUBLE FULL`). Zurück: HOME + OCT− (oder K2 LENGTH kürzer). HOME + REC nimmt danach keine ältere Aufnahme mehr zurück |
+| HOME + OCT− | auf der Looper-Seite: die Schleife halbieren (16 → 8 → 4 → 2 → 1 Takte; ungerade aufgerundet, 3 → 2; `HALF 8 BARS`). Die Takte danach werden ausgeblendet wie mit K2 LENGTH; ein DOUBLE danach überschreibt sie. Nicht unter 1 Takt (`HALF MIN 1 BAR`), nicht während der ersten Aufnahme. Die Seite bleibt offen (OCT− allein schließt sie) |
 
 **Die erste Aufnahme** (alle Spuren leer, LENGTH AUTO) legt die Länge fest: REC beendet sie, auf ganze Takte gerundet
 (der nächste, 1–16), und die Schleife spielt weiter; PLAY beendet sie und stoppt. Was nach dem Ende gespielt wurde,
@@ -170,16 +172,17 @@ spielt, leuchtet in allen Reihen auf, seine Nummer oben auch.
 | weiße Tasten | die 16 Steps des gewählten Parts (F3 = Step 1 … G5 = Step 16). Ein leerer Step wird beim Drücken gesetzt (mit K2–K4), ein gesetzter beim Loslassen gelöscht, außer es wurde dabei gedreht. Ihre Lichter zeigen die gesetzten Steps; das Licht des Steps, der gerade spielt, kippt (Lauflicht) |
 | schwarze Tasten | nichts (auf STEP spielen die Tasten nicht) |
 | K1 BAR | welcher Takt gezeigt wird |
+| ALGO | der Cursor: Step für Step durch alle Takte (K1 BAR folgt), der Step weiß umrandet, seine Nummer oben hell und unterstrichen. Steht er auf einem gesetzten Step, ändern K2–K4 diesen Step, ohne dass eine Taste gehalten wird (unten `STEP 09 ALGO`); auf einem leeren Step die Werte neuer Steps. Ganz links (vor Step 1) und mit HOME + ALGO: kein Cursor (`NEW STEPS`); ebenso nach einem Wechsel des Tabs oder der Seite |
 | K2 NOTE | Note neuer Steps (C1 … C7; am Anfang C4). DRUMS: K2 INST wählt das Instrument (BD, RS, SD, CP, CB, LT, CH, MT, das eigene des Kits auf G#, HT, OH, CY), die Tasten zeigen und schalten dann nur dessen Steps |
 | K3 VEL | Anschlag neuer Steps (1 … 127; am Anfang 100) |
 | K4 LEN | Länge neuer Steps: 1/32, 1/16, 1/8, 3/16, 1/4, 3/8, 1/2, 3/4, 1/1 (am Anfang 1/16). Eine Note endet kurz vor ihrer Länge; länger als bis zur nächsten Note gleitet ACID (Slide) |
-| Taste halten + K2–K4 | Note, Anschlag, Länge dieses Steps (gehalten: weiß umrandet, unten seine Werte); mehrere gehaltene ändern sich zusammen |
-| HOME + K2–K4 | zurück auf C in der Oktave des Parts (DRUMS: BD), 100, 1/16, mit Marke im Balken; mit gehaltener Taste für diesen Step |
+| Taste halten + K2–K4 | Note, Anschlag, Länge dieses Steps (gehalten: weiß umrandet, unten seine Werte); mehrere gehaltene ändern sich zusammen. Eine gehaltene Taste geht dem Cursor vor |
+| HOME + K2–K4 | zurück auf C in der Oktave des Parts (DRUMS: BD), 100, 1/16, mit Marke im Balken; mit gehaltener Taste (oder dem Cursor auf einem gesetzten Step) für diesen Step |
 
 Ist die Schleife leer (LENGTH AUTO), macht der erste Step sie einen Takt lang. Während der ersten Aufnahme setzt STEP
 nichts (`STEP AFTER TAKE`). Ein Step hebt HOME + REC für die letzte Aufnahme seines Parts auf (sie ließe sich
-nicht mehr allein zurücknehmen). Unten steht beim gewählten Part der gehaltene Step (`STEP 09 HELD`) oder, was neue
-Steps bekommen (`NEW STEPS`); bei DRUMS die Reihe des Instruments und die Instrumente des Kits (ein Punkt: hat Steps
+nicht mehr allein zurücknehmen). Unten steht beim gewählten Part der gehaltene Step (`STEP 09 HELD`), der des Cursors (`STEP 09 ALGO`) oder,
+was neue Steps bekommen (`NEW STEPS`); bei DRUMS die Reihe des Instruments und die Instrumente des Kits (ein Punkt: hat Steps
 in diesem Takt).
 
 ## Edit-Seiten

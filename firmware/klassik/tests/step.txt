@@ -26,6 +26,16 @@ expect snote 60
 expect svel 100
 expect slen 1
 shot step-empty.png
+# HOME + SEQ with no loop yet: nothing to double
+press HOME
+wait 30
+tap SEQ
+wait 30
+release HOME
+wait 30
+said DOUBLE NO LOOP
+expect bars 0
+expect tab 2
 # part 1 VA: a white key on an empty loop sets its step (C4, 100, 1/16) and makes the loop a bar
 key w0 down
 wait 30
@@ -229,3 +239,234 @@ wait 100
 expect pvoices >0
 key w0 up
 wait 30
+# part 3 ACID: each step its own length; step 1 at 1/8 ends after step 2 starts (D4), so ACID slides to it. The held
+# step's values show at once (the screen follows the steps changed, not only their count)
+tap SEL
+wait 30
+expect part 3
+tap SEQ
+wait 30
+tap SEQ
+wait 30
+expect tab 2
+expect events 0
+key w0 down
+wait 30
+spin K4 1
+wait 30
+shot step-acid-held.png
+key w0 up
+wait 30
+expect slen 1
+spin K2 2
+wait 30
+key w1 down
+wait 30
+key w1 up
+wait 30
+expect events 4
+expect lt0 0
+expect ln0 60
+expect lt1 48
+expect ln1 62
+expect lt2 92
+expect lt3 92
+# step 1 held alone again, K4 back to 1/16: only its end moves (to 44), step 2 stays
+key w0 down
+wait 30
+spin K4 -1
+wait 30
+key w0 up
+wait 30
+expect lt1 44
+expect lv1 0
+expect lt2 48
+expect lt3 92
+# ALGO's cursor: a step a detent; on a step with a note K2..K4 change it, no key held (the panel says ALGO)
+spin ALGO 2
+wait 30
+expect scur 2
+said STEP 2 D4
+spin K4 1
+wait 30
+shot step-cursor.png
+expect lt3 140
+expect slen 1
+# a key tapped still clears its step (a knob turned with no key held keeps none)
+key w1 down
+wait 30
+key w1 up
+wait 30
+said STEP 2 OFF
+expect events 2
+# on an empty step K2..K4 are a new step's
+spin K2 1
+wait 30
+expect snote 63
+expect events 2
+# HOME + ALGO: back to NEW STEPS; left of step 1 it stays there, to the right at most the last step
+spin ALGO 3
+wait 30
+expect scur 5
+press HOME
+wait 30
+spin ALGO 1
+wait 30
+release HOME
+wait 30
+expect scur 0
+said NEW STEPS
+spin ALGO -3
+wait 30
+expect scur 0
+spin ALGO 40
+wait 30
+expect scur 16
+expect sbar 1
+# through the bars: LENGTH 2 (the tab LOOP puts the cursor back); from step 16 on to bar 2's step 1, BAR follows
+tap SEQ
+wait 30
+spin K2 1
+wait 30
+expect bars 2
+tap SEQ
+wait 30
+expect scur 0
+spin ALGO 17
+wait 30
+expect sbar 2
+expect scur 1
+spin ALGO -1
+wait 30
+expect sbar 1
+expect scur 16
+# a 1/4 on step 16 (the cursor's, empty: K4 a new step's LEN; D#4) ends in bar 2; LENGTH 1 hides that end (and
+# DRUMS' step in bar 2)
+spin K4 3
+wait 30
+key w15 down
+wait 30
+key w15 up
+wait 30
+expect slen 4
+expect events 4
+expect lt2 720
+expect lt3 908
+tap SEQ
+wait 30
+spin K2 -1
+wait 30
+expect bars 1
+# HOME + SEQ: the loop doubled, every part's notes copied into bar 2; the hidden end comes at bar 1's end (767)
+press HOME
+wait 30
+tap SEQ
+wait 30
+release HOME
+wait 30
+said DOUBLE 2 BARS
+expect bars 2
+expect tab 1
+expect events 8
+expect lt2 720
+expect lt3 767
+expect lv3 0
+expect ln3 63
+expect lt4 768
+expect lt6 1488
+expect lt7 1535
+shot loop-double.png
+spin SELECT -1
+wait 30
+expect part 2
+expect events 4
+expect lt2 768
+expect lt3 812
+# HOME + REC after it: no older take to bring back
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+said UNDO NOTHING
+# not past 16 bars (here from STEP), not while counting in
+spin K2 20
+wait 30
+expect bars 16
+tap SEQ
+wait 30
+expect tab 2
+press HOME
+wait 30
+tap SEQ
+wait 30
+release HOME
+wait 30
+said DOUBLE MAX 16 BARS
+expect bars 16
+tap REC
+wait 30
+expect lstate 1
+press HOME
+wait 30
+tap SEQ
+wait 30
+release HOME
+wait 30
+said DOUBLE AFTER TAKE
+tap PLAY
+wait 30
+expect lstate 0
+# HOME + OCT-: the loop half as long, the page stays open; the bars after are hidden (K2 LENGTH's way), a DOUBLE after
+# it copies over them
+press HOME
+wait 30
+tap OCT-
+wait 30
+release HOME
+wait 30
+said HALF 8 BARS
+expect bars 8
+expect loop 1
+expect events 4
+press HOME
+wait 30
+tap SEQ
+wait 30
+release HOME
+wait 30
+said DOUBLE 16 BARS
+expect events 8
+# down to a bar, not below; an odd length rounds up
+press HOME
+wait 30
+tap OCT-
+wait 30
+tap OCT-
+wait 30
+tap OCT-
+wait 30
+tap OCT-
+wait 30
+said HALF 1 BAR
+tap OCT-
+wait 30
+release HOME
+wait 30
+said HALF MIN 1 BAR
+expect bars 1
+expect loop 1
+tap SEQ
+wait 30
+spin K2 2
+wait 30
+expect bars 3
+press HOME
+wait 30
+tap OCT-
+wait 30
+release HOME
+wait 30
+said HALF 2 BARS
+expect bars 2

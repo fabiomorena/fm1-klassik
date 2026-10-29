@@ -93,7 +93,10 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   Render, Loops nur im RAM.
 - Step-Sequencer (Tab STEP der Looper-Seite, `stp` und `step_*` in `app.c`): dieselben Ereignisse wie der Looper,
   ein Step = 1/16 = 48 Ticks (±24); die 16 weißen Tasten (`PLAT_WHITE_KEYS`) sind die Steps des gewählten Parts,
-  DRUMS je Instrument (= Halbton); Änderungen über `lp_ask_step` (`LC_SSET`, `LC_SCLR`, `LC_SEDIT`) im Render.
+  DRUMS je Instrument (= Halbton); Änderungen über `lp_ask_step` (`LC_SSET`, `LC_SCLR`, `LC_SEDIT`) im Render;
+  ALGO = Cursor (`ui.cur`, `step_cursor`, `step_edit_mask`: gehaltene Tasten, sonst der Step des Cursors); HOME + SEQ
+  verdoppelt die Schleife mit Inhalt (`LC_DOUBLE`, `lp_double` im Render, Ergebnis `lp.double_res`), HOME + OCT−
+  halbiert sie (`loop_half`, wie K2 LENGTH).
 - Engines: VA = ANALOG, PD = PHASE, ORGAN = WHEEL, FM6 = msfa (`KL_FM6`), DRUMS (`KL_DRUMS` = 4, Kachel der früheren STRINGS). Je Engine acht Parameter (`engines/src/felucca_engine.h`:
   `engine_t.edit[8]`, `page_title[2]`, `presets`). Festkomma, keine Allokation.
 - FM6: Presets sind ganze DX7-Stimmen plus acht beschreibende Werte; die Makros verschieben die Stimme relativ zum
