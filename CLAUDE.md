@@ -150,7 +150,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits 606, 707, 808, 909; Plaits, MIT; ersetzt STRINGS), dann ACID (Open303, MIT) | erledigt (Simulator) |
 | v0.5 | Parts (4, je eine Engine; Stimmen-Obergrenze), Mixer (Level, Pan, Mute, Solo, Limiter), Noten-Looper | erledigt (Simulator) |
-| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts | erledigt (Simulator) |
+| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts; dazu Step-Cursor, DOUBLE/HALF | erledigt (Simulator; Emulator-Protokolle 29.10.) |
 | v0.7 | Preset-Liste, Glyphen-Browser (früher v0.4) | offen |
 | v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |
 | am Ende | Feinschliff: Klang nach Gehör, Design-Fragen | offen |
