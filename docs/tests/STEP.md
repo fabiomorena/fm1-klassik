@@ -189,3 +189,11 @@ Nachtest HOME + OCT+ (Emulator mit Cmd+Shift+R neu laden, Factory reset zweimal,
 - [ x] N17 HOME halten, OCT+ dreimal (`DOUBLE 2 BARS`, `4 BARS`, `8 BARS`), dann OCT− einmal (`HALF 4 BARS`). HOME
   loslassen: LENGTH `4 BARS`, die Noten in allen vier Takten wie in Takt 1.
 - [x ] N18 Ohne HOME: OCT+ wechselt LOOP/STEP, OCT− schließt die Seite, wie bisher. HOME + SEQ wechselt nur den Tab.
+
+## Auswertung Nachtest HOME + OCT+ (Claude, 29.10.2026)
+
+- N16–N18 ohne Befund (`[ x]`, `[x ]` als bestanden gewertet): `DOUBLE NO LOOP` ohne Tabwechsel, HOME gehalten
+  verdoppelt OCT+ mehrmals und halbiert OCT−, ohne HOME bleiben OCT+ / OCT− und SEQ wie bisher. Deine Häkchen kamen
+  schon mit `59d97d2` ins Repo (gespeichert kurz vor dem Commit).
+- Damit ist STEP fertig: alle Punkte bestanden, die Notizen C5 (Step-Cursor), E (DOUBLE), N11 (HALF) und N13
+  (HOME + OCT+ / OCT−) umgesetzt.
