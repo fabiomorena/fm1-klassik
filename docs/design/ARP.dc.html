@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARP – a part's arpeggiator</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- The arpeggiator (decided 29.10.2026, v0.7): ARP opens it for the chosen part (each part its own), OCT- back; ARP on the open page switches LATCH (the notes struck play on without a key, until new ones come; LATCH lit). K1 MODE OFF, UP, DOWN, UP-DN, RAND, ORDER (as played), K2 RATE 1/4 .. 1/32 in the looper's TEMPO (dotted and triplet too), K3 OCT 1..4 (octaves it climbs), K4 GATE 10..100 % of a step (ACID: over 100 % slides). The arp plays in the render, in time with the loop; REC takes its notes (what sounds: they show in LOOP and STEP), the loop plays them back without the arp again. The picture: the held notes as the arp plays them, the line where it is. Below, every part's MODE and RATE. HOME + K1..K4: OFF, 1/16, 1, 50 %. Here part 1 VA, UP 1/16 over 2 octaves of C4 E4 G4, LATCH -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #E8EAED; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">ARP</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">1 VA</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-label="Playing"><polygon points="2,1 13,7 2,13" fill="#7EE08A"></polygon></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">3.2</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="A part's arpeggiator" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">ARP</text>
+<rect x="10" y="28" width="36" height="3" fill="#FFB454"/>
+<text x="470" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">120 BPM</text>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<rect x="2" y="44" width="476" height="180" rx="8" fill="#151922"/>
+<text x="16" y="72" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">UP · 1/16 · 2 OCT</text>
+<rect x="384" y="54" width="82" height="24" rx="5" fill="#E8EAED"/>
+<text x="425" y="72" text-anchor="middle" font-size="16" font-weight="700" letter-spacing="1" fill="#0B0D11">LATCH</text>
+<rect x="40.0" y="88" width="1" height="104" fill="#2A3242"/>
+<rect x="42.0" y="182.0" width="13.3" height="8" rx="3" fill="#FFB454"/>
+<rect x="68.6" y="162.0" width="13.3" height="8" rx="3" fill="#FFB454"/>
+<rect x="95.2" y="147.0" width="13.3" height="8" rx="3" fill="#FFB454"/>
+<rect x="121.9" y="122.0" width="13.3" height="8" rx="3" fill="#FFB454"/>
+<rect x="146.5" y="88" width="1" height="104" fill="#2A3242"/>
+<rect x="148.5" y="102.0" width="13.3" height="8" rx="3" fill="#FFB454"/>
+<rect x="175.1" y="87.0" width="13.3" height="8" rx="3" fill="#FFB454"/>
+<rect x="201.8" y="182.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="228.4" y="162.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="253.0" y="88" width="1" height="104" fill="#2A3242"/>
+<rect x="255.0" y="147.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="281.6" y="122.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="308.2" y="102.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="334.9" y="87.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="359.5" y="88" width="1" height="104" fill="#2A3242"/>
+<rect x="361.5" y="182.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="388.1" y="162.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="414.8" y="147.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="441.4" y="122.0" width="13.3" height="8" rx="3" fill="#FFB454" opacity="0.55"/>
+<rect x="174.1" y="86" width="3" height="108" fill="#E8EAED"/>
+<text x="16" y="212" font-size="15" fill="#9AA3B2">HELD C4 E4 G4 · GATE 50%</text>
+<rect x="2" y="230" width="156" height="72" rx="8" fill="#1C2230" stroke="#FFB454" stroke-width="4"/>
+<g opacity="1">
+<polygon points="24.0,244.8 28.7,249.3 32.6,254.0 31.2,261.2 24.0,261.3 20.0,258.0 17.4,254.0 20.7,250.7" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="261" font-size="18" font-weight="700" fill="#FFB454">1 VA</text>
+<text x="16" y="290" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">UP</text>
+<text x="148" y="290" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#9AA3B2">1/16</text>
+</g>
+<rect x="162" y="230" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="184.0,247.7 191.2,246.8 191.3,254.0 190.5,260.5 184.0,260.6 178.4,259.6 179.3,254.0 178.6,248.6" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="202" y="261" font-size="18" font-weight="700" fill="#E8EAED">2 DRUMS</text>
+<text x="176" y="290" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">OFF</text>
+</g>
+<rect x="322" y="230" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="344.0,246.1 348.7,249.3 354.2,254.0 350.3,260.3 344.0,261.3 336.8,261.2 337.4,254.0 336.8,246.8" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="362" y="261" font-size="18" font-weight="700" fill="#E8EAED">3 ACID</text>
+<text x="336" y="290" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">RAND</text>
+<text x="468" y="290" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#9AA3B2">1/8</text>
+</g>
+<rect x="2" y="308" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="24.0,327.0 29.4,326.6 34.2,332.0 29.1,337.1 24.0,343.0 18.4,337.6 17.4,332.0 18.9,326.9" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="339" font-size="18" font-weight="700" fill="#E8EAED">4 FM6</text>
+<text x="16" y="368" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">OFF</text>
+</g>
+<rect x="162" y="308" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="184.0,321.8 188.0,328.0 193.2,332.0 188.7,336.7 184.0,340.6 180.7,335.3 174.5,332.0 179.8,327.8" fill="#FF7AB6" fill-opacity="0.375" stroke="#FF7AB6" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="202" y="339" font-size="18" font-weight="700" fill="#E8EAED">5 PD</text>
+<text x="176" y="368" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">OFF</text>
+</g>
+<rect x="322" y="308" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="344.0,324.7 350.5,325.5 351.3,332.0 350.5,338.5 344.0,339.3 337.5,338.5 336.7,332.0 337.5,325.5" fill="#7EE08A" fill-opacity="0.375" stroke="#7EE08A" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="362" y="339" font-size="18" font-weight="700" fill="#E8EAED">6 ORGAN</text>
+<text x="336" y="368" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">OFF</text>
+</g>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 MODE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">UP</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 20%; background: #FFB454"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 RATE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">1/16</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 60%; background: #FFB454"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 OCT</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">2</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 33%; background: #FFB454"></span><span style="position: absolute; left: calc(0% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED; border-radius: 1px"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4 GATE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">50%</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 50%; background: #FFB454"></span></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

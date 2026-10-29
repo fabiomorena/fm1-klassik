@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LFO – more</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=IBM+Plex+Sans+Condensed:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9AA3B2}a:hover{color:#E8EAED}
+</style>
+</helmet>
+<!-- The LFO's second tab MORE (decided 29.10.2026, v0.7; LFO or OCT+ flips the tabs): K1 SYNC ON (RATE in note values of the TEMPO; free running it follows the loop, the same every round) or OFF (Hz), K2 RETRIG FREE (one wave for all the part's notes) or KEY (each note starts it anew), K3 FADE 0 .. 2 s (the depth fades in after a note: a delayed vibrato), K4 free. HOME + K1..K3: ON, FREE, 0. Here part 3 ACID, RETRIG KEY, FADE 0.5 s -->
+<div style="width: 480px; height: 480px; box-sizing: border-box; display: flex; flex-direction: column; background: #0B0D11; color: #E8EAED; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; overflow: hidden">
+<header style="height: 40px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #11151C; border-bottom: 1px solid #2A3242">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0">
+<span style="background: #E8EAED; color: #0B0D11; font-weight: 700; font-size: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; flex: none">LFO</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">3 ACID</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; flex: none">
+<svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-label="Playing"><polygon points="2,1 13,7 2,13" fill="#7EE08A"></polygon></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">3.2</span>
+<svg width="28" height="14" viewBox="0 0 30 16" role="img" aria-label="Battery about three quarters full"><rect x="1" y="1" width="25" height="14" rx="3" fill="none" stroke="#9AA3B2" stroke-width="2"></rect><rect x="27" y="5" width="2" height="6" rx="1" fill="#9AA3B2"></rect><rect x="4" y="4" width="15" height="8" rx="1.5" fill="#E8EAED"></rect></svg>
+</div>
+</header>
+<main style="flex: 1; min-height: 0">
+<svg width="480" height="386" viewBox="0 0 480 386" role="img" aria-label="A part's LFO, more" style="display: block; font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif">
+<text x="10" y="22" font-size="17" font-weight="600" letter-spacing="1" fill="#9AA3B2">LFO</text>
+<text x="62" y="22" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">MORE</text>
+<rect x="62" y="28" width="46" height="3" fill="#E3F45E"/>
+<text x="470" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="16" fill="#9AA3B2">120 BPM</text>
+<rect x="0" y="36" width="480" height="2" fill="#2A3242"/>
+<rect x="2" y="44" width="476" height="180" rx="8" fill="#151922"/>
+<text x="16" y="72" font-size="17" font-weight="700" letter-spacing="1" fill="#E8EAED">RETRIG KEY · FADE</text>
+<text x="464" y="72" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="17" fill="#9AA3B2">0.5 S</text>
+<rect x="40" y="144" width="426" height="2" fill="#2A3242"/>
+<polyline points="40.0,145.0 42.1,144.9 44.3,144.6 46.4,144.2 48.5,143.6 50.6,142.9 52.8,142.0 54.9,140.9 57.0,139.8 59.2,138.6 61.3,137.3 63.4,136.0 65.6,134.7 67.7,133.4 69.8,132.2 72.0,131.0 74.1,129.9 76.2,128.9 78.3,128.1 80.5,127.4 82.6,127.0 84.7,126.8 86.9,126.7 89.0,127.0 91.1,127.5 93.2,128.3 95.4,129.3 97.5,130.6 99.6,132.2 101.8,134.1 103.9,136.2 106.0,138.6 108.2,141.2 110.3,144.0 112.4,147.0 114.5,150.2 116.7,153.5 118.8,156.9 120.9,160.3 123.1,163.8 125.2,167.3 127.3,170.7 129.5,174.0 131.6,176.6 133.7,178.8 135.9,180.6 138.0,182.2 140.1,183.4 142.2,184.3 144.4,184.8 146.5,185.0 148.6,184.8 150.8,184.3 152.9,183.4 155.0,182.2 157.2,180.6 159.3,178.8 161.4,176.6 163.5,174.2 165.7,171.5 167.8,168.5 169.9,165.4 172.1,162.0 174.2,158.5 176.3,154.9 178.5,151.3 180.6,147.5 182.7,143.7 184.8,140.0 187.0,136.3 189.1,132.6 191.2,129.1 193.4,125.7 195.5,122.5 197.6,119.5 199.8,116.7 201.9,114.2 204.0,111.9 206.1,109.9 208.3,108.3 210.4,107.0 212.5,106.0 214.7,105.3 216.8,105.0 218.9,105.1 221.0,105.5 223.2,106.3 225.3,107.4 227.4,108.8 229.6,110.6 231.7,112.6 233.8,115.0 236.0,117.6 238.1,120.5 240.2,123.6 242.3,126.8 244.5,130.3 246.6,133.8 248.7,137.5 250.9,145.0 253.0,144.8 255.1,144.5 257.3,144.0 259.4,143.3 261.5,142.5 263.6,141.6 265.8,140.5 267.9,139.3 270.0,138.1 272.2,136.8 274.3,135.5 276.4,134.2 278.6,132.9 280.7,131.7 282.8,130.5 284.9,129.5 287.1,128.6 289.2,127.8 291.3,127.2 293.5,126.9 295.6,126.7 297.7,126.8 299.9,127.2 302.0,127.8 304.1,128.7 306.2,129.8 308.4,131.3 310.5,133.0 312.6,134.9 314.8,137.2 316.9,139.6 319.0,142.3 321.2,145.2 323.3,148.3 325.4,151.5 327.6,154.8 329.7,158.3 331.8,161.7 333.9,165.2 336.1,168.7 338.2,172.0 340.3,175.2 342.5,177.5 344.6,179.6 346.7,181.3 348.8,182.7 351.0,183.8 353.1,184.6 355.2,184.9 357.4,185.0 359.5,184.6 361.6,184.0 363.8,183.0 365.9,181.6 368.0,179.9 370.2,177.9 372.3,175.6 374.4,173.1 376.5,170.3 378.7,167.2 380.8,164.0 382.9,160.6 385.1,157.1 387.2,153.4 389.3,149.7 391.4,146.0 393.6,142.2 395.7,138.5 397.8,134.8 400.0,131.2 402.1,127.7 404.2,124.4 406.4,121.3 408.5,118.3 410.6,115.6 412.8,113.2 414.9,111.1 417.0,109.2 419.1,107.7 421.3,106.5 423.4,105.7 425.5,105.2 427.7,105.0 429.8,105.2 431.9,105.8 434.1,106.7 436.2,107.9 438.3,109.5 440.4,111.4 442.6,113.6 444.7,116.0 446.8,118.8 449.0,121.7 451.1,124.9 453.2,128.2 455.3,131.7 457.5,135.3 459.6,139.0 461.7,142.8 463.9,146.5 466.0,150.3" fill="none" stroke="#E3F45E" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="38" y="88" width="4" height="116" rx="2" fill="#E8EAED"/>
+<rect x="248" y="88" width="4" height="116" rx="2" fill="#E8EAED"/>
+<text x="46" y="100" font-size="14" fill="#9AA3B2">NOTE</text>
+<text x="256" y="100" font-size="14" fill="#9AA3B2">NOTE</text>
+<text x="16" y="212" font-size="15" fill="#9AA3B2">EACH NOTE STARTS THE WAVE, FADES IT IN</text>
+<rect x="2" y="230" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="24.0,244.8 28.7,249.3 32.6,254.0 31.2,261.2 24.0,261.3 20.0,258.0 17.4,254.0 20.7,250.7" fill="#FFB454" fill-opacity="0.375" stroke="#FFB454" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="261" font-size="18" font-weight="700" fill="#E8EAED">1 VA</text>
+<text x="16" y="290" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#E8EAED">PIT</text>
+<rect x="58" y="280" width="56" height="6" rx="3" fill="#2A3242"/>
+<rect x="58" y="280" width="6" height="6" rx="3" fill="#FFB454"/>
+<text x="148" y="290" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">10</text>
+</g>
+<rect x="162" y="230" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="0.45">
+<polygon points="184.0,247.7 191.2,246.8 191.3,254.0 190.5,260.5 184.0,260.6 178.4,259.6 179.3,254.0 178.6,248.6" fill="#B9A2FF" fill-opacity="0.375" stroke="#B9A2FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="202" y="261" font-size="18" font-weight="700" fill="#E8EAED">2 DRUMS</text>
+<text x="176" y="290" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">–</text>
+</g>
+<rect x="322" y="230" width="156" height="72" rx="8" fill="#1C2230" stroke="#E3F45E" stroke-width="4"/>
+<g opacity="1">
+<polygon points="344.0,246.1 348.7,249.3 354.2,254.0 350.3,260.3 344.0,261.3 336.8,261.2 337.4,254.0 336.8,246.8" fill="#E3F45E" fill-opacity="0.375" stroke="#E3F45E" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="362" y="261" font-size="18" font-weight="700" fill="#E3F45E">3 ACID</text>
+<text x="336" y="290" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#E8EAED">FLT</text>
+<rect x="378" y="280" width="56" height="6" rx="3" fill="#2A3242"/>
+<rect x="378" y="280" width="22" height="6" rx="3" fill="#E3F45E"/>
+<text x="468" y="290" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">40</text>
+</g>
+<rect x="2" y="308" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="24.0,327.0 29.4,326.6 34.2,332.0 29.1,337.1 24.0,343.0 18.4,337.6 17.4,332.0 18.9,326.9" fill="#5CC8FF" fill-opacity="0.375" stroke="#5CC8FF" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="42" y="339" font-size="18" font-weight="700" fill="#E8EAED">4 FM6</text>
+<text x="16" y="368" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">PIT</text>
+<rect x="58" y="358" width="56" height="6" rx="3" fill="#2A3242"/>
+<text x="148" y="368" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#9AA3B2">0</text>
+</g>
+<rect x="162" y="308" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="184.0,321.8 188.0,328.0 193.2,332.0 188.7,336.7 184.0,340.6 180.7,335.3 174.5,332.0 179.8,327.8" fill="#FF7AB6" fill-opacity="0.375" stroke="#FF7AB6" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="202" y="339" font-size="18" font-weight="700" fill="#E8EAED">5 PD</text>
+<text x="176" y="368" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#E8EAED">SHP</text>
+<rect x="218" y="358" width="56" height="6" rx="3" fill="#2A3242"/>
+<rect x="218" y="358" width="34" height="6" rx="3" fill="#FF7AB6"/>
+<text x="308" y="368" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#E8EAED">60</text>
+</g>
+<rect x="322" y="308" width="156" height="72" rx="8" fill="#151922" stroke="none" stroke-width="0"/>
+<g opacity="1">
+<polygon points="344.0,324.7 350.5,325.5 351.3,332.0 350.5,338.5 344.0,339.3 337.5,338.5 336.7,332.0 337.5,325.5" fill="#7EE08A" fill-opacity="0.375" stroke="#7EE08A" stroke-width="3" stroke-linejoin="round" opacity="1"/>
+<text x="362" y="339" font-size="18" font-weight="700" fill="#E8EAED">6 ORGAN</text>
+<text x="336" y="368" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="600" fill="#9AA3B2">AMP</text>
+<rect x="378" y="358" width="56" height="6" rx="3" fill="#2A3242"/>
+<text x="468" y="368" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="600" fill="#9AA3B2">0</text>
+</g>
+</svg>
+</main>
+<footer style="height: 52px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #2A3242; border-top: 1px solid #2A3242">
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K1 SYNC</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">ON</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #E3F45E"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K2 RETRIG</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">KEY</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #E3F45E"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K3 FADE</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">0.5 S</span>
+<span style="height: 3px; background: #2A3242; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 25%; background: #E3F45E"></span><span style="position: absolute; left: calc(0% - 2px); top: -4px; width: 4px; height: 11px; background: #E8EAED; border-radius: 1px"></span></span>
+</div>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: #11151C; min-width: 0">
+<span style="font-size: 16px; color: #9AA3B2; white-space: nowrap">K4</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap">-</span>
+<span style="height: 3px; background: #2A3242; position: relative"></span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ground":{"editor":"color","default":"#0B0D11"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { ground: this.props.ground ?? '#0B0D11' };
+}
+}
+</script>
+</body>
+</html>

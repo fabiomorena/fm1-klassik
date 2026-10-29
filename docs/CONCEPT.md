@@ -30,7 +30,10 @@ gerade halten).
 | v0.2 | FM6 (msfa, Apache-2.0, nach C portiert), acht eigene Presets | erledigt (Simulator) |
 | v0.3 | DRUMS (Kits im Stil von 606, 707, 808, 909; Plaits, MIT, und eigener Code; ersetzt STRINGS), ACID (Open303, MIT) | erledigt (Simulator) |
 | v0.5 | Parts (4, je eine Engine), Mixer mit Limiter, Noten-Looper | erledigt (Simulator) |
-| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts | erledigt (Simulator) |
-| v0.7 | Preset-Liste und Glyphen-Browser (früher v0.4) | offen |
-| v0.8 | Klang-Atlas, Klang-Stammbaum (früher v0.6) | offen |
-| am Ende | Feinschliff: Klang nach Gehör, Design-Fragen | offen |
+| v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts; dazu Step-Cursor, DOUBLE/HALF | erledigt (Simulator; Emulator-Protokolle 29.10.) |
+| v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | offen |
+| v0.8 | Edit-Seiten nach den Mockups 02 `Edit-VA` und 03 `Edit-FM6` (mehr Seiten je Engine: Hüllkurve, LFO, Filterkurve, Algorithmus-Grafik) | offen |
+| v0.9 | Preset-Liste und Glyphen-Browser (früher v0.4, dann v0.7) | offen |
+| v1.0 | Klang-Atlas, Klang-Stammbaum (früher v0.6, dann v0.8) | offen |
+| danach | Sequencer-Extras aus Mockup 05 (CHANCE, RATCH, Patterns, SONG), Drive und Chorus | offen |
+| am Ende | Feinschliff: Klang nach Gehör, Design-Fragen; Streichen, was nicht trägt | offen |
