@@ -122,3 +122,6 @@ nur bei oct + - gerade bemerkt mit edit scrollt man auch durch alle tabs
 - [ x] N1 Part 1 VA, ENV (Seite zu): Tab `ENV`. ENV noch einmal: `MORE`, dann `OSC`, `FLT`, wieder `ENV`. OCT−: zurück
   zum Rack.
 - [ x] N2 Part 4 FM6: ENV öffnet `ENV`, ENV noch einmal: `ALGO`, noch einmal: `ENV`.
+
+**Nachtest ausgewertet (Claude, 29.10.2026):** N1 und N2 bestanden: ENV geht bei VA und FM6 durch alle Tabs wie EDIT,
+OCT− schließt. Damit ist das EDIT-Protokoll fertig.
