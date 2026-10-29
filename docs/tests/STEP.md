@@ -164,8 +164,28 @@ douple bar geklickt hat
 
 Nachtest HALF (Emulator mit Cmd+Shift+R neu laden, Factory reset zweimal, „Switch on“):
 
-- [ ] N2 und N3 von oben.
-- [ ] N13 SEQ zweimal (STEP), ein paar Steps setzen, HOME (`Esc`) halten und SEQ dreimal: `DOUBLE 8 BARS`. HOME
+- [ x] N2 und N3 von oben.
+- [! ] N13 SEQ zweimal (STEP), ein paar Steps setzen, HOME (`Esc`) halten und SEQ dreimal: `DOUBLE 8 BARS`. HOME
   halten und OCT− (`Y`): `HALF 4 BARS`, die Seite bleibt offen, auf LOOP stehen die Noten wie vor dem letzten DOUBLE.
-- [ ] N14 HOME + OCT− weiter bis `HALF 1 BAR`, dann `HALF MIN 1 BAR`. Takt 1 klingt wie am Anfang.
-- [ ] N15 OCT− allein schließt die Looper-Seite wie bisher.
+- [ x] N14 HOME + OCT− weiter bis `HALF 1 BAR`, dann `HALF MIN 1 BAR`. Takt 1 klingt wie am Anfang.
+- [ x] N15 OCT− allein schließt die Looper-Seite wie bisher.
+
+Notizen: ich denke es macht Sinn, wenn man home+seq gedrückt hat, man generell mit okt + double bar und mit okt - 
+half bar machen kann - das ist dann konsitenter
+
+## Auswertung Nachtest HALF (Claude, 29.10.2026)
+
+- N2, N3 (Gleiten nur mit überlappender Länge, Anzeige folgt jeder Raste), N14 (HALF bis 1 Takt, `MIN 1 BAR`) und
+  N15 (OCT− schließt die Seite) ohne Befund (`[ x]` als bestanden gewertet). N13 lief (N14 baut darauf auf).
+- **N13 `[!]`, Notiz (OCT+ verdoppeln, OCT− halbieren, konsistenter):** Du hast gewählt: HOME halten, OCT+ verdoppelt,
+  OCT− halbiert, beliebig oft hintereinander; HOME + SEQ ist wieder nur SEQ (Tab). Umgesetzt (DECISIONS.md 29.10.,
+  MANUAL, Mockup 31); in `tests/step.txt` die DOUBLE-Prüfungen auf HOME + OCT+ umgestellt und +6 Prüfungen
+  (853 gesamt).
+
+Nachtest HOME + OCT+ (Emulator mit Cmd+Shift+R neu laden, Factory reset zweimal, „Switch on“, SEQ zweimal):
+
+- [ x] N16 HOME (`Esc`) halten und OCT+ (`X`): `DOUBLE NO LOOP`, der Tab bleibt STEP. HOME loslassen, ein paar Steps
+  setzen.
+- [ x] N17 HOME halten, OCT+ dreimal (`DOUBLE 2 BARS`, `4 BARS`, `8 BARS`), dann OCT− einmal (`HALF 4 BARS`). HOME
+  loslassen: LENGTH `4 BARS`, die Noten in allen vier Takten wie in Takt 1.
+- [x ] N18 Ohne HOME: OCT+ wechselt LOOP/STEP, OCT− schließt die Seite, wie bisher. HOME + SEQ wechselt nur den Tab.

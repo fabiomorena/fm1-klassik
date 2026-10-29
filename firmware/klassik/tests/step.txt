@@ -26,10 +26,10 @@ expect snote 60
 expect svel 100
 expect slen 1
 shot step-empty.png
-# HOME + SEQ with no loop yet: nothing to double
+# HOME + OCT+ with no loop yet: nothing to double (the tab stays: OCT+ alone flips it)
 press HOME
 wait 30
-tap SEQ
+tap OCT+
 wait 30
 release HOME
 wait 30
@@ -357,10 +357,10 @@ wait 30
 spin K2 -1
 wait 30
 expect bars 1
-# HOME + SEQ: the loop doubled, every part's notes copied into bar 2; the hidden end comes at bar 1's end (767)
+# HOME + OCT+: the loop doubled, every part's notes copied into bar 2; the hidden end comes at bar 1's end (767)
 press HOME
 wait 30
-tap SEQ
+tap OCT+
 wait 30
 release HOME
 wait 30
@@ -399,7 +399,7 @@ wait 30
 expect tab 2
 press HOME
 wait 30
-tap SEQ
+tap OCT+
 wait 30
 release HOME
 wait 30
@@ -410,7 +410,7 @@ wait 30
 expect lstate 1
 press HOME
 wait 30
-tap SEQ
+tap OCT+
 wait 30
 release HOME
 wait 30
@@ -418,7 +418,7 @@ said DOUBLE AFTER TAKE
 tap PLAY
 wait 30
 expect lstate 0
-# HOME + OCT-: the loop half as long, the page stays open; the bars after are hidden (K2 LENGTH's way), a DOUBLE after
+# HOME + OCT-: the loop half as long, the page stays open (OCT- alone shuts it); the bars after are hidden (K2 LENGTH's way), a DOUBLE after
 # it copies over them
 press HOME
 wait 30
@@ -432,7 +432,7 @@ expect loop 1
 expect events 4
 press HOME
 wait 30
-tap SEQ
+tap OCT+
 wait 30
 release HOME
 wait 30
@@ -470,3 +470,22 @@ release HOME
 wait 30
 said HALF 2 BARS
 expect bars 2
+# HOME held: OCT+ doubles again and again (2 -> 4 -> 8), OCT- halves; HOME + SEQ is SEQ (the other tab)
+press HOME
+wait 30
+tap OCT+
+wait 30
+tap OCT+
+wait 30
+said DOUBLE 8 BARS
+tap OCT-
+wait 30
+said HALF 4 BARS
+expect tab 1
+tap SEQ
+wait 30
+release HOME
+wait 30
+expect bars 4
+expect tab 2
+expect loop 1

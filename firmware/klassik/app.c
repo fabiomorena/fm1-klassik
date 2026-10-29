@@ -378,7 +378,8 @@ static struct {
     volatile uint8_t full;                           /* notes left out, the part full: a count (the main loop says so) */
     volatile uint8_t stepped;                        /* the steps changed: a count (a step's note, velocity or length
                                                      * leaves the events' count as it was; the screen follows this) */
-    volatile uint8_t doubled, double_res;            /* HOME + SEQ done: a count, and how (DB_*; the main loop says so) */
+    volatile uint8_t doubled, double_res;            /* HOME + OCT+ done: a count, and how (DB_*; the main loop says
+                                                     * so) */
 } lp;
 #define LC_N 16u
 static volatile uint32_t lc_w, lc_r;                 /* main loop writes lc_w, the render lc_r */
@@ -691,7 +692,7 @@ static void lp_set_bars(uint32_t bars)               /* K2: shorter hides the ba
         lp.cur[p] = (uint16_t)lp_lower(p, lp.pos16);
 }
 
-/* HOME + SEQ: the loop twice as long, every part's notes again in the new bars. What a shorter LENGTH hid goes
+/* HOME + OCT+: the loop twice as long, every part's notes again in the new bars. What a shorter LENGTH hid goes
  * first; a note it hid the end of ends with the bars shown (as it plays now). Every part or none: not with no loop,
  * while a take or a count-in runs, past LP_MAXBARS, or when a part has no room. HOME + REC has no older take after */
 static void lp_stepped(int p);                       /* (below) */
@@ -1834,7 +1835,7 @@ static void loop_show(int on)                        /* SEQ: the looper's page o
     announce(on ? "LOOP" : "RACK");
 }
 
-/* HOME + SEQ on the looper's page: the loop doubled, every part's notes copied (the render does it: LC_DOUBLE; the
+/* HOME + OCT+ on the looper's page: the loop doubled, every part's notes copied (the render does it: LC_DOUBLE; the
  * screen says how it went) */
 static void loop_double(void)
 {
@@ -2401,10 +2402,10 @@ static void input(void)
         else if (k == B_OCTDN && ui.edit)
             edit_close();                            /* back, as on Felucca's pages */
         else if (k == B_OCTDN && ui.loop && (btn & 1u << B_HOME))
-            loop_half();
+            loop_half();                             /* HOME + OCT- / OCT+: the loop's length / 2, x 2 */
         else if (k == B_OCTDN && ui.loop)
             loop_show(0);                            /* back */
-        else if (k == B_SEQ && ui.loop && (btn & 1u << B_HOME))
+        else if (k == B_OCTUP && ui.loop && (btn & 1u << B_HOME))
             loop_double();
         else if ((k == B_SEQ || k == B_OCTUP) && ui.loop)
             step_tab(!ui.tab);                       /* the other tab, as EDIT and OCT+ on the edit pages */
@@ -3658,7 +3659,7 @@ void app_frame(void)
             ui.lp_sig = sig;
             ui.redraw = 1;
         }
-        if (lp.doubled != ui.doubled_seen) {         /* HOME + SEQ: DOUBLE 4 BARS, or why not */
+        if (lp.doubled != ui.doubled_seen) {         /* HOME + OCT+: DOUBLE 4 BARS, or why not */
             static const char *const WHY[5] = {"", "NO LOOP", "AFTER TAKE", "MAX 16 BARS", "FULL"};
             char t[16] = "";
             ui.doubled_seen = lp.doubled;
