@@ -34,7 +34,9 @@ Die Tastatur-Kürzel wirken nur, wenn das Panel den Fokus hat: einmal aufs Gerä
 statt SELECT. Für SELECT den Drehregler SELECT anklicken (das dreht ihn nicht), dann ↑ / ↓.
 
 - [ ] 0.1 `http://localhost:8000` mit **Cmd+Shift+R** neu laden, „Factory reset“ zweimal klicken (der zweite Klick
-  bestätigt), dann „Switch on“. Neuer Stand? GLO, GLO, GLO zeigt den Tab `LIST` (statt wieder `MIX`).
+  bestätigt), dann „Switch on“. Neuer Stand? Auf MIX zeigt die Tab-Zeile `MIX SEND LIST GLYPHS`. (Falls nicht:
+  einmal privates Fenster, Cmd+Shift+N. Falls die Seite nicht lädt, im Terminal:
+  `python3 firmware/klassik/tools/serve_emu.py`)
 
 ## A GLO-Tabs
 

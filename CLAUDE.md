@@ -30,6 +30,7 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `firmware/klassik/dsp/drums/` | Plaits-Drums nach C portiert (o2-Einheit, MIT, `float`): 808-BD/SD/Hi-Hat, 909-artige BD/SD; Änderungen im Dateikopf von `drums.c` |
 | `firmware/klassik/dsp/eng_acid.c` | ACID als `engine_t` (MPL-2.0): acht Makros in den Einheiten von Open303, acht Presets, Accent ab Velocity 100 |
 | `firmware/klassik/dsp/acid/` | Open303 nach C portiert (o2-Einheit, MIT, `float`, TB_303-Filter); Änderungen im Dateikopf von `acid.c` |
+| `firmware/klassik/tools/serve_emu.py` | Browser-Emulator auf localhost:8000 wie `http.server`, aber mit `Cache-Control: no-store` (MPL-2.0) |
 | `firmware/klassik/tools/device_check.py` | Geräte-Build bis zu den Prüfungen von fm1-base (Größe, RAM, Pool, kein double), ohne Paket (MPL-2.0) |
 | `firmware/klassik/tools/gen_acid_tables.py` | rechnet Open303s Wellenform-Tabellen (int16), das elliptische Filter als Biquads und feste Koeffizienten beim Build (`acid_tables.h`, MIT) |
 | `firmware/klassik/dsp/klassik_dsp.h` | Schnittstelle App ↔ DSP |
@@ -54,7 +55,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   `firmware/klassik/build/host/` ansehen und mit `docs/design/png/` vergleichen.
 - Die CI macht dasselbe bei jedem Push (`.github/workflows/host.yml`) und baut den Browser-Emulator
   (`.github/workflows/web.yml`, Emscripten 6.0.13 aus emsdk). Lokal: `base/tools/build.py firmware/klassik --web`
-  (Emscripten per Homebrew), ansehen mit `python3 -m http.server 8000 -d firmware/klassik/build/emu`.
+  (Emscripten per Homebrew), ansehen mit `python3 firmware/klassik/tools/serve_emu.py` (localhost:8000, ohne
+  Cache: `python3 -m http.server` ließ Chrome nach einem Rebuild die alte `app.wasm` behalten).
 - Geräte-Prüfung ohne Paket (Docker läuft, Toolchain in `~/.jieli/toolchain`):
   `JIELI_TOOLCHAIN=~/.jieli/toolchain .venv/bin/python firmware/klassik/tools/device_check.py`; alle Zeilen „ok“,
   Exit-Code 0. Zeigt App-Größe, RAM und Pool (Stand: RESEARCH.md „Geräte-Build“). Das Paket
