@@ -97,7 +97,7 @@ wir lassen es erst einmal so mit dem layout, feinschliff später
 - [ x] D5 K4 CLICK auf OFF, gestoppt, REC: die Aufnahme beginnt sofort, ohne Vorzähler. CLICK ON: es klickt auch beim
   bloßen Abspielen.
 
-Notizen: D3 ![LOOPER-D3.png](LOOPER-D3.png) nicht ganz so wie beschrieben
+Notizen: D3 (Screenshot entfernt 30.10.2026, in Git bis 642f840) nicht ganz so wie beschrieben
 
 
 ## E Stabilität
@@ -154,7 +154,7 @@ laden):
   bisher).
 
 
-Notizen: N1: ![LOOPER-N1.png](LOOPER-N1.png) warum hat FM& jetzt 1/4/6 zugewiesen bekommen, wie das geht habe ich noch nicht 
+Notizen: N1: (Screenshot entfernt 30.10.2026, in Git bis 642f840) warum hat FM& jetzt 1/4/6 zugewiesen bekommen, wie das geht habe ich noch nicht 
 verstanden
 
 
