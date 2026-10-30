@@ -15,12 +15,12 @@ Browser keine Wirkung.
 | `Main` | 01 Rack: Engine-Wahl |
 | `Edit-VA` | 02 VA: Filterseite mit Live-Glyphe |
 | `Edit-FM6` | 03 FM6: Algorithmus und Operator-Pegel |
-| `Presets` | 04 Preset-Liste mit Glyphen |
+| `Presets` | 04 Preset-Liste mit Glyphen (26.10.; ersetzt durch 37 `Sounds-List`) |
 | `Sequencer` | 05 Sequencer: 4 Parts × 16 Steps |
 | `Mixer` | 06 Mixer: 4 Parts + Master |
 | `FX` | 07 FX-Kette mit Delay-Detail |
 | `Atlas` | 08 Klang-Atlas |
-| `Glyphs` | 09 Glyphen-Browser |
+| `Glyphs` | 09 Glyphen-Browser (26.10.; ersetzt durch 38 `Sounds-Glyphs`) |
 | `Family` | 10 Klang-Stammbaum |
 | `Edit-DRUMS` | 11 DRUMS: eine Oktave als Pads (jede Taste mit ihrem Instrument), Seiten DRUM und KIT |
 | `Edit-ACID` | 12 ACID: Seiten FILTER (TUNE, CUTOFF, RESO, ENV MOD) und VOICE (DECAY, ACCENT, WAVE, SLIDE), Glyphe wie bei VA; `ACC` in der Kopfzeile, solange der Accent-Taster (ENV) gehalten wird |
@@ -52,9 +52,11 @@ Browser keine Wirkung.
 | `Edit-VA-FLT` | 35 **Entschieden** (29.10.2026, v0.8, „passt so“, umgesetzt: rechts oben die Cutoff-Frequenz statt CUT/RES, aus 02 `Edit-VA`): VA, Tab FLT mit denselben Reglern (CUT, RES, DRV, KTR), statt der großen Glyphe die Filterkurve (Cutoff gestrichelt, Resonanz als Spitze), darunter die Hüllkurve klein mit ENV > FILTER, DRV, KTR und die Live-Glyphe; OSC, PDs und ORGANs Seiten behalten die große Glyphe |
 | `Edit-FM6-ALGO` | 36 **Entschieden** (29.10.2026, v0.8, „passt so“, umgesetzt: ohne „FB 3“ an der Schleife, aus 03 `Edit-FM6`): FM6, Tab ALGO mit denselben Makros (ALGO, FEEDBK, MOD, DTUN), dazu der Algorithmus (Träger gefüllt, Modulatoren umrandet, FEEDBK als Schleife) und die Pegel der sechs Operatoren, wie sie spielen (MOD verschiebt die der Modulatoren); keine Regler OP SEL / LEVEL wie in 03 |
 | `Edit-ENV-More` | 34b **Entschieden** (29.10.2026, v0.8, „passt so“, umgesetzt; Fabio: ENV > FILTER einstellbar): Tab MORE nach ENV (VA, PD, ORGAN; ENV noch einmal oder EDIT/OCT+): K1 ENV > FILTER −64 … 63 (PD: ENV > DCW, ORGAN: –), K2 VOICE POLY/MONO, K3/K4 frei; Bild: der Cutoff über eine Note (CUT gestrichelt plus der Anteil der Hüllkurve) |
+| `Sounds-List` | 37 **Entschieden** (30.10.2026, v0.9, „passt so“, umgesetzt; ersetzt 04 `Presets`; Fabio: als Tabs unter GLO, alles zum Sound an einem Ort): GLO hat die Tabs MIX, SEND, LIST, GLYPHS (GLO öffnet auf MIX wie bisher, GLO oder OCT+ der nächste Tab, nach GLYPHS wieder MIX, OCT− zurück). Tab LIST: die Sounds des gewählten Parts; PRESET macht, was er überall macht (nächster Sound, sofort zu hören), die Liste zeigt es. K1 ENGINE wie im Rack, davor ALL; der Tab öffnet auf der Engine des Parts (Nummern wie im Feld PRESET, USER zuletzt mit FROM); auf ALL alle Sounds in Gruppen in der Reihenfolge des Racks, PRESET geht über die Engines (die Engine des Parts folgt dem Sound). Rechts die Parts, die den Sound spielen. Fußzeile wie im Rack, kein HOME-Reset (Wahl, kein Wert), K2–K4 frei; CATEG und HEAR aus 04 entfallen |
+| `Sounds-Glyphs` | 38 **Entschieden** (30.10.2026, v0.9, „passt so“, umgesetzt; ersetzt 09 `Glyphs`): Tab GLYPHS unter GLO (nach LIST): die Sounds als Glyphen, drei je Reihe, zuerst der Sound beim Öffnen des Tabs (START), dann die anderen nach Abstand ihrer acht Strahlen (Summe der Differenzen, `kl_shape`); PRESET geht sie entlang; die Reihenfolge bleibt, solange der Tab offen ist. K1 ENGINE wie bei LIST; mit ALL über alle Engines (ähnlich im Aussehen, nicht unbedingt im Klang). Echte Glyphen der Presets (43 und ein USER-Sound). Umgesetzt: die Reihe des gewählten Sounds in der Mitte, soweit es geht (in LIST die Zeile), die Engine unten links, `START` unten rechts |
 
 `png/`: Renderings vom 26.10.2026, ohne die Webfonts des Canvas erstellt (daher breitere Ersatzschrift und vereinzelt
-Umbrüche); `Main.png`, `Edit-DRUMS.png`, `Edit-ACID.png`, `Edit-Reset.png`, `Rack-Parts.png`, `Mixer-Parts.png`, `Looper.png`, `Looper-Rack.png` (27.10.2026), `Step.png`, `Step-DRUMS.png` und `Looper.png` (Tab-Zeile, 28.10.2026), `Mixer-Send.png`, `FX-Delay.png`, `FX-Hall.png` (28.10.2026), `Mixer-6-Page1.png`, `Mixer-6.png`, `Looper-6.png`, `Looper-6-Pages.png`, `Step-6.png`, `FX-6.png` (28.10.2026), `Mixer-6-Mix.png`, `Mixer-6-Send.png`, `Rack-6.png`, `Main.png`, `Rack-Parts.png`, `Looper-Rack.png`, `Step-Cursor.png`, `Loop-Double.png`, `LFO.png`, `LFO-More.png`, `ARP.png`, `Edit-ENV.png`, `Edit-ENV-More.png`, `Edit-VA-FLT.png`, `Edit-FM6-ALGO.png` (29.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
+Umbrüche); `Main.png`, `Edit-DRUMS.png`, `Edit-ACID.png`, `Edit-Reset.png`, `Rack-Parts.png`, `Mixer-Parts.png`, `Looper.png`, `Looper-Rack.png` (27.10.2026), `Step.png`, `Step-DRUMS.png` und `Looper.png` (Tab-Zeile, 28.10.2026), `Mixer-Send.png`, `FX-Delay.png`, `FX-Hall.png` (28.10.2026), `Mixer-6-Page1.png`, `Mixer-6.png`, `Looper-6.png`, `Looper-6-Pages.png`, `Step-6.png`, `FX-6.png` (28.10.2026), `Mixer-6-Mix.png`, `Mixer-6-Send.png`, `Rack-6.png`, `Main.png`, `Rack-Parts.png`, `Looper-Rack.png`, `Step-Cursor.png`, `Loop-Double.png`, `LFO.png`, `LFO-More.png`, `ARP.png`, `Edit-ENV.png`, `Edit-ENV-More.png`, `Edit-VA-FLT.png`, `Edit-FM6-ALGO.png` (29.10.2026), `Sounds-List.png`, `Sounds-Glyphs.png` (30.10.2026) neu mit Chrome im Headless-Modus (26.10.2026, so erprobt):
 
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --hide-scrollbars \
         --user-data-dir=/tmp/chrome-mockups --window-size=480,480 \

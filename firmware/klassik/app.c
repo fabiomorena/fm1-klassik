@@ -1695,6 +1695,14 @@ void app_init(void)
 static const char *const BTN_NAME[NB] = {"FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ",
                                          "PLAY", "REC", "OCT-", "OCT+"};
 static const char *const KEY_NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+enum { GT_MIX, GT_SEND, GT_LIST, GT_GLYPHS, GT_N };   /* GLO's tabs: the mixer's two, then the sounds' */
+#define SND(e, p) ((uint8_t)((e) << 4 | (p)))        /* a sound in LIST and GLYPHS: engine and preset (kl_presets: its
+                                                     * USER sound; ANALOG's 12 and USER the most) */
+#define SND_MAX (KL_NENG * 16)
+static int snd_list(uint8_t *out);                   /* (below, with GLO's LIST and GLYPHS) */
+static int snd_index(const uint8_t *l, int n);
+static const char *snd_name(int s);
+static void snd_anchor(void);
 static struct {
     char msg[2][24];                                 /* a short message over the header */
     uint32_t msg_until;
@@ -1714,8 +1722,10 @@ static struct {
                                                      * last drawn */
     uint8_t env_stage;                               /* ENV: the latest note's stage, as last drawn */
     uint8_t tab, bar, turned;                        /* the tab of the page open: the looper's LOOP (0) or STEP (1),
-                                                     * the mixer's MIX or SEND, the effects' DELAY or HALL; STEP's bar
-                                                     * shown; a knob turned while a step was held */
+                                                     * GLO's MIX, SEND, LIST or GLYPHS (GT_*), the effects' DELAY or
+                                                     * HALL; STEP's bar shown; a knob turned while a step was held */
+    uint8_t snd_all;                                 /* LIST and GLYPHS: K1 ENGINE on ALL (else the part's engine) */
+    uint8_t anc, anc_sh[8];                          /* GLYPHS: the sound it started from (SND) and its glyph */
     uint16_t held, held_new;                         /* the steps held (white keys), those set as they went down */
     uint8_t cur;                                     /* STEP's cursor (ALGO): 0 none (NEW STEPS), 1..16 a step of the
                                                      * bar shown */
@@ -2025,7 +2035,25 @@ static void speak(void)
             text_cat(t, ", EDITED");
         text_cat(t, ". OCTAVE ");
         text_cat(t, o);
-        if (ui.mix) {                                /* the mixer: the chosen part's strip (SEND: its sends) */
+        if (ui.mix && ui.tab >= GT_LIST) {           /* LIST, GLYPHS: what K1 shows, where the sound is among them */
+            uint8_t l[SND_MAX];
+            int n = snd_list(l);
+            char v[8];
+            if (ui.tab == GT_GLYPHS) {
+                text_cat(t, ". GLYPHS, LIKE ");
+                text_cat(t, snd_name(ui.anc));
+            } else {
+                text_cat(t, ". LIST");
+            }
+            text_cat(t, ". ENGINE ");
+            text_cat(t, ui.snd_all ? "ALL" : TILES[TILE_OF[eng_cur()]].name);
+            text_cat(t, ". SOUND ");
+            int_text(snd_index(l, n) + 1, v);
+            text_cat(t, v);
+            text_cat(t, " OF ");
+            int_text(n, v);
+            text_cat(t, v);
+        } else if (ui.mix) {                         /* the mixer: the chosen part's strip (SEND: its sends) */
             text_cat(t, ui.tab ? ". SEND" : ". MIX");
             for (k = ui.tab ? 4 : 0; k < (ui.tab ? 6 : 4); k++) {
                 char v[12];
@@ -2110,6 +2138,8 @@ static void part_step(int32_t d)                     /* SEL, SELECT: the next pa
         lp_ask(LC_PART, set.part);                   /* the recording goes along */
     ui.edit = 0;
     ui.redraw = 1;
+    if (ui.mix && ui.tab == GT_GLYPHS)
+        snd_anchor();                                /* GLYPHS from the new part's sound */
     ui.hits = kl_hits(set.part, &hit);               /* its own notes: no pad lit from the other part's */
     ui.hit_until = 0;
     part_text(t);
@@ -2239,16 +2269,19 @@ static void mix_show(int on)                         /* GLO: the mixer open on M
                                                      * (OCT-) */
 {
     ui.mix = (uint8_t)(on != 0);
-    ui.edit = ui.loop = ui.fx = ui.lfo = ui.arp = ui.tab = 0;
+    ui.edit = ui.loop = ui.fx = ui.lfo = ui.arp = ui.tab = ui.snd_all = 0;
     ui.redraw = 1;
     announce(on ? "MIX" : "RACK");
 }
 
-static void page_tab(int t)                          /* the mixer's or the effects' page: the other tab */
+static void page_tab(int t)                          /* GLO's page, the effects' or the LFO's: that tab */
 {
+    static const char *const GT_NAME[GT_N] = {"MIX", "SEND", "LIST", "GLYPHS"};
     ui.tab = (uint8_t)t;
     ui.redraw = 1;
-    announce(ui.mix ? (t ? "SEND" : "MIX") : ui.lfo ? (t ? "MORE" : "LFO") : t ? "HALL" : "DELAY");
+    if (ui.mix && t == GT_GLYPHS)
+        snd_anchor();                                /* alike to the sound playing now */
+    announce(ui.mix ? GT_NAME[t] : ui.lfo ? (t ? "MORE" : "LFO") : t ? "HALL" : "DELAY");
 }
 
 static void mix_changed(int32_t k)
@@ -2264,7 +2297,7 @@ static void mix_changed(int32_t k)
 static void mix_step(int32_t k, int32_t d)
 {
     part_set_t *ps = part_cur();
-    if (ui.tab) {
+    if (ui.tab == GT_SEND) {
         if (k >= 2)
             return;
         ps->send[k] = (uint8_t)clamp(ps->send[k] + d, 0, 100);
@@ -2283,7 +2316,7 @@ static void mix_step(int32_t k, int32_t d)
 static void mix_reset(int32_t k)                     /* HOME + K1..K4 on the mixer: 0 dB, the middle, off; SEND: 0 */
 {
     part_set_t *ps = part_cur();
-    if (ui.tab) {
+    if (ui.tab == GT_SEND) {
         if (k >= 2)
             return;
         ps->send[k] = 0;
@@ -2297,6 +2330,115 @@ static void mix_reset(int32_t k)                     /* HOME + K1..K4 on the mix
     else
         ps->solo = 0;
     mix_changed(k);
+}
+
+/* ------------------------------------------------- GLO's LIST and GLYPHS --- */
+static void snd_values(int s, int8_t v[KL_NV])       /* a sound as stored: its preset's values, or its USER sound's */
+{
+    int e = s >> 4, p = s & 15;
+    uint32_t k;
+    if (p < kl_presets(e)) {
+        kl_preset_values(e, p, v);
+        return;
+    }
+    for (k = 0; k < (uint32_t)KL_NV; k++)
+        v[k] = set.user[e].v[k];
+}
+
+static const char *snd_name(int s) { return (s & 15) < kl_presets(s >> 4) ? kl_preset_name(s >> 4, s & 15) : "USER"; }
+static int snd_now(void) { return SND(eng_cur(), part_cur()->preset[eng_cur()]); }   /* the chosen part's */
+
+static void snd_anchor(void)                         /* GLYPHS from the sound playing now (as edited) */
+{
+    ui.anc = (uint8_t)snd_now();
+    kl_shape(eng_cur(), work[set.part][eng_cur()], ui.anc_sh);
+}
+
+/* the sounds K1 shows (ALL: every engine's, in the rack's order; else the chosen part's engine's), each engine's
+ * presets then its USER sound; on GLYPHS the one it started from first, then the others by how far their glyphs are
+ * from its (the sum of the eight spokes' differences; alike: as before) */
+static int snd_list(uint8_t *out)
+{
+    int16_t dist[SND_MAX];
+    int pos, p, n = 0, i, j;
+    for (pos = 0; pos < KL_NENG; pos++) {
+        int e = engine_at(pos);
+        if (!ui.snd_all && e != eng_cur())
+            continue;
+        for (p = 0; p < sound_count(e); p++)
+            out[n++] = SND(e, p);
+    }
+    if (ui.tab != GT_GLYPHS)
+        return n;
+    for (i = 0; i < n; i++) {
+        int8_t v[KL_NV];
+        uint8_t sh[8];
+        snd_values(out[i], v);
+        kl_shape(out[i] >> 4, v, sh);
+        dist[i] = out[i] == ui.anc ? -1 : 0;
+        for (j = 0; j < 8 && out[i] != ui.anc; j++)
+            dist[i] = (int16_t)(dist[i] + (sh[j] > ui.anc_sh[j] ? sh[j] - ui.anc_sh[j] : ui.anc_sh[j] - sh[j]));
+    }
+    for (i = 1; i < n; i++)                          /* in order, the equal as they were */
+        for (j = i; j > 0 && dist[j - 1] > dist[j]; j--) {
+            int16_t d = dist[j];
+            uint8_t s = out[j];
+            dist[j] = dist[j - 1];
+            out[j] = out[j - 1];
+            dist[j - 1] = d;
+            out[j - 1] = s;
+        }
+    return n;
+}
+
+static int snd_index(const uint8_t *l, int n)        /* where the chosen part's sound is in the list */
+{
+    int i;
+    for (i = 0; i < n; i++)
+        if (l[i] == snd_now())
+            return i;
+    return 0;
+}
+
+static void snd_step(int32_t d)                      /* PRESET on LIST and GLYPHS: the next sound shown, or the one
+                                                     * before; on ALL another engine's too (the part plays it) */
+{
+    uint8_t l[SND_MAX];
+    int n = snd_list(l), s, e;
+    part_set_t *ps = part_cur();
+    char t[48] = "";
+    s = l[((snd_index(l, n) + d) % n + n) % n];
+    e = s >> 4;
+    if (e != ps->engine) {
+        text_cat(t, "ENGINE ");
+        text_cat(t, TILES[TILE_OF[e]].name);
+        text_cat(t, ". ");
+    }
+    ps->engine = (uint8_t)e;
+    ps->preset[e] = (uint8_t)(s & 15);
+    sound_load(set.part, e);
+    set_dirty = 1;
+    sound_select(set.part);
+    ui.redraw = 1;
+    text_cat(t, snd_name(s));
+    announce(t);
+}
+
+static void snd_engine(int32_t d)                    /* K1 on LIST and GLYPHS: ALL, then the engines as in the rack */
+{
+    int32_t pos = ui.snd_all ? 0 : engine_pos(eng_cur()) + 1;
+    pos = ((pos + d) % (KL_NENG + 1) + KL_NENG + 1) % (KL_NENG + 1);
+    ui.snd_all = pos == 0;
+    ui.redraw = 1;
+    if (ui.snd_all) {
+        announce("ENGINE ALL");
+    } else if (pos - 1 != engine_pos(eng_cur())) {
+        engine_step(pos - 1 - engine_pos(eng_cur()));   /* as K1 in the rack */
+    } else {                                         /* from ALL to the engine playing */
+        char t[16] = "ENGINE ";
+        text_cat(t, TILES[TILE_OF[eng_cur()]].name);
+        announce(t);
+    }
 }
 
 /* ------------------------------------------------------- the effects' page --- */
@@ -3187,7 +3329,7 @@ static void input(void)
         else if (k == B_LFO)
             lfo_show(1);
         else if ((k == B_GLO || k == B_OCTUP) && ui.mix)
-            page_tab(!ui.tab);                       /* MIX and SEND, as SEQ on the looper's page */
+            page_tab((ui.tab + 1) % GT_N);           /* MIX, SEND, LIST, GLYPHS, MIX: as EDIT on the edit pages */
         else if ((k == B_FX || k == B_OCTUP) && ui.fx)
             page_tab(!ui.tab);                       /* DELAY and HALL */
         else if (k == B_GLO)
@@ -3216,7 +3358,7 @@ static void input(void)
             announce("ACCENT");                      /* held: the keys pressed now are accented */
         else if (k == B_ENV)
             env_show();
-        else if (k == B_HOME && (ui.edit || ui.mix || ui.loop || ui.fx || ui.lfo || ui.arp))
+        else if (k == B_HOME && (ui.edit || (ui.mix && ui.tab < GT_LIST) || ui.loop || ui.fx || ui.lfo || ui.arp))
             app_say("RESET", "TURN K1-K4");          /* held: a knob turned goes back to its sound's value */
         else if (k == B_HOME)
             app_say("HOME", "+ REC UNDO");           /* held: REC takes the last take back, PLAY empties a part */
@@ -3226,7 +3368,9 @@ static void input(void)
     for (k = 0; k < NE; k++) {                       /* every one read, so none piles up */
         if ((e = plat_enc((int)k)) == 0)
             continue;
-        if (k == EN_PRESET)
+        if (k == EN_PRESET && ui.mix && ui.tab >= GT_LIST)
+            snd_step(e);                             /* the next sound the tab shows */
+        else if (k == EN_PRESET)
             preset_step(e);
         else if (k == EN_SELECT)
             part_step(e);                            /* the part, as SEL: to the right the next */
@@ -3252,6 +3396,10 @@ static void input(void)
             fx_reset((int32_t)(k - EN_K1));
         else if (ui.fx && k >= EN_K1)
             fx_step((int32_t)(k - EN_K1), e);
+        else if (ui.mix && ui.tab >= GT_LIST && k == EN_K1)
+            snd_engine(e);                           /* K1 ENGINE (a choice: HOME takes it nowhere) */
+        else if (ui.mix && ui.tab >= GT_LIST)
+            continue;                                /* K2..K4 free */
         else if (ui.mix && k >= EN_K1 && (btn & 1u << B_HOME))
             mix_reset((int32_t)(k - EN_K1));
         else if (ui.mix && k >= EN_K1)
@@ -3398,10 +3546,13 @@ static void draw_header(void)
         cv_text(x + 6, 3, &FONT_B, ui.msg[1], tl->col);
     } else if (ui.mix || ui.loop || ui.fx || ui.lfo || ui.arp) {   /* the mixer, the looper, the effects, the LFO,
                                                                     * the arp */
-        const char *c = ui.mix ? "MIX" : ui.fx ? "FX" : ui.lfo ? "LFO" : ui.arp ? "ARP" : ui.tab ? "STEP" : "LOOP";
+        const char *c = ui.mix ? (ui.tab >= GT_LIST ? "SOUNDS" : "MIX") : ui.fx ? "FX" : ui.lfo ? "LFO" : ui.arp ?
+                        "ARP" : ui.tab ? "STEP" : "LOOP";
         char st[24] = "";
         int32_t w = text_w(&FONT_XS, c) + 8;
-        if (ui.mix) {
+        if (ui.mix && ui.tab >= GT_LIST) {          /* LIST, GLYPHS: the chosen part's */
+            part_name(set.part, st);
+        } else if (ui.mix) {
             text_cat(st, set.part < 3 ? "PARTS 1-3" : "PARTS 4-6");   /* the page: the chosen part's three */
         } else if (ui.fx) {
             text_cat(st, "DELAY + HALL");
@@ -3632,6 +3783,23 @@ static void footer_mix(char lab[4][16], char v[4][12], int32_t frac[4], int32_t 
     frac[3] = ps->solo ? 256 : 0;
 }
 
+/* LIST and GLYPHS: as the rack's, K1 ENGINE with ALL in front, PRESET where the sound is among those shown */
+static void footer_sounds(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
+{
+    uint8_t l[SND_MAX];
+    int n = snd_list(l), i = snd_index(l, n);
+    char t[4];
+    footer_rack(lab, v, frac, mark);
+    v[0][0] = v[1][0] = 0;
+    text_cat(v[0], ui.snd_all ? "ALL" : TILES[TILE_OF[eng_cur()]].name);
+    frac[0] = (ui.snd_all ? 0 : engine_pos(eng_cur()) + 1) * 256 / KL_NENG;
+    two_digits(i + 1, v[1]);
+    text_cat(v[1], "/");
+    two_digits(n, t);
+    text_cat(v[1], t);
+    frac[1] = n > 1 ? i * 256 / (n - 1) : 256;
+}
+
 /* K1..K4: the effects' tab's, each marked where HOME takes it while it is elsewhere */
 static void footer_fx(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
 {
@@ -3782,7 +3950,9 @@ static void draw_footer(void)                        /* what the controls hold, 
     const tile_t *tl = &TILES[TILE_OF[eng_cur()]];
     char lab[4][16], v[4][12];
     int32_t frac[4], mark[4], i;
-    if (ui.mix)
+    if (ui.mix && ui.tab >= GT_LIST)
+        footer_sounds(lab, v, frac, mark);
+    else if (ui.mix)
         footer_mix(lab, v, frac, mark);
     else if (ui.fx)
         footer_fx(lab, v, frac, mark);
@@ -4279,10 +4449,10 @@ static void draw_edit(int32_t y0)
 }
 
 static const char *const TABS_LOOP[2] = {"LOOP", "STEP"};   /* the pages' tabs (draw_tabs, below) */
-static const char *const TABS_MIX[2] = {"MIX", "SEND"};
+static const char *const TABS_MIX[GT_N] = {"MIX", "SEND", "LIST", "GLYPHS"};
 static const char *const TABS_FX[2] = {"DELAY", "HALL"};
 static const char *const TABS_LFO[2] = {"LFO", "MORE"};
-static void draw_tabs(int32_t y0, const char *const TAB[2], const char *right);
+static void draw_tabs(int32_t y0, const char *const *TAB, int32_t n, const char *right);
 
 /* ---------------------------------------------------------------- the mixer --- */
 #define FD_TOP 68                                    /* the faders and meters: from this row, this high */
@@ -4364,7 +4534,7 @@ static void draw_mix(int32_t y0)
 {
     int32_t p, i, solo = 0, first = set.part < 3 ? 0 : 3;
     cv_begin(240, 93, K_GROUND);
-    draw_tabs(y0, TABS_MIX, "");
+    draw_tabs(y0, TABS_MIX, GT_N, "");
     cv_rect(222, 27 - y0, 7, 5, first ? K_LINE : K_TEXT);
     cv_rect(231, 27 - y0, 7, 5, first ? K_TEXT : K_LINE);
     for (p = 0; p < KL_NPART; p++)
@@ -4387,7 +4557,7 @@ static void draw_mix(int32_t y0)
         t[2] = 0;
         text_cat(t, tl->name);
         text_fit(x + 21, 49 - y0, 39, &FONT_T, t, sel ? tl->col : K_TEXT);
-        if (!ui.tab) {                               /* MIX: LEVEL, PAN */
+        if (ui.tab == GT_MIX) {                               /* MIX: LEVEL, PAN */
             fader(cx, y0, ps->level < -40 ? 0 : (ps->level + 40) * FD_H / 46, col, FD_HW, K_TEXT, bg);
             mix_text(ps, 0, t, 1);
             text_mid(cx, 157 - y0, t, K_TEXT);
@@ -4421,7 +4591,7 @@ static void draw_mix(int32_t y0)
         char v[8];
         cv_rect(x, 43 - y0, 46, 163, K_SURF);
         text_mid(x + 23, 49 - y0, "MASTER", K_TEXT);
-        if (!ui.tab) {
+        if (ui.tab == GT_MIX) {
             fader(x + 13, y0, pct * FD_H / 100, K_TEXT, FD_HW - 2, K_TEXT, K_SURF);
             for (i = 0; i < 2; i++) {
                 int32_t mx = x + 26 + i * (FD_MW + 2);
@@ -4451,6 +4621,124 @@ static void draw_mix(int32_t y0)
     cv_blit(0, (uint32_t)y0);
 }
 
+/* ---------------------------------------------------- GLO's LIST and GLYPHS --- */
+static void snd_badges(int s, int32_t right, int32_t y, uint16_t col, uint16_t bg)   /* the parts playing sound s,
+                                                     * from right leftwards (the chosen filled) */
+{
+    int32_t p, cx = right;
+    for (p = KL_NPART - 1; p >= 0; p--) {
+        char n[2] = {(char)('1' + p), 0};
+        int32_t tx = cx - text_w(&FONT_T, n) / 2;
+        if (SND(set.parts[p].engine, set.parts[p].preset[set.parts[p].engine]) != s)
+            continue;
+        if (p == set.part) {
+            disc(cx, y, 6, col);
+            cv_text(tx, y - 6, &FONT_T, n, K_GROUND);
+        } else {
+            disc(cx, y, 6, K_MUTED);
+            disc(cx, y, 5, bg);
+            cv_text(tx, y - 6, &FONT_T, n, K_TEXT);
+        }
+        cx -= 15;
+    }
+}
+
+static void snd_glyph(int s, int32_t cx, int32_t cy, int32_t r, uint16_t col, uint16_t bg)   /* as it plays if it is
+                                                     * the chosen part's (an edit shows), else as stored */
+{
+    int8_t v[KL_NV];
+    uint8_t sh[8];
+    if (s == snd_now())
+        kl_shape(s >> 4, work[set.part][s >> 4], sh);
+    else {
+        snd_values(s, v);
+        kl_shape(s >> 4, v, sh);
+    }
+    glyph_draw(cx, cy, r, sh, col, bg);
+}
+
+#define SL_TOP 41                                    /* LIST: its rows from here, SL_H high, SL_N of them */
+#define SL_H 24
+#define SL_N 7
+#define SG_TOP 42                                    /* GLYPHS: its cards, three a row, three rows */
+#define SG_W 78
+#define SG_H 54
+
+static void draw_sounds(int32_t y0)
+{
+    uint8_t l[SND_MAX];
+    int n = snd_list(l), cur = snd_index(l, n), i;
+    char right[24] = "";
+    if (ui.tab == GT_GLYPHS) {
+        text_cat(right, "LIKE ");
+        text_cat(right, snd_name(ui.anc));
+    } else {
+        text_cat(right, ui.snd_all ? "ALL" : TILES[TILE_OF[eng_cur()]].name);
+    }
+    cv_begin(240, 93, K_GROUND);
+    draw_tabs(y0, TABS_MIX, GT_N, right);
+    if (ui.tab == GT_LIST) {                         /* a row a sound: glyph, number, name; the chosen in the middle */
+        int top = clamp(cur - SL_N / 2, 0, n > SL_N ? n - SL_N : 0);
+        for (i = top; i < n && i < top + SL_N; i++) {
+            int s = l[i], e = s >> 4, on = i == cur;
+            const tile_t *tl = &TILES[TILE_OF[e]];
+            int32_t y = SL_TOP + (i - top) * SL_H - y0, x;
+            uint16_t bg = on ? K_SURF2 : K_GROUND;
+            char num[4] = "", t[24] = "";
+            if (on) {
+                cv_rect(1, y + 1, 232, SL_H - 2, bg);
+                box_edge(1, y + 1, 232, SL_H - 2, 2, tl->col);
+            }
+            snd_glyph(s, 14, y + 12, 9, tl->col, bg);
+            two_digits((s & 15) + 1, num);           /* as PRESET counts them in the rack */
+            cv_text(28, y + 5, &FONT_XS, num, K_MUTED);
+            if (on)
+                sound_title(set.part, e, t);         /* with its "*" while edited */
+            else
+                text_cat(t, snd_name(s));
+            x = cv_text(48, y + 4, &FONT_B, t, on ? tl->col : K_TEXT);
+            if ((s & 15) >= kl_presets(e)) {         /* a USER sound: the preset it was made from */
+                char f[24] = "FROM ";
+                text_cat(f, kl_preset_name(e, set.user[e].base));
+                text_fit(x + 6, y + 7, 200 - x, &FONT_T, f, K_MUTED);
+            }
+            snd_badges(s, 222, y + 12, tl->col, bg);
+        }
+        if (n > SL_N) {                              /* where the rows are among all */
+            cv_rect(236, SL_TOP - y0, 2, SL_N * SL_H, K_LINE);
+            cv_rect(236, SL_TOP + top * SL_N * SL_H / n - y0, 2, SL_N * SL_N * SL_H / n, K_MUTED);
+        }
+    } else {                                         /* GLYPHS: a card a sound, the chosen's row in the middle */
+        int rows = (n + 2) / 3, top = clamp(cur / 3 - 1, 0, rows > 3 ? rows - 3 : 0);
+        for (i = top * 3; i < n && i < top * 3 + 9; i++) {
+            int s = l[i], e = s >> 4, on = i == cur;
+            const tile_t *tl = &TILES[TILE_OF[e]];
+            int32_t x = 1 + (i % 3) * (SG_W + 2), y = SG_TOP + (i / 3 - top) * (SG_H + 2) - y0;
+            uint16_t bg = on ? K_SURF2 : K_SURF;
+            char t[24] = "";
+            cv_rect(x, y, SG_W, SG_H, bg);
+            if (on)
+                box_edge(x, y, SG_W, SG_H, 2, tl->col);
+            uint32_t k;
+            snd_glyph(s, x + SG_W / 2, y + 17, 14, tl->col, bg);
+            if (on)
+                sound_title(set.part, e, t);
+            else
+                text_cat(t, snd_name(s));
+            for (k = 0; t[k]; k++)
+                ;
+            while (k && text_w(&FONT_XS, t) > SG_W - 6)   /* cut until it fits, then centred */
+                t[--k] = 0;
+            cv_text(x + (SG_W - text_w(&FONT_XS, t)) / 2, y + 30, &FONT_XS, t, on ? tl->col : K_TEXT);
+            cv_text(x + 4, y + 42, &FONT_T, tl->name, K_MUTED);
+            if (s == ui.anc)                         /* where GLYPHS started */
+                cv_text(x + SG_W - 4 - text_w(&FONT_T, "START"), y + 42, &FONT_T, "START", K_MUTED);
+            snd_badges(s, x + SG_W - 9, y + 9, tl->col, bg);
+        }
+    }
+    cv_blit(0, (uint32_t)y0);
+}
+
 /* -------------------------------------------------------- the effects' page --- */
 static uint16_t fx_shade(int32_t n, int32_t tone)    /* the n-th echo (0: the first), darker with a lower TONE */
 {
@@ -4471,7 +4759,7 @@ static void draw_fx(int32_t y0)
         int_text(lp.tempo, t);
         text_cat(t, " BPM");
     }
-    draw_tabs(y0, TABS_FX, t);
+    draw_tabs(y0, TABS_FX, 2, t);
     cv_rect(1, 44 - y0, 238, 82, K_SURF);
     t[0] = 0;
     if (ui.tab) {
@@ -4580,7 +4868,7 @@ static void draw_lfo(int32_t y0)
     cv_begin(240, 93, K_GROUND);
     int_text(lp.tempo, t);
     text_cat(t, " BPM");
-    draw_tabs(y0, TABS_LFO, t);
+    draw_tabs(y0, TABS_LFO, 2, t);
     cv_rect(1, 44 - y0, 238, 82, K_SURF);
     t[0] = v[0] = 0;
     if (!av) {
@@ -4716,7 +5004,7 @@ static void draw_arp(int32_t y0)
     cv_begin(240, 93, K_GROUND);
     int_text(lp.tempo, v);
     text_cat(v, " BPM");
-    draw_tabs(y0, TABS_ARP, v);
+    draw_tabs(y0, TABS_ARP, 2, v);
     cv_rect(1, 44 - y0, 238, 82, K_SURF);
     if (m->arp_mode) {
         text_cat(t, ARP_MODE_NAME[m->arp_mode]);
@@ -4812,18 +5100,29 @@ static void draw_arp(int32_t y0)
 
 /* a page's two tabs (the looper's LOOP and STEP, the mixer's MIX and SEND, the effects' DELAY and HALL), this one
  * lit (as the edit pages'), and a note on the right */
-static void draw_tabs(int32_t y0, const char *const TAB[2], const char *right)
+static void draw_tabs(int32_t y0, const char *const *TAB, int32_t n, const char *right)
 {
     const tile_t *tl = &TILES[TILE_OF[eng_cur()]];
-    int32_t i, x = 8;
-    for (i = 0; i < 2; i++) {
+    int32_t i, x = 8, gap = n > 2 ? 10 : 14;
+    for (i = 0; i < n; i++) {
         int32_t w = text_w(&FONT_XS, TAB[i]);
         cv_text(x, 23 - y0, &FONT_XS, TAB[i], i == ui.tab ? K_TEXT : K_MUTED);
         if (i == ui.tab)
             cv_rect(x, 38 - y0, w, 2, tl->col);
-        x += w + 14;
+        x += w + gap;
     }
-    cv_text(232 - text_w(&FONT_XS, right), 23 - y0, &FONT_XS, right, K_MUTED);
+    if (right[0]) {                                  /* on the right, as much as there is room for */
+        char t[24];
+        uint32_t k = 0;
+        while (right[k] && k < sizeof t - 1u) {
+            t[k] = right[k];
+            k++;
+        }
+        t[k] = 0;
+        while (k && text_w(&FONT_XS, t) > 232 - x)
+            t[--k] = 0;
+        cv_text(232 - text_w(&FONT_XS, t), 23 - y0, &FONT_XS, t, K_MUTED);
+    }
     cv_rect(0, 40 - y0, 240, 1, K_LINE);
 }
 
@@ -4911,7 +5210,7 @@ static void draw_loop(int32_t y0)
     char v[12];
     cv_begin(240, 93, K_GROUND);
     bars_text(lp.bars, v);
-    draw_tabs(y0, TABS_LOOP, v);
+    draw_tabs(y0, TABS_LOOP, 2, v);
     for (b = 0; b < bars; b++) {
         int32_t x = LT_X + b * LT_W / bars;
         char t[4];
@@ -4958,7 +5257,7 @@ static void draw_step(int32_t y0)
     text_cat(t, "/");
     int_text((int32_t)step_bars(), v);
     text_cat(t, v);
-    draw_tabs(y0, TABS_LOOP, t);
+    draw_tabs(y0, TABS_LOOP, 2, t);
     for (i = 0; i < 16; i++) {                       /* the step numbers: 1, 5, 9, 13, the one playing, the cursor's
                                                      * (underlined) */
         int32_t cx = SX0 + i * SXW / 16 + SXW / 32;
@@ -5069,7 +5368,10 @@ static void draw_step(int32_t y0)
 static void draw(void)
 {
     draw_header();
-    if (ui.mix) {
+    if (ui.mix && ui.tab >= GT_LIST) {
+        draw_sounds(22);
+        draw_sounds(115);
+    } else if (ui.mix) {
         draw_mix(22);
         draw_mix(115);
     } else if (ui.fx) {
@@ -5130,7 +5432,7 @@ void app_frame(void)
             ui.msg_until = 0;
         ui.redraw = 1;
     }
-    if (ui.mix && now - ui.meter_at >= 50u)          /* the mixer's meters, 20 times a second */
+    if (ui.mix && ui.tab < GT_LIST && now - ui.meter_at >= 50u)   /* the mixer's meters, 20 times a second */
         meters_read(now);
     if (ui.ask && now >= ui.msg_until)               /* HOME + PLAY's question unanswered: nothing emptied */
         ui.ask = 0;
@@ -5401,8 +5703,20 @@ int app_expect(const char *what, int *got)
         *got = (int)kl_hits(set.part, &k);
     else if (!strcmp(what, "ask"))                   /* HOME + PLAY's question stands */
         *got = ui.ask;
-    else if (!strcmp(what, "tab"))                   /* the page's: 1 LOOP, MIX, DELAY; 2 STEP, SEND, HALL */
+    else if (!strcmp(what, "tab"))                   /* the page's: 1 LOOP, MIX, DELAY; 2 STEP, SEND, HALL; 3 LIST, 4
+                                                     * GLYPHS */
         *got = ui.tab + 1;
+    else if (!strcmp(what, "sndall"))                /* LIST, GLYPHS: K1 ENGINE on ALL */
+        *got = ui.snd_all;
+    else if (!strcmp(what, "sndn") || !strcmp(what, "sndi")) {   /* the sounds shown; where the chosen part's is, 1.. */
+        uint8_t l[SND_MAX];
+        int n = snd_list(l);
+        *got = what[3] == 'n' ? n : snd_index(l, n) + 1;
+    } else if ((k = expect_k(what, "snd")) >= 0) {   /* the k-th of them: engine * 16 + preset (the USER sound after
+                                                     * the presets) */
+        uint8_t l[SND_MAX];
+        *got = k < snd_list(l) ? l[k] : -1;
+    }
     else if (!strcmp(what, "sbar"))                  /* STEP: the bar shown, 1.. */
         *got = ui.bar + 1;
     else if (!strcmp(what, "scur"))                  /* STEP: ALGO's cursor, 0 none (NEW STEPS), 1..16 */

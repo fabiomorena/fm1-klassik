@@ -97,7 +97,7 @@ wait 30
 expect tempo 120
 expect dlyd 16537
 # GLO opens the mixer on MIX; GLO goes to its tab SEND (no longer shuts it), K1 DELAY and K2 HALL the chosen part's
-# sends; K3 and K4 do nothing there
+# sends; K3 and K4 do nothing there; GLO goes on to LIST and GLYPHS (v0.9, tests/sounds.txt), then MIX again
 tap GLO
 wait 30
 expect mix 1
@@ -290,6 +290,11 @@ spin K2 60
 wait 30
 tap OCT+
 wait 30
+tap OCT+
+wait 30
+tap OCT+
+wait 30
+expect tab 1
 spin K3 1
 wait 30
 expect mute 1

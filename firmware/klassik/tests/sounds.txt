@@ -1,0 +1,214 @@
+# KLASSIK's sound pages (v0.9): GLO's tabs LIST and GLYPHS after MIX and SEND, in the host simulator, from the
+# repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/sounds.txt firmware/klassik/build/host
+# A sound is engine * 16 + preset (snd0..snd7, sndi): VA (0) 0..11, its USER sound 12; ORGAN 32.., FM6 48.., DRUMS 64..
+wait 600
+listen
+# GLO, GLO, GLO: MIX, SEND, LIST; K1 ENGINE on the part's engine (part 1 VA, SAW LEAD): its 12 presets
+tap GLO
+wait 30
+tap GLO
+wait 30
+tap GLO
+wait 30
+expect mix 1
+expect tab 3
+said LIST
+expect sndall 0
+expect sndn 12
+expect sndi 1
+expect snd0 0
+expect snd7 7
+# PRESET goes along them as it does on every page: BRASS
+spin PRESET 9
+wait 30
+expect engine 0
+expect preset 9
+expect sndi 10
+said BRASS
+where
+said LIST. ENGINE VA. SOUND 10 OF 12
+# K2..K4 do nothing here (not the mixer's knobs); HOME is no reset here
+spin K2 5
+wait 30
+spin K3 1
+wait 30
+spin K4 1
+wait 30
+expect level 0
+expect mute 0
+expect solo 0
+tap HOME
+wait 30
+unsaid RESET
+# K1 to the left: ALL, every engine's sounds in the rack's order (43 presets), the part still VA BRASS
+spin K1 -1
+wait 30
+expect sndall 1
+expect sndn 43
+expect sndi 10
+expect engine 0
+said ENGINE ALL
+# PRESET on ALL: past VA's last into DRUMS' first (the part plays DRUMS), and back
+spin PRESET 3
+wait 30
+expect engine 4
+expect preset 0
+expect sndi 13
+said ENGINE DRUMS
+wait 1400
+shot sounds-all.png
+spin PRESET -3
+wait 30
+expect engine 0
+expect preset 9
+# K1 from ALL to the right: the part's engine again; on: DRUMS, as K1 in the rack; ALL wraps to ORGAN on the left
+spin K1 1
+wait 30
+expect sndall 0
+expect engine 0
+said ENGINE VA
+spin K1 1
+wait 30
+expect engine 4
+expect sndn 4
+spin K1 -1
+wait 30
+expect engine 0
+expect preset 9
+spin K1 -1
+wait 30
+expect sndall 1
+spin K1 -1
+wait 30
+expect sndall 0
+expect engine 2
+spin K1 1
+wait 30
+spin K1 1
+wait 30
+expect engine 0
+expect sndall 0
+# GLO: GLYPHS, from VA BRASS: VA's sounds by how alike their glyphs are (kl_shape, the sum of the differences)
+tap GLO
+wait 30
+expect tab 4
+said GLYPHS
+expect snd0 9
+expect snd1 0
+expect snd2 8
+expect snd3 1
+expect snd4 11
+expect snd5 6
+expect snd6 3
+expect snd7 4
+# ALL: FM6's MARIMBA comes in after PWM STR (both 334 from BRASS: the rack's order first)
+spin K1 -1
+wait 30
+expect sndall 1
+expect snd5 6
+expect snd6 3
+expect snd7 52
+# PRESET goes along them: seven on, MARIMBA (the part plays FM6); the order stays (still from BRASS)
+spin PRESET 7
+wait 30
+expect engine 3
+expect preset 4
+expect sndi 8
+expect snd0 9
+said ENGINE FM6
+where
+said GLYPHS, LIKE BRASS. ENGINE ALL. SOUND 8 OF 43
+wait 1400
+shot sounds-glyphs.png
+spin PRESET -7
+wait 30
+expect engine 0
+expect preset 9
+# another part: GLYPHS from its sound (part 2 DRUMS, 606); back to part 1: from BRASS again
+tap SEL
+wait 30
+expect part 2
+expect snd0 64
+spin SELECT -1
+wait 30
+expect part 1
+expect snd0 9
+# GLO goes round to MIX; PRESET there is PRESET as ever (the next VA sound)
+tap GLO
+wait 30
+expect tab 1
+spin PRESET 1
+wait 30
+expect engine 0
+expect preset 10
+spin PRESET -1
+wait 30
+# OCT- shuts it; GLO opens it again on MIX, LIST on the part's engine again
+tap OCT-
+wait 30
+expect mix 0
+said RACK
+tap GLO
+wait 30
+tap GLO
+wait 30
+tap GLO
+wait 30
+expect tab 3
+expect sndall 0
+tap OCT-
+wait 30
+# a USER sound, made from PLUCK: in LIST after the presets (13 now), FROM PLUCK
+spin PRESET -1
+wait 30
+expect preset 8
+tap EDIT
+wait 30
+spin K1 3
+wait 30
+tap OCT-
+wait 30
+tap SAVE
+wait 50
+expect user 1
+expect preset 12
+tap GLO
+wait 30
+tap GLO
+wait 30
+tap GLO
+wait 30
+expect sndn 13
+expect sndi 13
+spin PRESET -3
+wait 30
+expect preset 9
+expect sndi 10
+# the mockups (docs/design: Sounds-List): part 1 VA BRASS, rows 07..13 of 13
+wait 1400
+shot sounds-list.png
+# an edit shows: BRASS* in the list, as in the header; PRESET forgets it as it does on every page
+tap OCT-
+wait 30
+tap EDIT
+wait 30
+spin K2 4
+wait 30
+expect edited 1
+tap OCT-
+wait 30
+tap GLO
+wait 30
+tap GLO
+wait 30
+tap GLO
+wait 1400
+shot sounds-edited.png
+spin PRESET 1
+wait 30
+expect preset 10
+expect edited 0
+tap OCT-
+wait 30

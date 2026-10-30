@@ -72,13 +72,13 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (`base/bsp/docs/CPU.md`). Stattdessen 32 Bit mit Rechenweg, oder eine `noinline`-Hilfsfunktion. Kein `double`.
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
-## Klang (Stand v0.8)
+## Klang (Stand v0.9)
 - Parts: sechs gleichzeitig (am Anfang VA, DRUMS, ACID, FM6, PD, ORGAN: `PART_ENGINE`; das Rack (`TILES`) seit 29.10. in
   derselben Reihenfolge, Part 1–6 von links oben nach rechts unten; K1 wählt die Engines in dieser Reihenfolge), SEL (Taster) oder SELECT
   (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem gewählten (`set.part`, `part_cur()`, `eng_cur()` in
   `app.c`); MIDI-Kanal 1–6 = Part 1–6; Mixer drei Parts je Seite (die des gewählten), Looper, Step und FX alle sechs; `work`/`orig`/`edited`
   je Part und Engine. Obergrenze: alle Parts zusammen ≤ 240 Zehntel FM6-Stimmen.
-- Mixer (GLO; GLO/OCT+ wechselt MIX/SEND, OCT− schließt): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance),
+- Mixer (GLO; GLO/OCT+ geht MIX → SEND → LIST → GLYPHS → MIX (`GT_*`), OCT− schließt): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance),
   MUTE, SOLO, `send[2]` in `part_set_t`; `mix_update()` setzt `mix_tgt`, `snd_tgt` (nach LEVEL/MUTE/SOLO, vor PAN,
   quadratisch) und `ret_tgt`; `app_render` gleitet, mischt stereo, Limiter (−0,5 dBFS) vor dem harten Begrenzen.
   Speicherformat `KLS9` (`KLS8` und `KLS7` mit vier Parts werden in `settings_load` übernommen).
@@ -107,6 +107,12 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   mono summiert, die Rückwege stereo vor dem Limiter. DELAY Ping-Pong (erstes Echo links), höchstens 0,5 s je Seite
   (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
   PRE bis 100 ms. Ohne Send schläft ein Effekt, sobald er verklungen ist. Pool: 88 200 + 8 820 + 65 536 B.
+- Sounds (v0.9, GLO-Tabs LIST und GLYPHS, `snd_*` und `draw_sounds` in `app.c`): ein Sound ist `SND(e, p)` =
+  Engine × 16 + Preset (USER nach den Presets); `snd_list` liefert, was K1 zeigt (`ui.snd_all`: ALL in der
+  Reihenfolge des Racks, sonst die Engine des Parts), auf GLYPHS ab `ui.anc` sortiert nach Abstand der Glyphen
+  (`kl_shape`, Summe der acht Differenzen, Gleichstand in Listenreihenfolge; `snd_anchor` beim Öffnen des Tabs und
+  beim Partwechsel). PRESET dort `snd_step` (auf ALL wechselt die Engine des Parts), K1 `snd_engine` (ALL, dann wie
+  `engine_step`), K2–K4 frei, kein HOME-Reset. Gewählter Sound in der Mitte (LIST 7 Zeilen, GLYPHS 3 × 3).
 - Looper (SEQ, PLAY, REC; `lp` in `app.c`): Noten, kein Klang; eine Schleife für alle Parts, je Part `lp_ev[p]`
   (2048 Ereignisse, Tick 16 Bit bei 192 je Viertel, höchstens 16 Takte), Rückgängig über `lp_undo` (eine Stufe je Part).
   Läuft im Audio-Interrupt: `app_render` in Schritten zu 32 Frames (`lp_step` vor jedem `kl_render`); die
@@ -174,7 +180,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts; dazu Step-Cursor, DOUBLE/HALF | erledigt (Simulator; Emulator-Protokolle 29.10.) |
 | v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | erledigt (Simulator) |
 | v0.8 | Edit-Seiten nach den Mockups 34–36 (aus 02 `Edit-VA`, 03 `Edit-FM6`): Hüllkurve ENV und MORE (Taster ENV), VA-Filterkurve, FM6-Algorithmus | erledigt (Simulator) |
-| v0.9 | Preset-Liste und Glyphen-Browser (früher v0.4, dann v0.7) | offen |
+| v0.9 | Preset-Liste und Glyphen-Browser als GLO-Tabs LIST und GLYPHS (Mockups 37, 38) | erledigt (Simulator) |
 | v1.0 | Klang-Atlas, Klang-Stammbaum (früher v0.6, dann v0.8) | offen |
 | danach | Sequencer-Extras aus Mockup 05 (CHANCE, RATCH, Patterns, SONG), Drive und Chorus | offen |
 | am Ende | Feinschliff: Klang nach Gehör, Design-Fragen; Streichen, was nicht trägt | offen |
