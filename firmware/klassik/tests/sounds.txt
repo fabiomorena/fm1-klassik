@@ -1,4 +1,4 @@
-# KLASSIK's sound pages (v0.9): GLO's tabs LIST and GLYPHS after MIX and SEND, in the host simulator, from the
+# KLASSIK's sound page (v0.9; GLYPHS struck 02.11.): GLO's tab LIST after MIX and SEND, in the host simulator, from the
 # repository's root:
 #   python3 base/tools/build.py firmware/klassik --host
 #   firmware/klassik/build/host/klassik_host firmware/klassik/tests/sounds.txt firmware/klassik/build/host
@@ -90,55 +90,25 @@ spin K1 1
 wait 30
 expect engine 0
 expect sndall 0
-# GLO: GLYPHS, from VA BRASS: VA's sounds by how alike their glyphs are (kl_shape, the sum of the differences)
-tap GLO
-wait 30
-expect tab 4
-said GLYPHS
-expect snd0 9
-expect snd1 0
-expect snd2 8
-expect snd3 14
-expect snd4 1
-expect snd5 11
-expect snd6 6
-expect snd7 3
-# ALL: FM6's MARIMBA comes in after PWM STR (both 334 from BRASS: the rack's order first), the ninth
-spin K1 -1
-wait 30
-expect sndall 1
-expect snd5 11
-expect snd6 6
-expect snd7 3
-# PRESET goes along them: eight on, MARIMBA (the part plays FM6); the order stays (still from BRASS)
-spin PRESET 8
-wait 30
-expect engine 3
-expect preset 4
-expect sndi 9
-expect snd0 9
-said ENGINE FM6
-where
-said GLYPHS, LIKE BRASS. ENGINE ALL. SOUND 9 OF 71
-wait 1400
-shot sounds-glyphs.png
-spin PRESET -8
-wait 30
-expect engine 0
-expect preset 9
-# another part: GLYPHS from its sound (part 2 DRUMS, 606); back to part 1: from BRASS again
+# another part: the list follows it (part 2 DRUMS, 606: its 8 kits); back to part 1, VA BRASS
 tap SEL
 wait 30
 expect part 2
-expect snd0 64
+expect tab 3
+expect engine 4
+expect sndn 8
+expect sndi 1
 spin SELECT -1
 wait 30
 expect part 1
-expect snd0 9
-# GLO goes round to MIX; PRESET there is PRESET as ever (the next VA sound)
+expect engine 0
+expect sndn 15
+expect sndi 10
+# GLO goes round to MIX after LIST (GLYPHS until 02.11.); PRESET there is PRESET as ever (the next VA sound)
 tap GLO
 wait 30
 expect tab 1
+said MIX
 spin PRESET 1
 wait 30
 expect engine 0

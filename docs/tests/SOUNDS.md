@@ -1,5 +1,8 @@
 # SOUNDS – Testprotokoll (Browser-Emulator)
 
+> **Nicht mehr ausfüllen (02.11.2026):** Der Tab GLYPHS ist gestrichen (DECISIONS.md). Die Prüfungen von A, B und D
+> stehen mit den Zahlen von v1.0 (15 VA-Presets, 71 insgesamt) in `PRESETS.md`, Teil B.
+
 Stand v0.9 (Preset-Liste und Glyphen-Browser als GLO-Tabs LIST und GLYPHS, Mockups 37 und 38). Die erwarteten
 Ergebnisse stammen aus dem Code (`firmware/klassik/app.c`) und dem Host-Test (`firmware/klassik/tests/sounds.txt`).
 Es geht um Funktion und Stabilität; wie es klingt und aussieht, stimmen wir zum Schluss ab (Notizen dazu sind trotzdem
@@ -98,3 +101,12 @@ Notizen:
   Engine, den du auf ALL gewählt hast).
 
 Notizen:
+
+## Auswertung (Claude, 02.11.2026)
+
+- Nicht getestet: Fabio hat das Protokoll vor dem ersten Punkt abgebrochen, weil der Tab GLYPHS (Teil C) gestrichen
+  wird („ich will doch gar nicht mehr die Glyphs in der App haben“). Auf Nachfrage: nur der Tab, die Glyphen bleiben in
+  Kopfzeile, Rack, LIST und Edit.
+- Gestrichen und umgesetzt: GLO geht MIX → SEND → LIST → MIX; Host-Test `tests/sounds.txt` ohne GLYPHS, dazu der
+  Partwechsel auf LIST (vorher nur auf GLYPHS geprüft).
+- Die übrigen Punkte (A ohne GLYPHS, B, C6 als Stabilität auf LIST, D) prüft `PRESETS.md` Teil B auf dem v1.0-Stand.

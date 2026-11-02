@@ -28,7 +28,7 @@ jeder Kachel stehen die Parts, die diese Engine spielen (der gewählte gefüllt,
 | PRESET | Sound der Engine wählen; nach den Presets folgt USER, sobald die Engine einen eigenen Sound hat |
 | OCT- / OCT+ | Oktave des Parts −2 … +2 |
 | EDIT | Edit-Seiten der Engine öffnen |
-| GLO | Mixer und Sounds öffnen (dort geht GLO durch MIX, SEND, LIST und GLYPHS, OCT− schließt) |
+| GLO | Mixer und Sounds öffnen (dort geht GLO durch MIX, SEND und LIST, OCT− schließt) |
 | FX | Effekt-Seite öffnen (dort wechselt FX zwischen DELAY und HALL, OCT− schließt sie) |
 | SEQ | Looper-Seite öffnen (dort wechselt SEQ zwischen LOOP und STEP, OCT− schließt sie) |
 | PLAY, REC | Looper starten und stoppen, aufnehmen (auf jeder Seite, siehe Looper) |
@@ -42,7 +42,7 @@ MIDI-In über USB und TRS spielt ebenfalls.
 ## Mixer
 
 GLO öffnet den Mixer auf dem Tab MIX (GLO leuchtet); GLO oder OCT+ geht zum nächsten Tab: MIX, SEND, dann die
-Sounds LIST und GLYPHS (siehe unten) und wieder MIX (wie EDIT auf den Edit-Seiten). OCT− schließt, EDIT, SEQ und FX
+Sounds LIST (siehe unten) und wieder MIX (wie EDIT auf den Edit-Seiten). OCT− schließt, EDIT, SEQ und FX
 wechseln zu ihren Seiten. Für jeden Part gibt es einen
 Kanalzug: Glyphe, Part und Engine, auf MIX Fader, Pegel und Pan, auf SEND ein Fader je Effekt (DLY, HALL); auf
 beiden M (Mute) und S (Solo).
@@ -79,10 +79,10 @@ rechts, auf SEND grau, wie laut die Effekte zurückkommen (DLY, HALL: LEVEL der 
 50 ms wieder los. Solange er arbeitet, leuchtet `LIM`. Änderungen gleiten in wenigen Millisekunden, ohne Knacken.
 SAVE speichert den Mixer mit.
 
-## Sounds: LIST und GLYPHS
+## Sounds: LIST
 
-Die Tabs LIST und GLYPHS hinter MIX und SEND (GLO, GLO, GLO; Kopfzeile `SOUNDS` und der gewählte Part) zeigen die
-Sounds, unter denen PRESET wählt. PRESET macht dort, was er überall macht: den nächsten Sound oder den vorigen, sofort
+Der Tab LIST hinter MIX und SEND (GLO, GLO, GLO; Kopfzeile `SOUNDS` und der gewählte Part) zeigt die Sounds, unter
+denen PRESET wählt. PRESET macht dort, was er überall macht: den nächsten Sound oder den vorigen, sofort
 zu hören (eine ungespeicherte Änderung geht dabei verloren). Die Tasten spielen weiter.
 
 | Regler | Was er tut |
@@ -92,17 +92,11 @@ zu hören (eine ungespeicherte Änderung geht dabei verloren). Die Tasten spiele
 | K2–K4 | frei |
 | SEL, SELECT | anderer Part; die Liste folgt ihm |
 
-**LIST:** je Zeile Glyphe, Nummer (wie im Feld PRESET des Racks) und Name, der USER-Sound nach den Presets mit
+Je Zeile Glyphe, Nummer (wie im Feld PRESET des Racks) und Name, der USER-Sound nach den Presets mit
 `FROM` und dem Preset, aus dem er gemacht ist. Der Sound des Parts ist umrandet und steht in der Mitte, mit `*`,
 solange er geändert und nicht gespeichert ist. Rechts die Parts, die diesen Sound spielen (gefüllt: der gewählte).
 Auf `ALL` stehen die Engines in der Reihenfolge des Racks untereinander (Farbe der Glyphe, Nummern ab 01), und PRESET
 geht über die Grenzen: Der Part spielt dann die Engine des Sounds.
-
-**GLYPHS:** die Sounds als Glyphen, drei je Reihe. Zuerst der Sound, den der Part beim Öffnen des Tabs spielt
-(`START`, rechts oben `LIKE` und sein Name), dann die anderen, je ähnlicher ihre Glyphe, desto weiter vorn (die acht
-Strahlen verglichen). Die Reihenfolge bleibt, solange der Tab offen ist; sie gilt wieder ab dem Sound von dann, wenn
-man den Tab neu öffnet oder den Part wechselt. Mit `ALL` sind alle Engines dabei: Dort heißt ähnlich „sieht ähnlich
-aus“, nicht unbedingt „klingt ähnlich“, denn jede Engine hat ihre eigenen acht Parameter.
 
 Die Presets, in der Reihenfolge von PRESET (71; dahinter je Engine der USER-Sound, sobald es ihn gibt):
 

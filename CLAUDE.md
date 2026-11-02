@@ -81,7 +81,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem gewählten (`set.part`, `part_cur()`, `eng_cur()` in
   `app.c`); MIDI-Kanal 1–6 = Part 1–6; Mixer drei Parts je Seite (die des gewählten), Looper, Step und FX alle sechs; `work`/`orig`/`edited`
   je Part und Engine. Obergrenze: alle Parts zusammen ≤ 240 Zehntel FM6-Stimmen.
-- Mixer (GLO; GLO/OCT+ geht MIX → SEND → LIST → GLYPHS → MIX (`GT_*`), OCT− schließt): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance),
+- Mixer (GLO; GLO/OCT+ geht MIX → SEND → LIST → MIX (`GT_*`), OCT− schließt): je Part LEVEL (Q11-Tabelle, −40 … +6 dB), PAN (Balance),
   MUTE, SOLO, `send[2]` in `part_set_t`; `mix_update()` setzt `mix_tgt`, `snd_tgt` (nach LEVEL/MUTE/SOLO, vor PAN,
   quadratisch) und `ret_tgt`; `app_render` gleitet, mischt stereo, Limiter (−0,5 dBFS) vor dem harten Begrenzen.
   Speicherformat `KLS9` (`KLS8` und `KLS7` mit vier Parts werden in `settings_load` übernommen).
@@ -115,12 +115,11 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   mono summiert, die Rückwege stereo vor dem Limiter. DELAY Ping-Pong (erstes Echo links), höchstens 0,5 s je Seite
   (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
   PRE bis 100 ms. Ohne Send schläft ein Effekt, sobald er verklungen ist. Pool: 88 200 + 8 820 + 65 536 B.
-- Sounds (v0.9, GLO-Tabs LIST und GLYPHS, `snd_*` und `draw_sounds` in `app.c`): ein Sound ist `SND(e, p)` =
-  Engine × 16 + Preset (USER nach den Presets); `snd_list` liefert, was K1 zeigt (`ui.snd_all`: ALL in der
-  Reihenfolge des Racks, sonst die Engine des Parts), auf GLYPHS ab `ui.anc` sortiert nach Abstand der Glyphen
-  (`kl_shape`, Summe der acht Differenzen, Gleichstand in Listenreihenfolge; `snd_anchor` beim Öffnen des Tabs und
-  beim Partwechsel). PRESET dort `snd_step` (auf ALL wechselt die Engine des Parts), K1 `snd_engine` (ALL, dann wie
-  `engine_step`), K2–K4 frei, kein HOME-Reset. Gewählter Sound in der Mitte (LIST 7 Zeilen, GLYPHS 3 × 3).
+- Sounds (v0.9, GLO-Tab LIST, `snd_*` und `draw_sounds` in `app.c`; der Tab GLYPHS ist seit 02.11. gestrichen): ein
+  Sound ist `SND(e, p)` = Engine × 16 + Preset (USER nach den Presets); `snd_list` liefert, was K1 zeigt
+  (`ui.snd_all`: ALL in der Reihenfolge des Racks, sonst die Engine des Parts). PRESET dort `snd_step` (auf ALL
+  wechselt die Engine des Parts), K1 `snd_engine` (ALL, dann wie `engine_step`), K2–K4 frei, kein HOME-Reset.
+  Gewählter Sound in der Mitte (7 Zeilen).
 - Looper (SEQ, PLAY, REC; `lp` in `app.c`): Noten, kein Klang; eine Schleife für alle Parts, je Part `lp_ev[p]`
   (2048 Ereignisse, Tick 16 Bit bei 192 je Viertel, höchstens 16 Takte), Rückgängig über `lp_undo` (eine Stufe je Part).
   Läuft im Audio-Interrupt: `app_render` in Schritten zu 32 Frames (`lp_step` vor jedem `kl_render`); die
@@ -176,7 +175,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   Wert des Sounds (`orig` in `app.c`); Mixer: 0 dB, Mitte, aus (Marke nur LEVEL und PAN), Sends 0; Looper: 120 BPM,
   Länge der ersten Aufnahme, 1/16, REC; Effekte: `FX_DEF`. Neue Screens bekommen das gleich mit.
 - Keine neuen Bildschirme (Fabio, 02.11.): Neues möglichst in bestehende Seiten/Tabs; Klang-Atlas und Stammbaum
-  (Mockups 08, 10) gestrichen, `docs/CONCEPT.md`.
+  (Mockups 08, 10) gestrichen, ebenso der Tab GLYPHS (38), `docs/CONCEPT.md`.
 
 ## Fahrplan
 | Version | Inhalt | Stand |
@@ -189,8 +188,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.6 | Step-Sequencer (auf den Ereignissen des Loopers), Effekte (Delay, Hall), sechs Parts; dazu Step-Cursor, DOUBLE/HALF | erledigt (Simulator; Emulator-Protokolle 29.10.) |
 | v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | erledigt (Simulator) |
 | v0.8 | Edit-Seiten nach den Mockups 34–36 (aus 02 `Edit-VA`, 03 `Edit-FM6`): Hüllkurve ENV und MORE (Taster ENV), VA-Filterkurve, FM6-Algorithmus | erledigt (Simulator) |
-| v0.9 | Preset-Liste und Glyphen-Browser als GLO-Tabs LIST und GLYPHS (Mockups 37, 38) | erledigt (Simulator) |
+| v0.9 | Preset-Liste und Glyphen-Browser als GLO-Tabs LIST und GLYPHS (Mockups 37, 38; GLYPHS am 02.11. gestrichen) | erledigt (Simulator) |
 | v1.0 | Mehr Presets: 43 → 71 (VA 15, PD 12, ORGAN 12, FM6 12, ACID 12, DRUMS 8 Kits), Speicherformat KLSC | erledigt (Simulator) |
 | dann | Feinschliff: Klang nach Gehör, Design-Fragen; Streichen, was nicht trägt | offen |
 | danach | Drive und Chorus (FX-Tabs), CHANCE und RATCH (STEP-Tab), Patterns und SONG (einzige neue Seite) | offen |
-| gestrichen | Klang-Atlas, Klang-Stammbaum (02.11.: keine neuen Bildschirme; GLYPHS bleibt, wird nicht ausgebaut) | – |
+| gestrichen | Klang-Atlas, Klang-Stammbaum (02.11.: keine neuen Bildschirme); Tab GLYPHS (02.11.: kaum genutzt, die Glyphe bleibt) | – |

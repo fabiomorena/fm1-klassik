@@ -529,7 +529,8 @@ Träger).
 - **Glyphen:** jede neue Glyphe liegt mindestens 143 (Summe der acht Unterschiede auf 0–255, wie GLYPHS sortiert)
   von der nächsten ihrer Engine; unter den alten Presets ist der kleinste Abstand 38 (VA). Die GLYPHS-Reihenfolge ab
   BRASS in `tests/sounds.txt` ist in Python nachgerechnet und stimmt mit dem Simulator überein (POLY KEYS, 144, jetzt
-  an vierter Stelle; MARIMBA an neunter).
+  an vierter Stelle; MARIMBA an neunter). Der Tab GLYPHS ist seit dem 02.11. gestrichen (DECISIONS.md); der Abstand
+  bleibt das Maß dafür, dass sich die Glyphen in LIST und in der Kopfzeile unterscheiden.
 - **FM6:** die beschreibenden Werte der vier neuen Stimmen nach der Regel im Kopf von `eng_fm6.c` gerechnet
   (ATK, DEC, REL = (99 − Rate des langsamsten klingenden Trägers) × 99 / 80, gerundet; SUS höchster L3 der Träger;
   MOD lautester Modulator); dieselbe Rechnung ergibt für E.PIANO dessen Werte 5, 95, 48.
