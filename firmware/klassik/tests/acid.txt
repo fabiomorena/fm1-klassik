@@ -130,7 +130,7 @@ shot acid-edit-2.png
 tap OCT-
 wait 30
 expect edit 0
-# every preset, its name said; all eight play
+# every preset, its name said; all twelve play
 spin PRESET 1
 wait 50
 said SQUELCH
@@ -156,6 +156,23 @@ spin PRESET 1
 wait 50
 said SLOW SLIDE
 expect v7 99
+spin PRESET 1
+wait 50
+said DARK
+expect v1 8
+spin PRESET 1
+wait 50
+said OPEN
+expect v1 75
+spin PRESET 1
+wait 50
+said HOLLOW
+expect v6 50
+spin PRESET 1
+wait 50
+said CHIRP
+expect v3 99
+expect mono 1
 spin PRESET 1
 wait 50
 expect preset 0

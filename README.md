@@ -24,15 +24,17 @@ Browser-Emulator, noch nicht auf einem FM-1.
   Lauflicht, DRUMS je Instrument wie bei einer TR; Note, Anschlag und Länge je Step.
 - Sechs Engines, sechs Stimmen je Part:
   - **FM6**: sechs Operatoren wie ein DX7, 32 Algorithmen, auf dem FM-Kern
-    [msfa](https://github.com/google/music-synthesizer-for-android) (Apache-2.0, nach C portiert); acht eigene
+    [msfa](https://github.com/google/music-synthesizer-for-android) (Apache-2.0, nach C portiert); zwölf eigene
     Presets (keine DX7-Werksklänge).
   - Drei aus [Felucca-Engines](https://github.com/hugelton/Felucca-Engines) (MIT): **VA** (ANALOG),
-    **PD** (PHASE, Phase Distortion), **ORGAN** (WHEEL, Zugriegel-Orgel).
-  - **DRUMS**: vier Kits im Stil von TR-606, TR-707, TR-808 und TR-909, zwölf Instrumente je Kit, eins je Taste
-    einer Oktave; berechnet auf den Drum-Modellen von [Plaits](https://github.com/pichenettes/eurorack) (MIT, nach
-    C portiert) und eigenen (Toms, Clap, Rimshot, Cowbell), keine Samples aus den Geräten.
+    **PD** (PHASE, Phase Distortion), **ORGAN** (WHEEL, Zugriegel-Orgel); Presets von Felucca und eigene,
+    zusammen VA 15, PD 12, ORGAN 12.
+  - **DRUMS**: vier Kits im Stil von TR-606, TR-707, TR-808 und TR-909 und vier eigene (TECH, BOOM, LOFI, TIGHT),
+    zwölf Instrumente je Kit, eins je Taste einer Oktave; berechnet auf den Drum-Modellen von
+    [Plaits](https://github.com/pichenettes/eurorack) (MIT, nach C portiert) und eigenen (Toms, Clap, Rimshot,
+    Cowbell), keine Samples aus den Geräten.
   - **ACID**: ein einstimmiger Bass im Stil der TB-303 mit Slide (gebunden gespielt) und Accent (ENV gehalten), auf
-    [Open303](https://github.com/RobinSchmidt/Open303) von Robin Schmidt (MIT, nach C portiert); acht eigene Presets.
+    [Open303](https://github.com/RobinSchmidt/Open303) von Robin Schmidt (MIT, nach C portiert); zwölf eigene Presets.
 - Rack-Bildschirm mit Glyphen, Kopfzeile, Reglerzeile.
 - Edit-Seiten: EDIT öffnet je Engine zwei Seiten mit je vier Parametern auf K1–K4. Die Glyphe in der Kopfzeile
   und eine große Live-Glyphe verformen sich beim Drehen, der Klang ändert sich sofort. HOME halten und einen Regler

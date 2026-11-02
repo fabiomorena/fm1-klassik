@@ -23,12 +23,13 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `engines/` | Felucca-Engines (Submodul, MIT): ANALOG, PHASE, WHEEL, LOFI, TRIO, NOISE. **Nicht ändern.** |
 | `firmware/klassik/app.c`, `app.h` | die App (Unity-Build nach der Plattform): UI, Eingabe, Einstellungen, Audio-Ausgabe, Mixer, Looper |
 | `firmware/klassik/dsp/engines.c` | Stimmen-Host (o2-Einheit, MIT, nach `engines/tests/fe_host.c`): 6 Parts (`KL_NPART`, `prt[]`) zu je 6 Stimmen, gewichtete Obergrenze (`COST`, `KL_BUDGET`), eigene einfache ADSR; FM6, DRUMS und ACID mit eigenen Hüllkurven (`ownenv`, `done`); DRUMS: eine Stimme je Instrument (`same_note`); MONO-Presets (ACID): gehaltene Tasten (`held`), `legato` 1 = Slide, 2 = zurück zur gehaltenen Taste |
+| `firmware/klassik/dsp/presets.c` | eigene Presets für VA, PD, ORGAN (MPL-2.0) hinter denen des Submoduls (`MORE`, `preset_at` in `engines.c`) |
 | `firmware/klassik/dsp/eng_fm6.c` | FM6 als `engine_t` (MPL-2.0): acht Makros, eigene Presets (DX7-Stimmen) |
 | `firmware/klassik/dsp/fm6/` | msfa nach C portiert (o2-Einheit, Apache-2.0, `LICENSE`); Änderungen im Dateikopf von `msfa.c` |
 | `firmware/klassik/tools/gen_fm6_tables.py` | rechnet msfas Tabellen beim Build (`gen` → `fm6_tables.h`, Apache-2.0) |
-| `firmware/klassik/dsp/eng_drums.c` | DRUMS als `engine_t` (MPL-2.0): vier Kits, Tastenbelegung je Halbton (G# je Kit), Toms/Clap/Rimshot/Cowbell, Choke, Accent |
+| `firmware/klassik/dsp/eng_drums.c` | DRUMS als `engine_t` (MPL-2.0): acht Kits, Tastenbelegung je Halbton (G# je Kit), Toms/Clap/Rimshot/Cowbell, Choke, Accent |
 | `firmware/klassik/dsp/drums/` | Plaits-Drums nach C portiert (o2-Einheit, MIT, `float`): 808-BD/SD/Hi-Hat, 909-artige BD/SD; Änderungen im Dateikopf von `drums.c` |
-| `firmware/klassik/dsp/eng_acid.c` | ACID als `engine_t` (MPL-2.0): acht Makros in den Einheiten von Open303, acht Presets, Accent ab Velocity 100 |
+| `firmware/klassik/dsp/eng_acid.c` | ACID als `engine_t` (MPL-2.0): acht Makros in den Einheiten von Open303, zwölf Presets, Accent ab Velocity 100 |
 | `firmware/klassik/dsp/acid/` | Open303 nach C portiert (o2-Einheit, MIT, `float`, TB_303-Filter); Änderungen im Dateikopf von `acid.c` |
 | `firmware/klassik/tools/serve_emu.py` | Browser-Emulator auf localhost:8000 wie `http.server`, aber mit `Cache-Control: no-store` (MPL-2.0) |
 | `firmware/klassik/tools/device_check.py` | Geräte-Build bis zu den Prüfungen von fm1-base (Größe, RAM, Pool, kein double), ohne Paket (MPL-2.0) |
@@ -74,7 +75,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   (`base/bsp/docs/CPU.md`). Stattdessen 32 Bit mit Rechenweg, oder eine `noinline`-Hilfsfunktion. Kein `double`.
 - Änderungen nur in `firmware/klassik/`, nie in `base/` oder `engines/`.
 
-## Klang (Stand v0.9)
+## Klang (Stand v1.0)
 - Parts: sechs gleichzeitig (am Anfang VA, DRUMS, ACID, FM6, PD, ORGAN: `PART_ENGINE`; das Rack (`TILES`) seit 29.10. in
   derselben Reihenfolge, Part 1–6 von links oben nach rechts unten; K1 wählt die Engines in dieser Reihenfolge), SEL (Taster) oder SELECT
   (Drehregler) wählt; Tasten, K1, PRESET, OCT, EDIT gehören dem gewählten (`set.part`, `part_cur()`, `eng_cur()` in
@@ -98,13 +99,18 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   reihen sich ein); der erste Schritt wartet `ARP_GATHER` (14,5 ms) auf den Akkord. REC
   nimmt die Arp-Noten auf ihren Ticks auf (`lp_record_at`, ohne QUANT); USB-MIDI-Out auf dem Kanal des Parts.
   Felder in `mod_set_t` (`KLSA`).
+- Presets (v1.0): 71, VA 15, PD 12, ORGAN 12, FM6 12, ACID 12, DRUMS 8 Kits; höchstens `KL_MAXPRESET` = 15 je Engine
+  (`SND`: Engine × 16 + Preset, USER danach). VA/PD/ORGAN: die des Submoduls, dann `dsp/presets.c`. Speicherformat
+  `KLSC` merkt sich die Preset-Zahl je Engine (`npre`, `presets_moved`: USER rückt hinter neue Presets); KLSB … KLS7
+  mit `KLSB_NPRE` übernommen (Host-Befehl `klsb`). Neue Presets: Glyphen-Abstand und Pegel messen (RESEARCH.md
+  „Presets v1.0“), Grenzen in `tests/presets.txt`.
 - Edit-Seiten (v0.8): ein Sound hat `KL_NV` = 14 Werte (die acht Parameter, dann `KL_ATK`, `KL_DEC`, `KL_SUS`,
   `KL_REL`, `KL_FENV`, `KL_MONO`; `work`/`orig`/`user_t.v`); VA, PD, ORGAN (`kl_env`) haben vier Seiten (`kl_pages`:
   …, ENV, MORE), die anderen zwei. Taster ENV: `env_show` (ACID bleibt Accent, DRUMS `NO ENV`). DSP: `env_tick` mit
   stufenloser DEC/REL (`env_k`, `ENV_FRAC`), Zeiten bis −60 dB `ENV_T60`/`kl_env_ms`; VOICE-Wechsel lässt los, was
   klingt (`ensure_loaded`). Bilder: `draw_env`, `draw_more`, `draw_flt` (VA, 2-poliger SVF), `draw_algo` (FM6,
   `kl_fm6_algo` aus msfas Bus-Flags `fm_algorithm_flags`, `kl_fm6_levels`). Speicherformat `KLSB` (KLSA … KLS7 über
-  `user_from8`).
+  `user_from8`; seit v1.0 `KLSC`).
 - Effekte (FX; FX/OCT+ wechselt DELAY/HALL; `set.fx[2][4]`, `fx_*` in `app.c`, `dsp/fx.c`): Send-Effekte, die Sends
   mono summiert, die Rückwege stereo vor dem Limiter. DELAY Ping-Pong (erstes Echo links), höchstens 0,5 s je Seite
   (`FX_DLY_N`), TIME zum `lp.tempo`, darüber halbiert (`dly_samples`); HALL = Rings (`set_time`/`set_lp` wie Rings),
@@ -131,8 +137,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 - FM6: Presets sind ganze DX7-Stimmen plus acht beschreibende Werte; die Makros verschieben die Stimme relativ zum
   Preset (Regel im Kopf von `eng_fm6.c`). ALGO/FEEDBK live, die anderen ab der nächsten Note. Der Port ist gegen
   das Original-msfa (portabler Pfad, nicht NEON) geprüft, siehe `docs/RESEARCH.md`.
-- DRUMS: Kits „606“, „707“, „808“, „909“ (Presets); Taste je Halbton → Instrument (`DR_OF_PC`; G# `DR_X` je Kit:
-  RD, TB, CL, RD); die Oktave ändert nichts; die acht Makros setzen, was sie nennen (BD/SD/TOM TUNE in Halbtönen,
+- DRUMS: Kits „606“, „707“, „808“, „909“ und eigene TECH, BOOM, LOFI, TIGHT (Presets); Taste je Halbton → Instrument
+  (`DR_OF_PC`; G# `DR_X` je Kit: RD, TB, CL, RD, RD, CL, TB, CL); die Oktave ändert nichts; die acht Makros setzen, was sie nennen (BD/SD/TOM TUNE in Halbtönen,
   HAT DEC/TONE für CH und OH, HAT TONE 1,9–9,6 kHz). Pegel je Modell über `DM_NORM` eingemessen
   (BD ~−24, SD ~−26, Hats ~−29 dBFS bei MASTER 50 %). Port gegen Plaits geprüft (RESEARCH.md). Edit-Seite: Pads statt
   Glyphe (`draw_pads`).
@@ -169,7 +175,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   darauf zurück, und eine Marke im Balken der Fußzeile zeigt den Grundwert, solange der Regler woanders steht. Edit:
   Wert des Sounds (`orig` in `app.c`); Mixer: 0 dB, Mitte, aus (Marke nur LEVEL und PAN), Sends 0; Looper: 120 BPM,
   Länge der ersten Aufnahme, 1/16, REC; Effekte: `FX_DEF`. Neue Screens bekommen das gleich mit.
-- Signatur-Ideen (Klang-Atlas, Glyphen-Browser, Klang-Stammbaum): `docs/CONCEPT.md`, Mockups 08–10.
+- Keine neuen Bildschirme (Fabio, 02.11.): Neues möglichst in bestehende Seiten/Tabs; Klang-Atlas und Stammbaum
+  (Mockups 08, 10) gestrichen, `docs/CONCEPT.md`.
 
 ## Fahrplan
 | Version | Inhalt | Stand |
@@ -183,6 +190,7 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
 | v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | erledigt (Simulator) |
 | v0.8 | Edit-Seiten nach den Mockups 34–36 (aus 02 `Edit-VA`, 03 `Edit-FM6`): Hüllkurve ENV und MORE (Taster ENV), VA-Filterkurve, FM6-Algorithmus | erledigt (Simulator) |
 | v0.9 | Preset-Liste und Glyphen-Browser als GLO-Tabs LIST und GLYPHS (Mockups 37, 38) | erledigt (Simulator) |
-| v1.0 | Klang-Atlas, Klang-Stammbaum (früher v0.6, dann v0.8) | offen |
-| danach | Sequencer-Extras aus Mockup 05 (CHANCE, RATCH, Patterns, SONG), Drive und Chorus | offen |
-| am Ende | Feinschliff: Klang nach Gehör, Design-Fragen; Streichen, was nicht trägt | offen |
+| v1.0 | Mehr Presets: 43 → 71 (VA 15, PD 12, ORGAN 12, FM6 12, ACID 12, DRUMS 8 Kits), Speicherformat KLSC | erledigt (Simulator) |
+| dann | Feinschliff: Klang nach Gehör, Design-Fragen; Streichen, was nicht trägt | offen |
+| danach | Drive und Chorus (FX-Tabs), CHANCE und RATCH (STEP-Tab), Patterns und SONG (einzige neue Seite) | offen |
+| gestrichen | Klang-Atlas, Klang-Stammbaum (02.11.: keine neuen Bildschirme; GLYPHS bleibt, wird nicht ausgebaut) | – |

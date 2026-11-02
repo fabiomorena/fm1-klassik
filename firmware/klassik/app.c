@@ -2,7 +2,7 @@
  * Copyright (C) 2026 fabiomorena
  * From fm1-base's template, Copyright (C) 2026 Charles Vestal (MPL-2.0) */
 /* KLASSIK v0.8 (parts, mixer, looper, step sequencer, effects, LFOs, arpeggiators, envelopes): the rack and its edit pages. Six engines, FM6 (msfa's six operators), three of
- * Felucca-Engines (ANALOG, PHASE, WHEEL), DRUMS (four kits on Plaits' drum models) and ACID (Open303's TB-303), on
+ * Felucca-Engines (ANALOG, PHASE, WHEEL), DRUMS (eight kits on Plaits' drum models) and ACID (Open303's TB-303), on
  * six parts that play at once, each its own sound and octave: SEL, or SELECT turned, goes to the next part (SELECT
  * to the left: the one before), and the keys, K1 (the engine, in the rack's order), PRESET (its sound), OCT- / OCT+
  * (its octave) and EDIT are the chosen part's; MIDI
@@ -86,13 +86,15 @@ static int engine_at(int pos)                        /* the engine at that place
 }
 
 /* -------------------------------------------------------------- settings --- */
-#define SET_MAGIC 0x4B4C5342u                        /* "KLSB": a USER sound's envelope, ENV > FILTER and VOICE. The LFOs'
+#define SET_MAGIC 0x4B4C5343u                        /* "KLSC": each engine's presets, so that a USER sound stays one
+                                                     * when presets come. The USER sounds' envelopes' KLSB, the LFOs'
                                                      * KLSA and the six parts' KLS9 are taken over (their USER sounds
                                                      * with their preset's envelope; KLS9's LFOs and arps as at first),
                                                      * so are the effects' KLS8 and the mixer's KLS7 (four parts; KLS7
                                                      * without sends), parts 5 and 6 as at first; another magic (the
                                                      * parts' KLS6, v0.3's KLS5, DRUMS' KLS4, v0.2's KLS3, v0.1's KLS2,
                                                      * v0's KLS1) loads defaults */
+#define SET_MAGICB 0x4B4C5342u
 #define SET_MAGICA 0x4B4C5341u
 #define SET_MAGIC9 0x4B4C5339u
 #define SET_MAGIC8 0x4B4C5338u
@@ -136,8 +138,20 @@ typedef struct {
                                                      * %, LEVEL (dB, -40 .. +6, LEVEL_OFF below); HALL PRE (ms),
                                                      * DECAY %, TONE %, LEVEL */
     mod_set_t mod[KL_NPART];                         /* each part's LFO and arpeggiator */
+    uint8_t npre[KL_NENG];                           /* each engine's presets (kl_presets) when saved: its USER sound
+                                                     * was the one after them (presets_moved) */
 } settings_t;
 _Static_assert(sizeof(settings_t) <= PLAT_STORE_MAX, "the settings are one store object");
+static const uint8_t KLSB_NPRE[KL_NENG] = {12, 6, 5, 8, 4, 8};   /* each engine's presets in KLSB and before (VA, PD,
+                                                                 * ORGAN, FM6, DRUMS, ACID) */
+typedef struct {                                     /* KLSB's: the same without npre */
+    uint32_t magic;
+    uint8_t part, rsv[3];
+    part_set_t parts[KL_NPART];
+    user_t user[KL_NENG];
+    int8_t fx[2][4];
+    mod_set_t mod[KL_NPART];
+} settingsB_t;
 typedef struct {                                     /* KLSA's: the USER sounds' eight parameters */
     uint32_t magic;
     uint8_t part, rsv[3];
@@ -172,8 +186,9 @@ typedef struct {
     user8_t user[KL_NENG];
 } settings7_t;
 _Static_assert(sizeof(settings7_t) < sizeof(settings8_t) && sizeof(settings8_t) < sizeof(settings9_t) &&
-               sizeof(settings9_t) < sizeof(settingsA_t) && sizeof(settingsA_t) < sizeof(settings_t),
-               "KLS7, KLS8, KLS9 and KLSA tell themselves by their sizes (each fits where the store loads them)");
+               sizeof(settings9_t) < sizeof(settingsA_t) && sizeof(settingsA_t) < sizeof(settingsB_t) &&
+               sizeof(settingsB_t) < sizeof(settings_t),
+               "KLS7, KLS8, KLS9, KLSA and KLSB tell themselves by their sizes (each fits where the store loads them)");
 static settings_t set, set_kept;                     /* as it is, and as the store has it (or the defaults at boot) */
 static uint8_t set_dirty;
 static const uint8_t PART_ENGINE[KL_NPART] = {KL_ANALOG, KL_DRUMS, KL_ACID, KL_FM6, KL_PHASE, KL_WHEEL};   /* the
@@ -229,6 +244,8 @@ static void settings_defaults(void)
         set.fx[i / 4u][i % 4u] = FX_DEF[i / 4u][i % 4u];
     for (i = 0; i < KL_NPART; i++)
         mod_defaults(&set.mod[i]);
+    for (i = 0; i < KL_NENG; i++)
+        set.npre[i] = (uint8_t)kl_presets((int)i);
 }
 
 static int values_ok(int e, const int8_t v[KL_NV])
@@ -287,21 +304,47 @@ static void user_from8(user_t *u, const user8_t *o, int e)
     u->saved = o->saved;
 }
 
-static void settings_load(void)                      /* the store's, KLSA's, KLS9's, KLS8's or KLS7's taken over, or
-                                                     * the defaults */
+/* the parts' sounds numbered as today: a USER sound (the one after the presets the store counted) after today's
+ * presets. 0: the store's numbers do not fit (more presets than today's, a sound past the USER sound) */
+static int presets_moved(void)
+{
+    uint32_t p, e;
+    for (e = 0; e < KL_NENG; e++) {
+        uint32_t then = set.npre[e], now = (uint32_t)kl_presets((int)e);
+        if (then > now)
+            return 0;
+        for (p = 0; p < KL_NPART; p++) {
+            uint8_t *pr = &set.parts[p].preset[e];
+            if (*pr > then)
+                return 0;
+            if (*pr == then)
+                *pr = (uint8_t)now;
+        }
+        set.npre[e] = (uint8_t)now;
+    }
+    return 1;
+}
+
+static void settings_load(void)                      /* the store's, KLSB's, KLSA's, KLS9's, KLS8's or KLS7's taken
+                                                     * over, or the defaults */
 {
     int n = plat_store_load(OBJ_SETTINGS, &set, sizeof set);
-    uint32_t magic = set.magic;
+    uint32_t magic = set.magic, i;
     int va = n == (int)sizeof(settingsA_t) && magic == SET_MAGICA, v9 = n == (int)sizeof(settings9_t) && magic == SET_MAGIC9;
     int v8 = n == (int)sizeof(settings8_t) && magic == SET_MAGIC8, v7 = n == (int)sizeof(settings7_t) && magic == SET_MAGIC7;
-    if (va || v9 || v8 || v7) {
+    if (n == (int)sizeof(settingsB_t) && magic == SET_MAGICB) {   /* KLSC's fields up to npre */
+        set.magic = SET_MAGIC;
+        for (i = 0; i < KL_NENG; i++)
+            set.npre[i] = KLSB_NPRE[i];
+        n = (int)sizeof set;
+    } else if (va || v9 || v8 || v7) {
         union {
             settingsA_t sa;                          /* v0.7's LFOs and arps */
             settings9_t s9;                          /* v0.6's six parts */
             settings8_t s8;                          /* v0.6's effects, four parts */
             settings7_t s7;                          /* v0.5's mixer, no sends */
         } old;
-        uint32_t i, e, np = va || v9 ? KL_NPART : OLD_NPART;
+        uint32_t e, np = va || v9 ? KL_NPART : OLD_NPART;
         const uint8_t *src = (const uint8_t *)&set;
         const user8_t *u8 = va ? old.sa.user : v9 ? old.s9.user : v8 ? old.s8.user : old.s7.user;
         const int8_t(*fx)[4] = va ? old.sa.fx : v9 ? old.s9.fx : v8 ? old.s8.fx : 0;
@@ -332,9 +375,11 @@ static void settings_load(void)                      /* the store's, KLSA's, KLS
             set.fx[i / 4u][i % 4u] = fx[i / 4u][i % 4u];
         for (i = 0; va && i < KL_NPART; i++)
             set.mod[i] = old.sa.mod[i];
+        for (e = 0; e < KL_NENG; e++)
+            set.npre[e] = KLSB_NPRE[e];
         n = (int)sizeof set;
     }
-    if (n != (int)sizeof set || !settings_ok())
+    if (n != (int)sizeof set || !presets_moved() || !settings_ok())
         settings_defaults();
 }
 
@@ -5549,9 +5594,35 @@ static void user_to8(user8_t *o, const user_t *u)    /* a USER sound as KLSA and
     o->saved = u->saved;
 }
 
+static uint8_t preset_then(const part_set_t *ps, uint32_t e)   /* a part's sound as KLSB and before numbered it:
+                                                                * the USER sound after KLSB_NPRE's presets */
+{
+    return ps->preset[e] >= kl_presets((int)e) ? KLSB_NPRE[e] : ps->preset[e];
+}
+
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
 {
     (void)a, (void)b, (void)c, (void)d;
+    if (!strcmp(cmd, "klsb")) {                      /* the settings into the store as KLSB (no preset counts: as many
+                                                     * presets as KLSB_NPRE) */
+        settingsB_t old;
+        uint32_t i, e;
+        memset(&old, 0, sizeof old);
+        old.magic = SET_MAGICB;
+        old.part = set.part;
+        for (i = 0; i < KL_NPART; i++) {
+            old.parts[i] = set.parts[i];
+            for (e = 0; e < KL_NENG; e++)
+                old.parts[i].preset[e] = preset_then(&set.parts[i], e);
+            old.mod[i] = set.mod[i];
+        }
+        for (e = 0; e < KL_NENG; e++)
+            old.user[e] = set.user[e];
+        for (i = 0; i < 8u; i++)
+            old.fx[i / 4u][i % 4u] = set.fx[i / 4u][i % 4u];
+        plat_store_save(OBJ_SETTINGS, &old, sizeof old);
+        return 1;
+    }
     if (!strcmp(cmd, "klsa")) {                      /* the settings into the store as KLSA (USER sounds without
                                                      * their envelope) */
         settingsA_t old;
@@ -5561,6 +5632,8 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         old.part = set.part;
         for (i = 0; i < KL_NPART; i++) {
             old.parts[i] = set.parts[i];
+            for (e = 0; e < KL_NENG; e++)
+                old.parts[i].preset[e] = preset_then(&set.parts[i], e);
             old.mod[i] = set.mod[i];
         }
         for (e = 0; e < KL_NENG; e++)
@@ -5576,8 +5649,11 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         memset(&old, 0, sizeof old);
         old.magic = SET_MAGIC8;
         old.part = set.part;
-        for (i = 0; i < OLD_NPART; i++)
+        for (i = 0; i < OLD_NPART; i++) {
             old.parts[i] = set.parts[i];
+            for (e = 0; e < KL_NENG; e++)
+                old.parts[i].preset[e] = preset_then(&set.parts[i], e);
+        }
         for (e = 0; e < KL_NENG; e++)
             user_to8(&old.user[e], &set.user[e]);
         for (i = 0; i < 8u; i++)
@@ -5595,7 +5671,7 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
             const part_set_t *ps = &set.parts[i];
             old.parts[i].engine = ps->engine;
             for (e = 0; e < KL_NENG; e++)
-                old.parts[i].preset[e] = ps->preset[e];
+                old.parts[i].preset[e] = preset_then(ps, e);
             old.parts[i].octave = ps->octave;
             old.parts[i].level = ps->level;
             old.parts[i].pan = ps->pan;

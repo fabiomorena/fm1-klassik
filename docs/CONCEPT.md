@@ -14,11 +14,12 @@ gerade halten).
 
 ## Signatur-Ideen
 
-- **Klang-Atlas:** alle Sounds aller Engines auf einer Karte (dunkel ↔ hell, weich ↔ scharf), mit zwei Reglern
-  befahren; die Position je Sound wird beim Build aus Simulator-Renderings berechnet (2 Byte pro Sound).
-- **Glyphen-Browser:** Sounds als Raster von Glyphen, sortiert nach Ähnlichkeit.
-- **Klang-Stammbaum:** jede gespeicherte Variante ist ein Ast; Morph zwischen zwei beliebigen Ästen (A/B),
-  MUTATE erzeugt neue Kinder (ca. 27 Byte pro Knoten).
+- **Glyphen-Browser:** Sounds als Raster von Glyphen, sortiert nach Ähnlichkeit (v0.9, GLO-Tab GLYPHS).
+- Gestrichen am 02.11.2026 (keine neuen Bildschirme, DECISIONS.md):
+  - **Klang-Atlas:** alle Sounds aller Engines auf einer Karte (dunkel ↔ hell, weich ↔ scharf), mit zwei Reglern
+    befahren; die Position je Sound wird beim Build aus Simulator-Renderings berechnet (2 Byte pro Sound).
+  - **Klang-Stammbaum:** jede gespeicherte Variante ist ein Ast; Morph zwischen zwei beliebigen Ästen (A/B),
+    MUTATE erzeugt neue Kinder (ca. 27 Byte pro Knoten).
 
 ## Fahrplan
 
@@ -34,6 +35,7 @@ gerade halten).
 | v0.7 | LFO und Arpeggiator (Taster LFO, ARP; eigener Code) | erledigt (Simulator) |
 | v0.8 | Edit-Seiten nach den Mockups 34–36 (aus 02 `Edit-VA`, 03 `Edit-FM6`): Hüllkurve ENV und MORE (Taster ENV), VA-Filterkurve, FM6-Algorithmus | erledigt (Simulator) |
 | v0.9 | Preset-Liste und Glyphen-Browser als GLO-Tabs LIST und GLYPHS (Mockups 37, 38) | erledigt (Simulator) |
-| v1.0 | Klang-Atlas, Klang-Stammbaum (früher v0.6, dann v0.8) | offen |
-| danach | Sequencer-Extras aus Mockup 05 (CHANCE, RATCH, Patterns, SONG), Drive und Chorus | offen |
-| am Ende | Feinschliff: Klang nach Gehör, Design-Fragen; Streichen, was nicht trägt | offen |
+| v1.0 | Mehr Presets: 43 → 71 (VA 15, PD 12, ORGAN 12, FM6 12, ACID 12, DRUMS 8 Kits); Speicherformat KLSC | erledigt (Simulator) |
+| dann | Feinschliff: Klang nach Gehör, Design-Fragen; Streichen, was nicht trägt | offen |
+| danach | Drive und Chorus (FX-Tabs), CHANCE und RATCH (STEP-Tab), Patterns und SONG (eigene Seite) | offen |
+| gestrichen | Klang-Atlas, Klang-Stammbaum (02.11.: keine neuen Bildschirme) | – |

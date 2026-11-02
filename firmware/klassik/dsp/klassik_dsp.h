@@ -29,7 +29,9 @@ typedef struct {
 
 const char *kl_engine_name(int e);          /* the engine's own name: "ANALOG", "PHASE", "WHEEL", "FM6", "DRUMS",
                                              * "ACID" */
-int kl_presets(int e);
+#define KL_MAXPRESET 15                     /* an engine's presets at most: the app keeps a sound as engine * 16 +
+                                             * preset, its USER sound after the presets (app.c SND) */
+int kl_presets(int e);                      /* the engine's own presets, then KLASSIK's (presets.c: VA, PD, ORGAN) */
 const char *kl_preset_name(int e, int p);
 void kl_preset_values(int e, int p, int8_t v[KL_NV]);   /* the preset's values */
 int kl_env(int e);                          /* 1: its envelope, ENV > FILTER and VOICE are the sound's to set (VA, PD,

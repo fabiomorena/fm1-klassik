@@ -32,7 +32,12 @@ static const preset_t ACID_PRESETS[] = {
     {.name = "SCREAM", .e = {0, 60, 97, 70, 25, 99, 20, 40}, .env = {0, 0, 127, 0}, .mono = 1},
     {.name = "PLUCK", .e = {0, 30, 50, 90, 5, 60, 0, 30}, .env = {0, 0, 127, 0}, .mono = 1},
     {.name = "SLOW SLIDE", .e = {0, 45, 80, 55, 55, 60, 30, 99}, .env = {0, 0, 127, 0}, .mono = 1},
+    {.name = "DARK", .e = {0, 8, 55, 35, 70, 50, 20, 60}, .env = {0, 0, 127, 0}, .mono = 1},
+    {.name = "OPEN", .e = {0, 75, 40, 30, 50, 60, 0, 60}, .env = {0, 0, 127, 0}, .mono = 1},
+    {.name = "HOLLOW", .e = {0, 30, 65, 55, 45, 70, 50, 60}, .env = {0, 0, 127, 0}, .mono = 1},
+    {.name = "CHIRP", .e = {0, 20, 85, 99, 10, 80, 0, 40}, .env = {0, 0, 127, 0}, .mono = 1},
 };
+_Static_assert(NELEM(ACID_PRESETS) <= KL_MAXPRESET, "ACID: at most KL_MAXPRESET presets");
 
 typedef struct {
     acid_t a;

@@ -90,6 +90,30 @@ static const fm6_voice_t FM6_VOICE[] = {
          OP_OFF, OP_OFF},
         5, 0, PEG_FLAT, LFO_OFF,
     },
+    {   /* HARPSI: three pairs (3:1, 5:2, 7:1) that fall away while held and stop short when let go */
+        {OP(99, 40, 30, 72, 99, 70, 0, 0, 99, 1, 0, 2, 3), OP(99, 48, 35, 72, 99, 62, 0, 0, 80, 3, 0, 4, 3),
+         OP(99, 42, 32, 72, 99, 66, 0, 0, 90, 2, 0, 2, 3), OP(99, 55, 40, 72, 99, 55, 0, 0, 74, 5, 0, 5, 3),
+         OP(99, 44, 34, 72, 99, 60, 0, 0, 84, 1, 0, 2, 3), OP(99, 60, 45, 72, 99, 45, 0, 0, 78, 7, 0, 5, 3)},
+        5, 5, PEG_FLAT, LFO_OFF,
+    },
+    {   /* VIBES: two long 1:1 bars, struck by modulators at 4:1 and 10:1 that die at once */
+        {OP(99, 28, 22, 55, 99, 80, 0, 0, 99, 1, 0, 2, 2), OP(99, 65, 45, 55, 99, 25, 0, 0, 68, 4, 0, 5, 2),
+         OP(99, 30, 24, 55, 99, 72, 0, 0, 88, 1, 0, 2, 2), OP(99, 75, 55, 55, 99, 0, 0, 0, 62, 10, 0, 6, 2),
+         OP_OFF, OP_OFF},
+        5, 0, PEG_FLAT, LFO_OFF,
+    },
+    {   /* STRINGS: a 1:1 pair and a 1:1 stack of four with feedback (saw-like), a slow bow, a late vibrato */
+        {OP(48, 35, 25, 45, 99, 95, 92, 0, 96, 1, 0, 1, 1), OP(52, 35, 25, 45, 99, 90, 85, 0, 76, 1, 0, 2, 1),
+         OP(46, 35, 25, 45, 99, 95, 92, 0, 94, 1, 0, 1, 1), OP(50, 35, 25, 45, 99, 90, 85, 0, 72, 1, 0, 2, 1),
+         OP(50, 35, 25, 45, 99, 88, 80, 0, 64, 1, 0, 2, 1), OP(55, 35, 25, 45, 99, 85, 80, 0, 66, 1, 0, 2, 1)},
+        1, 6, PEG_FLAT, .lfo = {30, 65, 5, 0, 0, 4}, .pms = 3,
+    },
+    {   /* FLUTE: a soft 1:1 pair, an octave above it, and a breath (a pair whose modulator feeds back hard) */
+        {OP(60, 40, 30, 60, 99, 95, 90, 0, 98, 1, 0, 2, 1), OP(62, 40, 30, 60, 99, 90, 80, 0, 55, 1, 0, 3, 1),
+         OP(60, 40, 30, 60, 99, 90, 85, 0, 70, 2, 0, 2, 1), OP(62, 40, 30, 60, 99, 70, 50, 0, 30, 1, 0, 3, 1),
+         OP(70, 50, 40, 60, 99, 70, 55, 0, 60, 1, 0, 2, 1), OP(75, 55, 45, 60, 99, 75, 60, 0, 85, 5, 0, 3, 1)},
+        5, 7, PEG_FLAT, .lfo = {35, 55, 4, 0, 0, 4}, .pms = 3,
+    },
 };
 
 /* the eight values that describe each voice (the rule at the top: ATK, DEC, REL from the slowest sounding carrier,
@@ -103,7 +127,13 @@ static const preset_t FM6_PRESETS[] = {
     {.name = "FM ORGAN", .e = {32, 2, 0, 1, 0, 0, 99, 21}, .env = {0, 0, 127, 0}},
     {.name = "WARM PAD", .e = {5, 3, 62, 6, 78, 85, 88, 73}, .env = {0, 0, 127, 0}},
     {.name = "CLAV", .e = {5, 0, 78, 1, 0, 46, 0, 33}, .env = {0, 0, 127, 0}},
+    {.name = "HARPSI", .e = {5, 5, 80, 1, 0, 73, 0, 33}, .env = {0, 0, 127, 0}},
+    {.name = "VIBES", .e = {5, 0, 68, 3, 0, 88, 0, 54}, .env = {0, 0, 127, 0}},
+    {.name = "STRINGS", .e = {1, 6, 76, 4, 66, 79, 92, 67}, .env = {0, 0, 127, 0}},
+    {.name = "FLUTE", .e = {5, 7, 85, 1, 48, 73, 90, 48}, .env = {0, 0, 127, 0}},
 };
+_Static_assert(NELEM(FM6_PRESETS) == NELEM(FM6_VOICE) && NELEM(FM6_PRESETS) <= KL_MAXPRESET,
+               "FM6: a voice for each preset, at most KL_MAXPRESET");
 
 static int32_t fm6_rate(int32_t v) { return v * 80 / 99; }   /* a value 0..99 as rate steps */
 static int32_t fm6_clamp99(int32_t v) { return v < 0 ? 0 : v > 99 ? 99 : v; }

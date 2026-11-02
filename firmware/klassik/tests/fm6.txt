@@ -141,12 +141,12 @@ tap SAVE
 wait 30
 expect dirty 0
 expect user 1
-expect preset 8
+expect preset 12
 said SAVED USER
 reboot
 wait 600
 expect engine 3
-expect preset 8
+expect preset 12
 expect user 1
 expect v3 5
 expect dsp3 5

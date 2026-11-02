@@ -503,6 +503,44 @@ Feedback-Schleife. Alle 32 als Bild mit der DX7-Algorithmentabelle verglichen (S
 im Test (`tests/fm6.txt`) 5 (drei Paare, FB auf 6), 16 (OP1 unter 2, 3 + 4, 5 + 6), 4 (Feedback 4 → 6), 32 (sechs
 Träger).
 
+## Presets v1.0: Messungen (Stand 02.11.2026, nur Simulator)
+
+- **Pegel**, Host-Simulator, MASTER 50 %, eine Note C4 (Taste 7, Anschlag 100) 1 s gehalten, Peak in dBFS
+  (`tests/presets.txt`, gleiche Reihenfolge; die Grenzen dort: gemessen −4 … +3 dB). Zum Vergleich die alten Presets
+  derselben Engine, gemessen mit derselben Note (Skript im Scratchpad, nicht im Repo):
+
+  | Engine | neu (Peak dBFS) | alte Presets (Spanne) |
+  | --- | --- | --- |
+  | VA | SYNC LEAD −29,7, FAT BASS −31,2, POLY KEYS −34,3 | −34,6 … −24,9 |
+  | PD | BASS −27,2, E.PIANO −28,4, SWEEP PAD −31,5, RESO LEAD −30,3, FOLD BASS −26,9, CHIME −28,0 | −32,8 … −28,3 |
+  | ORGAN | BLUES −30,9, BALLAD −31,2, MELLOW −31,6, CHAPEL −35,0, REED −32,2, CLARINET −32,8, BRIGHT −32,2 | −37,7 … −30,9 |
+  | FM6 | HARPSI −31,3, VIBES −32,9, STRINGS −32,9, FLUTE −36,0 | −35,8 … −29,3 |
+  | ACID (ohne Accent) | DARK −30,5, OPEN −28,3, HOLLOW −32,0, CHIRP −27,4 | −33,2 … −27,1 |
+  | DRUMS BD / SD / CH | TECH −23,4 / −25,5 / −26,9, BOOM −25,4 / −27,5 / −28,8, LOFI −23,6 / −26,6 / −28,4, TIGHT −26,8 / −24,8 / −32,1 | BD −26,1 … −22,7, SD −29,0 … −24,3, CH −30,2 … −29,0 |
+
+  Korrigiert nach der ersten Messung: PD CHIME (RTRI/RTRP mit RING) maß −38,7 dBFS Peak, RMS −62,4 dBFS (BELL
+  −53,8): als DSIN/RSAW mit RING und FOLD 30 neu, von drei Varianten die lauteste. LOFI: CH −24,9, Tamburin −25,2
+  dBFS, 4 dB über den anderen Kits; DRIVE 55 → 40 und Hats/Becken leiser (CH −27,7). TECH CP −23,3 → −25,1 dBFS.
+- **PD mit zweiter Linie schwankt je Note.** `phase_note_on` (`engines/src/eng_phase.c`) setzt die Phase der zweiten
+  Linie auf 0, die der ersten nicht. Mit MIX und kleinem DTN addieren sich beide je nach Startphase oder löschen sich
+  teilweise aus: E.PIANO (DTN 4 Cent, bei C4 eine Schwebung alle 1/(261,6 Hz × (2^(4/1200) − 1)) ≈ 1,7 s) maß
+  einmal −32,2 und einmal −37,2 dBFS. Deshalb E.PIANO mit DTN 0 (danach −28,4 dBFS). Die Flächen und Leads mit DTN
+  (SWEEP PAD 8, RESO LEAD 7, wie die alten STRING 12, WIRE 7) behalten das Schweben; das ist gewollt.
+- **Glyphen:** jede neue Glyphe liegt mindestens 143 (Summe der acht Unterschiede auf 0–255, wie GLYPHS sortiert)
+  von der nächsten ihrer Engine; unter den alten Presets ist der kleinste Abstand 38 (VA). Die GLYPHS-Reihenfolge ab
+  BRASS in `tests/sounds.txt` ist in Python nachgerechnet und stimmt mit dem Simulator überein (POLY KEYS, 144, jetzt
+  an vierter Stelle; MARIMBA an neunter).
+- **FM6:** die beschreibenden Werte der vier neuen Stimmen nach der Regel im Kopf von `eng_fm6.c` gerechnet
+  (ATK, DEC, REL = (99 − Rate des langsamsten klingenden Trägers) × 99 / 80, gerundet; SUS höchster L3 der Träger;
+  MOD lautester Modulator); dieselbe Rechnung ergibt für E.PIANO dessen Werte 5, 95, 48.
+- **Stimmen-Kosten je Preset** (Mac M3, `-O2`, `kl_render` über 4000 Blöcke, das Beste aus drei Läufen, 6 Stimmen
+  klingen; nur das Verhältnis zählt): FM6 E.PIANO 8,9 ms; PD BRASS 2,5, E.PIANO 3,2, STRING 3,8, SWEEP PAD 4,3,
+  CHIME 6,5 ms; ORGAN FULL ORGAN 5,2, CHAPEL 1,3 ms; VA SOFT PAD 2,8, POLY KEYS 3,4 ms. Je Stimme also PD BRASS
+  ~0,3, CHIME ~0,7 FM6-Stimmen; `COST` rechnet PD mit 0,5. **Unsicher** bis zur Messung auf dem Gerät (DECISIONS.md,
+  offene Punkte).
+- **Speicher** (`tools/device_check.py`): App 261 144 → 263 188 B (+2 044 B) von 581 564 B, RAM `.data` + `.bss`
+  75 624 → 75 656 B (+32 B: `npre` in `set` und `set_kept`, die Tabelle `MORE`), Pool unverändert 330 244 B.
+
 ## Neuheits-Check der Signatur-Ideen
 
 Klang-Atlas, Glyphen und Klang-Stammbaum wurden in den genannten Verzeichnissen nicht gefunden (Stand 26.10.).

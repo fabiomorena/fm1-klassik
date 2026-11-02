@@ -1,0 +1,493 @@
+# KLASSIK's presets (v1.0): 28 more, after the engines' own (VA 15, DRUMS 8 kits, ACID 12, FM6 12, PD 12, ORGAN 12),
+# in the host simulator, from the repository's root:
+#   python3 base/tools/build.py firmware/klassik --host
+#   firmware/klassik/build/host/klassik_host firmware/klassik/tests/presets.txt firmware/klassik/build/host
+# Each new one: its name, its values in the DSP, and its peak for a note (C4, 1 s) at MASTER 50 % within a few dB of
+# what it measured (docs/RESEARCH.md: Presets v1.0), so that none is silent or loud past its engine's others.
+wait 600
+listen
+# KLSB (v0.9) had fewer presets: its USER sounds (the one after VA's 12, PD's 6) are USER sounds still, after the
+# new presets (VA 15, PD 12); a part on a preset keeps it (part 2: DRUMS 909)
+spin PRESET 1
+wait 30
+tap EDIT
+wait 30
+spin K2 3
+wait 30
+expect v1 23
+tap OCT-
+wait 30
+spin K1 4
+wait 30
+expect engine 1
+tap EDIT
+wait 30
+spin K3 5
+wait 30
+expect v2 35
+tap OCT-
+wait 30
+tap SEL
+wait 30
+expect part 2
+spin PRESET 3
+wait 30
+said 909
+spin SELECT -1
+wait 30
+expect part 1
+tap SAVE
+wait 50
+said SAVED USER
+expect preset 12
+klsb
+reboot
+wait 600
+expect part 1
+expect engine 1
+expect preset 12
+expect user 1
+expect v2 35
+expect dsp2 35
+spin PRESET -1
+wait 30
+expect preset 11
+said CHIME
+spin PRESET 1
+wait 30
+spin K1 -4
+wait 30
+expect engine 0
+expect preset 15
+expect user 1
+expect v1 23
+spin PRESET -1
+wait 30
+expect preset 14
+said POLY KEYS
+tap SEL
+wait 30
+expect part 2
+expect preset 3
+spin SELECT -1
+wait 30
+# VA: its new ones, each a note
+spin PRESET -2
+wait 30
+said SYNC LEAD
+expect v0 5
+expect dsp0 5
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -33.5
+expect peak_db_max -26.5
+spin PRESET 1
+wait 30
+said FAT BASS
+expect v0 6
+expect mono 1
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -35
+expect peak_db_max -28
+spin PRESET 1
+wait 30
+said POLY KEYS
+expect v7 90
+expect mono 0
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -38.5
+expect peak_db_max -31.5
+wait 2000
+expect voices 0
+# DRUMS: its new ones, each a note
+spin K1 1
+wait 30
+spin PRESET 4
+wait 30
+said TECH
+expect v1 75
+expect dsp7 35
+peakreset
+key 7 down 100
+wait 30
+key 7 up
+wait 1000
+expect peak_db_min -27.5
+expect peak_db_max -20.5
+peakreset
+key 9 down 100
+wait 30
+key 9 up
+wait 1000
+expect peak_db_min -29.5
+expect peak_db_max -22.5
+peakreset
+key 13 down 100
+wait 30
+key 13 up
+wait 1000
+expect peak_db_min -31
+expect peak_db_max -24
+spin PRESET 1
+wait 30
+said BOOM
+expect v1 95
+expect dsp0 -2
+peakreset
+key 7 down 100
+wait 30
+key 7 up
+wait 1000
+expect peak_db_min -29.5
+expect peak_db_max -22.5
+peakreset
+key 9 down 100
+wait 30
+key 9 up
+wait 1000
+expect peak_db_min -31.5
+expect peak_db_max -24.5
+peakreset
+key 13 down 100
+wait 30
+key 13 up
+wait 1000
+expect peak_db_min -33
+expect peak_db_max -26
+spin PRESET 1
+wait 30
+said LOFI
+expect v7 40
+expect dsp6 25
+peakreset
+key 7 down 100
+wait 30
+key 7 up
+wait 1000
+expect peak_db_min -27.5
+expect peak_db_max -20.5
+peakreset
+key 9 down 100
+wait 30
+key 9 up
+wait 1000
+expect peak_db_min -30.5
+expect peak_db_max -23.5
+peakreset
+key 13 down 100
+wait 30
+key 13 up
+wait 1000
+expect peak_db_min -32.5
+expect peak_db_max -25.5
+spin PRESET 1
+wait 30
+said TIGHT
+expect v5 8
+expect dsp6 85
+peakreset
+key 7 down 100
+wait 30
+key 7 up
+wait 1000
+expect peak_db_min -31
+expect peak_db_max -24
+peakreset
+key 9 down 100
+wait 30
+key 9 up
+wait 1000
+expect peak_db_min -29
+expect peak_db_max -22
+peakreset
+key 13 down 100
+wait 30
+key 13 up
+wait 1000
+expect peak_db_min -36
+expect peak_db_max -29
+wait 2000
+expect voices 0
+# ACID: its new ones, each a note
+spin K1 1
+wait 30
+spin PRESET 8
+wait 30
+said DARK
+expect v1 8
+expect dsp1 8
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -34.5
+expect peak_db_max -27.5
+spin PRESET 1
+wait 30
+said OPEN
+expect v1 75
+expect dsp1 75
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -32.5
+expect peak_db_max -25.5
+spin PRESET 1
+wait 30
+said HOLLOW
+expect v6 50
+expect dsp6 50
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -36
+expect peak_db_max -29
+spin PRESET 1
+wait 30
+said CHIRP
+expect v3 99
+expect dsp3 99
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -31.5
+expect peak_db_max -24.5
+wait 2000
+expect voices 0
+# FM6: its new ones, each a note
+spin K1 1
+wait 30
+spin PRESET 8
+wait 30
+said HARPSI
+expect v1 5
+expect dsp1 5
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -35.5
+expect peak_db_max -28.5
+spin PRESET 1
+wait 30
+said VIBES
+expect v5 88
+expect dsp5 88
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -37
+expect peak_db_max -30
+spin PRESET 1
+wait 30
+said STRINGS
+expect v0 1
+expect dsp6 92
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -37
+expect peak_db_max -30
+spin PRESET 1
+wait 30
+said FLUTE
+expect v1 7
+expect dsp4 48
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -40
+expect peak_db_max -33
+wait 2000
+expect voices 0
+# PD: its new ones, each a note (from its USER sound, saved above)
+spin K1 1
+wait 30
+spin PRESET -6
+wait 30
+said BASS
+expect v6 60
+expect mono 1
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -31
+expect peak_db_max -24
+spin PRESET 1
+wait 30
+said E.PIANO
+expect v0 3
+expect dsp3 60
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -32.5
+expect peak_db_max -25.5
+spin PRESET 1
+wait 30
+said SWEEP PAD
+expect v0 7
+expect atk 75
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -35.5
+expect peak_db_max -28.5
+spin PRESET 1
+wait 30
+said RESO LEAD
+expect v7 25
+expect dsp0 5
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -34.5
+expect peak_db_max -27.5
+spin PRESET 1
+wait 30
+said FOLD BASS
+expect v7 70
+expect dsp7 70
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -31
+expect peak_db_max -24
+spin PRESET 1
+wait 30
+said CHIME
+expect v5 1
+expect dsp7 30
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -32
+expect peak_db_max -25
+wait 2000
+expect voices 0
+# ORGAN: its new ones, each a note
+spin K1 1
+wait 30
+spin PRESET 5
+wait 30
+said BLUES
+expect v0 5
+expect dsp7 2
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -35
+expect peak_db_max -28
+spin PRESET 1
+wait 30
+said BALLAD
+expect v1 3
+expect dsp3 -4
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -35
+expect peak_db_max -28
+spin PRESET 1
+wait 30
+said MELLOW
+expect v4 5
+expect dsp0 2
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -35.5
+expect peak_db_max -28.5
+spin PRESET 1
+wait 30
+said CHAPEL
+expect v0 12
+expect atk 25
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -39
+expect peak_db_max -32
+spin PRESET 1
+wait 30
+said REED
+expect v6 45
+expect dsp0 10
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -36
+expect peak_db_max -29
+spin PRESET 1
+wait 30
+said CLARINET
+expect v0 9
+expect dsp1 -2
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -37
+expect peak_db_max -30
+spin PRESET 1
+wait 30
+said BRIGHT
+expect v0 13
+expect dsp5 60
+peakreset
+key 7 down 100
+wait 1000
+key 7 up
+wait 1500
+expect peak_db_min -36
+expect peak_db_max -29
+wait 2000
+expect voices 0

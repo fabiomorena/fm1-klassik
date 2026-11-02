@@ -1,14 +1,16 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 fabiomorena */
-/* DRUMS: four kits in the style of Roland's TR-606, TR-707, TR-808 and TR-909, twelve instruments each, all
- * synthetic (no samples from the machines; the 707 and the 909's cymbals were samples, so theirs are likenesses).
+/* DRUMS: four kits in the style of Roland's TR-606, TR-707, TR-808 and TR-909 and four of KLASSIK's own on the same
+ * voices (TECH, BOOM, LOFI, TIGHT), twelve instruments each, all synthetic (no samples from the machines; the 707 and
+ * the 909's cymbals were samples, so theirs are likenesses).
  * The bass drums, snares and hats are Plaits' models (dsp/drums/drums.c, MIT); the toms, clap, rim shot and cowbell
  * are this file's. Included by engines.c after the other engines.
  *
  * One instrument a semitone, the same in every octave: C BD, C# RS, D SD, D# CP, E CB, F LT, F# CH, G MT, G# the
- * kit's own (606 and 909 RD ride, 707 TB tambourine, 808 CL claves), A HT, A# OH, B CY (BD, RS, SD, CP, CH and OH
- * where General MIDI has them). An instrument plays on one voice, as on the machines: hit again, it rings on from
- * where it is (engines.c same_note); CH ends a sounding OH; velocity is the accent; letting a key go does nothing.
+ * kit's own (606, 909 and TECH RD ride, 707 and LOFI TB tambourine, 808, BOOM and TIGHT CL claves), A HT, A# OH,
+ * B CY (BD, RS, SD, CP, CH and OH where General MIDI has them). An instrument plays on one voice, as on the
+ * machines: hit again, it rings on from where it is (engines.c same_note); CH ends a sounding OH; velocity is the
+ * accent; letting a key go does nothing.
  * Its own envelopes (ownenv): a voice ends after a few quiet blocks.
  *
  * The eight values (EDIT 1 DRUM: BD TUNE, BD DEC, SD TUNE, SNAPPY; EDIT 2 KIT: TOM TUNE, HAT DEC, HAT TONE, DRIVE)
@@ -71,6 +73,30 @@ static const drum_kit_t DRUM_KIT[] = {
         DI(DM_HAT, 500, 0, 0, 50, 90, 6), DI(DM_TOM, 140, 45, 45, 60, 80, 0), DI(DM_HAT, 520, 92, 92, 25, 70, 6),
         DI(DM_TOM, 190, 45, 45, 60, 80, 0), DI(DM_HAT, 500, 0, 0, 50, 85, 6), DI(DM_HAT, 460, 85, 85, 60, 75, 6),
     }},
+    {"RD", {    /* TECH: the 909's voices, a long bass drum and drive (KLASSIK's own, as the three after it) */
+        DI(DM_BD909, 50, 30, 0, 60, 99, 0), DI(DM_RIM, 520, 60, 12, 0, 60, 0), DI(DM_SD909, 200, 45, 40, 0, 85, 0),
+        DI(DM_CLAP, 1250, 50, 50, 0, 70, 0), DI(DM_COW, 560, 50, 30, 0, 50, 0), DI(DM_TOM, 105, 45, 40, 55, 80, 0),
+        DI(DM_HAT, 500, 0, 0, 50, 90, 6), DI(DM_TOM, 145, 45, 40, 55, 80, 0), DI(DM_HAT, 520, 92, 95, 25, 72, 6),
+        DI(DM_TOM, 195, 45, 40, 55, 80, 0), DI(DM_HAT, 500, 0, 0, 50, 85, 6), DI(DM_HAT, 470, 85, 90, 60, 75, 6),
+    }},
+    {"CL", {    /* BOOM: the 808's voices low and long, dark hats */
+        DI(DM_BD808, 48, 25, 0, 15, 99, 0), DI(DM_RIM, 440, 45, 20, 0, 55, 0), DI(DM_SD808, 165, 35, 40, 0, 85, 0),
+        DI(DM_CLAP, 1000, 40, 55, 0, 78, 0), DI(DM_COW, 520, 45, 40, 0, 50, 0), DI(DM_TOM, 85, 30, 60, 40, 85, 0),
+        DI(DM_HAT, 400, 0, 0, 15, 70, 0), DI(DM_TOM, 120, 30, 60, 40, 85, 0), DI(DM_RIM, 2400, 0, 25, 0, 58, 0),
+        DI(DM_TOM, 170, 30, 60, 40, 85, 0), DI(DM_HAT, 400, 0, 0, 15, 76, 0), DI(DM_HAT, 370, 75, 90, 45, 70, 0),
+    }},
+    {"TB", {    /* LOFI: 909-like drums, hats and cymbals of four steps, dull and driven */
+        DI(DM_BD909, 56, 25, 0, 35, 99, 0), DI(DM_RIM, 470, 50, 12, 0, 60, 0), DI(DM_SD909, 205, 25, 35, 0, 85, 0),
+        DI(DM_CLAP, 1100, 35, 40, 0, 75, 0), DI(DM_COW, 570, 45, 35, 0, 55, 0), DI(DM_TOM, 110, 35, 45, 45, 80, 0),
+        DI(DM_HAT, 450, 0, 0, 55, 70, 4), DI(DM_TOM, 150, 35, 45, 45, 80, 0), DI(DM_HAT, 580, 90, 55, 75, 76, 4),
+        DI(DM_TOM, 200, 35, 45, 45, 80, 0), DI(DM_HAT, 450, 0, 0, 55, 68, 4), DI(DM_HAT, 420, 80, 85, 65, 58, 4),
+    }},
+    {"CL", {    /* TIGHT: a short high 808 bass drum, a snappy 909 snare, short bright hats */
+        DI(DM_BD808, 62, 45, 0, 10, 99, 0), DI(DM_RIM, 540, 55, 12, 0, 60, 0), DI(DM_SD909, 235, 50, 30, 0, 85, 0),
+        DI(DM_CLAP, 1400, 50, 25, 0, 72, 0), DI(DM_COW, 620, 55, 25, 0, 52, 0), DI(DM_TOM, 130, 40, 30, 30, 80, 0),
+        DI(DM_HAT, 520, 0, 0, 30, 82, 0), DI(DM_TOM, 175, 40, 30, 30, 80, 0), DI(DM_RIM, 2700, 0, 20, 0, 58, 0),
+        DI(DM_TOM, 230, 40, 30, 30, 80, 0), DI(DM_HAT, 520, 0, 0, 30, 80, 0), DI(DM_HAT, 480, 85, 70, 40, 70, 0),
+    }},
 };
 #undef DI
 
@@ -79,7 +105,13 @@ static const preset_t DRUM_PRESETS[] = {
     {.name = "707", .e = {0, 35, 0, 55, 0, 30, 60, 0}, .env = {0, 0, 127, 0}},
     {.name = "808", .e = {0, 70, 0, 45, 0, 30, 50, 0}, .env = {0, 0, 127, 0}},
     {.name = "909", .e = {0, 50, 0, 65, 0, 35, 65, 10}, .env = {0, 0, 127, 0}},
+    {.name = "TECH", .e = {-2, 75, 0, 55, 0, 20, 70, 35}, .env = {0, 0, 127, 0}},
+    {.name = "BOOM", .e = {-2, 95, -2, 35, -2, 35, 40, 10}, .env = {0, 0, 127, 0}},
+    {.name = "LOFI", .e = {0, 40, -1, 45, 0, 25, 25, 40}, .env = {0, 0, 127, 0}},
+    {.name = "TIGHT", .e = {2, 20, 2, 70, 2, 8, 85, 0}, .env = {0, 0, 127, 0}},
 };
+_Static_assert(NELEM(DRUM_PRESETS) == NELEM(DRUM_KIT) && NELEM(DRUM_PRESETS) <= KL_MAXPRESET,
+               "DRUMS: a kit for each preset, at most KL_MAXPRESET");
 
 static const char *drum_name(int kit, int inst)
 {

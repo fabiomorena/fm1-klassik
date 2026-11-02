@@ -120,21 +120,41 @@ static int32_t lfo_gain(int part)                   /* AMP: Q15, 1 at the wave's
 #include "eng_fm6.c"
 #include "eng_drums.c"
 #include "eng_acid.c"
+#include "presets.c"
 
 static const engine_t *const ENG[KL_NENG] = {&ENG_ANALOG, &ENG_PHASE, &ENG_WHEEL, &ENG_FM6, &ENG_DRUMS, &ENG_ACID};
+static const struct {                               /* KLASSIK's presets after an engine's own (presets.c) */
+    const preset_t *p;
+    uint8_t n;
+} MORE[KL_NENG] = {
+    [KL_ANALOG] = {VA_MORE, NELEM(VA_MORE)},
+    [KL_PHASE] = {PD_MORE, NELEM(PD_MORE)},
+    [KL_WHEEL] = {ORGAN_MORE, NELEM(ORGAN_MORE)},
+};
 
 /* ------------------------------------------------------------ the app's questions --- */
 static int eng_ok(int e) { return e >= 0 && e < KL_NENG; }
 const char *kl_engine_name(int e) { return eng_ok(e) ? ENG[e]->name : ""; }
-int kl_presets(int e) { return eng_ok(e) ? ENG[e]->npresets : 0; }
+int kl_presets(int e) { return eng_ok(e) ? ENG[e]->npresets + MORE[e].n : 0; }
+
+static const preset_t *preset_at(int e, int p)      /* preset p of engine e: its own, then MORE's; 0 past them */
+{
+    int n;
+    if (!eng_ok(e) || p < 0)
+        return 0;
+    n = ENG[e]->npresets;
+    return p < n ? &ENG[e]->presets[p] : p < n + MORE[e].n ? &MORE[e].p[p - n] : 0;
+}
+
 const char *kl_preset_name(int e, int p)
 {
-    return eng_ok(e) && p >= 0 && p < ENG[e]->npresets ? ENG[e]->presets[p].name : "";
+    const preset_t *pr = preset_at(e, p);
+    return pr ? pr->name : "";
 }
 
 void kl_preset_values(int e, int p, int8_t v[KL_NV])
 {
-    const preset_t *pr = eng_ok(e) && p >= 0 && p < ENG[e]->npresets ? &ENG[e]->presets[p] : 0;
+    const preset_t *pr = preset_at(e, p);
     uint32_t k;
     for (k = 0; k < 8u; k++)
         v[k] = pr ? pr->e[k] : 0;
@@ -322,12 +342,11 @@ static void held_push(part_t *q, int note)
 static void load(int part, int e, int p)
 {
     part_t *q = &prt[part];
-    const engine_t *en = ENG[e];
     const preset_t *pr;
     track_t *t = &trk[part];
-    if (p < 0 || p >= en->npresets)                /* the engine and the preset asked for at different times */
+    if (p < 0 || p >= kl_presets(e))               /* the engine and the preset asked for at different times */
         p = 0;
-    pr = &en->presets[p];
+    pr = preset_at(e, p);
     if (!q->loaded || e != q->cur_e) {              /* another engine: from silence, WHEEL's own state cleared */
         memset(t, 0, sizeof *t);
         memset(&drw_t[part], 0, sizeof drw_t[part]);

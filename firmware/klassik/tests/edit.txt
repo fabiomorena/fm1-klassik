@@ -107,19 +107,19 @@ expect engine 0
 expect edited 1
 expect v1 33
 expect dsp1 33
-# SAVE: the edited sound becomes VA's USER sound (after its 12 presets), kept across a power cycle
+# SAVE: the edited sound becomes VA's USER sound (after its 15 presets), kept across a power cycle
 tap SAVE
 wait 30
 expect dirty 0
 expect edited 0
 expect user 1
-expect preset 12
+expect preset 15
 said SAVED USER
 shot user.png
 reboot
 wait 600
 expect engine 0
-expect preset 12
+expect preset 15
 expect user 1
 expect v1 33
 expect v4 64
@@ -133,7 +133,7 @@ expect v1 12
 expect dsp1 12
 spin PRESET -1
 wait 30
-expect preset 12
+expect preset 15
 expect v1 33
 expect dsp1 33
 # PRESET forgets an edit not saved
@@ -186,14 +186,14 @@ shot edit-organ-2.png
 tap SAVE
 wait 30
 expect user 1
-expect preset 5
+expect preset 12
 tap OCT-
 wait 30
 spin K1 -1
 wait 30
 expect engine 1
 expect user 1
-expect preset 6
+expect preset 12
 expect v2 40
 # a power cycle with a page open starts at the rack
 tap EDIT
@@ -204,11 +204,11 @@ wait 600
 expect edit 0
 expect dirty 0
 expect engine 2
-expect preset 5
+expect preset 12
 expect v1 -8
 spin K1 -1
 wait 30
-expect preset 6
+expect preset 12
 expect v2 40
 expect dsp2 40
 # HOME and a knob: back to its sound's value (PD's USER sound: DCW 40); the * and SAVE go when all are back (the

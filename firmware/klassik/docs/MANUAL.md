@@ -104,6 +104,19 @@ Strahlen verglichen). Die Reihenfolge bleibt, solange der Tab offen ist; sie gil
 man den Tab neu öffnet oder den Part wechselt. Mit `ALL` sind alle Engines dabei: Dort heißt ähnlich „sieht ähnlich
 aus“, nicht unbedingt „klingt ähnlich“, denn jede Engine hat ihre eigenen acht Parameter.
 
+Die Presets, in der Reihenfolge von PRESET (71; dahinter je Engine der USER-Sound, sobald es ihn gibt):
+
+| Engine | Presets |
+| --- | --- |
+| VA | SAW LEAD, SOFT PAD, SQR BASS, PWM STR, ACID, SINE KEY, RAVE, SUB BASS, PLUCK, BRASS, WIND, STRINGS, SYNC LEAD, FAT BASS, POLY KEYS |
+| DRUMS | 606, 707, 808, 909, TECH, BOOM, LOFI, TIGHT |
+| ACID | ACID LINE, SQUELCH, DEEP SAW, SQUARE, RUBBER, SCREAM, PLUCK, SLOW SLIDE, DARK, OPEN, HOLLOW, CHIRP |
+| FM6 | E.PIANO, GLASS BELL, FM BASS, BRASS, MARIMBA, FM ORGAN, WARM PAD, CLAV, HARPSI, VIBES, STRINGS, FLUTE |
+| PD | BRASS, ORGAN, STRING, RESO, BELL, WIRE, BASS, E.PIANO, SWEEP PAD, RESO LEAD, FOLD BASS, CHIME |
+| ORGAN | FULL ORGAN, JAZZ PERC, GOSPEL, SOFT FLUTE, ROCK DRIVE, BLUES, BALLAD, MELLOW, CHAPEL, REED, CLARINET, BRIGHT |
+
+Ein USER-Sound bleibt bei einem Update mit neuen Presets der USER-Sound: Er rückt hinter die neuen.
+
 ## Effekte
 
 Zwei Send-Effekte für alle Parts: **DELAY**, ein Ping-Pong-Delay im Takt, und **HALL**, der Hall von Mutable
@@ -343,14 +356,17 @@ ALGO und FEEDBK wirken sofort, auch auf gehaltene Töne; die anderen sechs ab de
 steckt in den Presets: Bei E.PIANO, CLAV und MARIMBA klingt ein härterer Anschlag heller, FM ORGAN reagiert nicht
 darauf.
 
-Presets: E.PIANO, GLASS BELL, FM BASS, BRASS, MARIMBA, FM ORGAN, WARM PAD, CLAV. Es sind eigene Klänge, keine
-Werksklänge des DX7. GLASS BELL und WARM PAD klingen nach dem Loslassen mehrere Sekunden nach.
+Presets: E.PIANO, GLASS BELL, FM BASS, BRASS, MARIMBA, FM ORGAN, WARM PAD, CLAV, HARPSI, VIBES, STRINGS, FLUTE. Es
+sind eigene Klänge, keine Werksklänge des DX7. GLASS BELL und WARM PAD klingen nach dem Loslassen mehrere Sekunden
+nach.
 
 ## DRUMS
 
-Vier Kits im Stil der Roland-Drumcomputer TR-606, TR-707, TR-808 und TR-909, mit PRESET gewählt („606“ … „909“).
-Alle Klänge werden berechnet, es sind keine Samples aus den Geräten. Der 707 und die Becken der 909 waren im
-Original Samples; ihre Kits hier sind Nachbildungen im Stil, nicht dieselben Klänge.
+Vier Kits im Stil der Roland-Drumcomputer TR-606, TR-707, TR-808 und TR-909 („606“ … „909“) und vier eigene auf
+denselben Klängen, mit PRESET gewählt: TECH (909-artig, lange Bassdrum, angezerrt), BOOM (808-artig, tief und lang),
+LOFI (Hats und Becken in groben Stufen, dumpf, angezerrt), TIGHT (kurz und hoch). Alle Klänge werden berechnet, es
+sind keine Samples aus den Geräten. Der 707 und die Becken der 909 waren im Original Samples; ihre Kits hier sind
+Nachbildungen im Stil, nicht dieselben Klänge.
 
 Jede Taste spielt ein Instrument, in jeder Oktave gleich:
 
@@ -359,8 +375,8 @@ Jede Taste spielt ein Instrument, in jeder Oktave gleich:
 | Instrument | BD | RS | SD | CP | CB | LT | CH | MT | je Kit | HT | OH | CY |
 
 BD Bassdrum, RS Rimshot, SD Snare, CP Clap, CB Cowbell, LT / MT / HT tiefe, mittlere, hohe Tom, CH geschlossene,
-OH offene Hi-Hat, CY Becken. G# hat jedes Kit für sich: 606 und 909 RD (Ride-Becken), 707 TB (Tamburin), 808 CL
-(Claves). BD, RS, SD, CP, CH und OH liegen dort, wo General MIDI sie hat: Ein Drum-Sequencer per
+OH offene Hi-Hat, CY Becken. G# hat jedes Kit für sich: 606, 909 und TECH RD (Ride-Becken), 707 und LOFI TB
+(Tamburin), 808, BOOM und TIGHT CL (Claves). BD, RS, SD, CP, CH und OH liegen dort, wo General MIDI sie hat: Ein Drum-Sequencer per
 MIDI trifft sie.
 
 - Der Anschlag ist der Accent: härter gespielt klingt lauter und kräftiger.
@@ -413,5 +429,6 @@ von Robin Schmidt (MIT, nach C portiert), mit dessen 303-Filter. Es klingt immer
 | VOICE | WAVE 0–99 | Wellenform: 0 Sägezahn, 99 Rechteck, dazwischen gemischt |
 | VOICE | SLIDE 0–99 | Gleitzeit beim Slide, in ms (Zeitkonstante); 60 ist die der 303, 0 springt ohne Gleiten |
 
-Presets: ACID LINE, SQUELCH, DEEP SAW, SQUARE, RUBBER, SCREAM, PLUCK, SLOW SLIDE. Für Bass die Oktave mit OCT−
-nach unten stellen. In hohen Lagen können SCREAM und SQUELCH mit Accent bei vollem MASTER übersteuern.
+Presets: ACID LINE, SQUELCH, DEEP SAW, SQUARE, RUBBER, SCREAM, PLUCK, SLOW SLIDE, DARK, OPEN, HOLLOW, CHIRP. Für
+Bass die Oktave mit OCT− nach unten stellen. In hohen Lagen können SCREAM und SQUELCH mit Accent bei vollem MASTER
+übersteuern.
