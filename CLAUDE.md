@@ -119,7 +119,9 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   Sound ist `SND(e, p)` = Engine × 16 + Preset (USER nach den Presets); `snd_list` liefert, was K1 zeigt
   (`ui.snd_all`: ALL in der Reihenfolge des Racks, sonst die Engine des Parts). PRESET dort `snd_step` (auf ALL
   wechselt die Engine des Parts), K1 `snd_engine` (ALL, dann wie `engine_step`), K2–K4 frei, kein HOME-Reset.
-  Gewählter Sound in der Mitte (7 Zeilen).
+  Gewählter Sound in der Mitte (7 Zeilen). Probenote (`pv_*`, seit 02.11.): `PV_WAIT` nach PRESET/K1 C in der Oktave
+  des Parts, `PV_HOLD` gehalten (DRUMS BD, SD, CH im Abstand `PV_GAP`), direkt über `kl_key` (nicht aufgenommen, kein
+  MIDI-Out), keine bei gehaltener Taste.
 - Looper (SEQ, PLAY, REC; `lp` in `app.c`): Noten, kein Klang; eine Schleife für alle Parts, je Part `lp_ev[p]`
   (2048 Ereignisse, Tick 16 Bit bei 192 je Viertel, höchstens 16 Takte), Rückgängig über `lp_undo` (eine Stufe je Part).
   Läuft im Audio-Interrupt: `app_render` in Schritten zu 32 Frames (`lp_step` vor jedem `kl_render`); die

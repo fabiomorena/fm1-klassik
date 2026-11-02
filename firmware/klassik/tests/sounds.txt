@@ -182,3 +182,95 @@ expect preset 10
 expect edited 0
 tap OCT-
 wait 30
+# a sound chosen on LIST plays a note to hear it by (02.11.): 100 ms after PRESET (or K1) came to rest C in the part's
+# octave, held 0.5 s (DRUMS: BD, SD, CH 150 ms apart); not on MIX, none while a key is held. hits: part 1's notes
+# so far (this file's keys and LIST's notes before)
+wait 3000
+expect voices 0
+tap GLO
+wait 30
+expect tab 1
+peakreset
+spin PRESET 1
+wait 400
+expect preset 11
+expect voices 0
+expect peak_db_max -80
+tap GLO
+wait 30
+tap GLO
+wait 30
+expect tab 3
+expect hits 7
+spin PRESET -1
+wait 50
+expect preset 10
+expect hits 7
+wait 100
+expect hits 8
+expect envst 1
+wait 500
+expect envst 3
+expect peak_db_min -45
+# turned fast: the notes before end at once, one note after the last
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 200
+expect preset 13
+expect hits 9
+# a key held: no note from LIST (the key is heard)
+key 7 down
+wait 30
+expect hits 10
+spin PRESET 1
+wait 300
+expect hits 10
+key 7 up
+wait 30
+# K1 to DRUMS: BD, SD, CH
+spin K1 1
+wait 30
+expect engine 4
+expect hits 10
+wait 600
+expect hits 13
+# the octave: C an octave up (ACID, a MONO sound: its note)
+tap OCT-
+wait 30
+spin K1 1
+wait 30
+expect engine 5
+tap OCT+
+wait 30
+expect octave 1
+tap GLO
+wait 30
+tap GLO
+wait 30
+tap GLO
+wait 30
+spin PRESET 1
+wait 200
+expect note 72
+# while the looper records: the key is taken, LIST's note is not (part 1 ACID, an octave up: C5)
+wait 1000
+tap REC
+wait 30
+expect rec 1
+wait 2100
+expect lstate 2
+key 7 down
+wait 100
+key 7 up
+wait 100
+spin PRESET 1
+wait 900
+tap REC
+wait 50
+expect rec 0
+expect ln0 72
+expect lv1 0
+expect lt2 -1

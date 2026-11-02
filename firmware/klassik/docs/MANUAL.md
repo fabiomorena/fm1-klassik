@@ -82,8 +82,11 @@ SAVE speichert den Mixer mit.
 ## Sounds: LIST
 
 Der Tab LIST hinter MIX und SEND (GLO, GLO, GLO; Kopfzeile `SOUNDS` und der gewählte Part) zeigt die Sounds, unter
-denen PRESET wählt. PRESET macht dort, was er überall macht: den nächsten Sound oder den vorigen, sofort
-zu hören (eine ungespeicherte Änderung geht dabei verloren). Die Tasten spielen weiter.
+denen PRESET wählt. PRESET macht dort, was er überall macht: den nächsten Sound oder den vorigen (eine ungespeicherte
+Änderung geht dabei verloren). Dazu spielt LIST eine Probenote, sobald PRESET kurz (0,1 s) ruht: C in der Oktave des
+Parts, eine halbe Sekunde gehalten, bei DRUMS Bassdrum, Snare und Hi-Hat nacheinander. Das gilt auch, wenn K1 die
+Engine wechselt. Hält man eine Taste, kommt keine Probenote (man hört den Sound ja schon); der Looper nimmt sie nicht
+auf, und sie geht nicht über MIDI hinaus. Die Tasten spielen weiter.
 
 | Regler | Was er tut |
 | --- | --- |

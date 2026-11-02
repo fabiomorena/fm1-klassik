@@ -66,15 +66,19 @@ Notizen:
 - [ ] B4 Part 1 im Rack auf VA `01 SAW LEAD` (K1, PRESET), GLO bis `LIST`: rechts oben `VA`, die Zeilen `01 SAW LEAD`
   … mit Glyphen in Orange, SAW LEAD umrandet, rechts darin eine gefüllte `1` (Part 1 spielt ihn). Fußzeile
   `K1 ENGINE VA`, `PRESET 01/15`, `OCTAVE`, `MASTER`.
-- [ ] B5 PRESET nach rechts: der Rahmen wandert zum nächsten Sound, er ist sofort zu hören (Taste anschlagen). Ab etwa
-  dem vierten Sound bleibt der Rahmen in der Mitte und die Liste rollt; rechts ein schmaler Balken zeigt, wo man ist.
-  Nach dem letzten (`15 POLY KEYS`) kommt wieder `01 SAW LEAD`.
+- [ ] B5 PRESET nach rechts: der Rahmen wandert zum nächsten Sound, und ohne Taste erklingt eine Probenote (C4,
+  eine halbe Sekunde, dann der Ausklang des Sounds). Ab etwa dem vierten Sound bleibt der Rahmen in der Mitte und die
+  Liste rollt; rechts ein schmaler Balken zeigt, wo man ist. Nach dem letzten (`15 POLY KEYS`) kommt wieder
+  `01 SAW LEAD`.
+- [ ] B5a Probenote: PRESET schnell über mehrere Sounds drehen: kein Notengewitter, nur der Sound, auf dem du
+  stehen bleibst, spielt (etwa 0,1 s danach). Eine Taste halten und PRESET drehen: keine Probenote, die Taste spielt
+  den neuen Sound. Auf MIX dreht PRESET ohne Probenote. Mit OCT+ im Rack eine Oktave höher: die Probenote auch.
 - [ ] B6 K1 nach links: `ALL`. Die Liste zeigt alle 71 Presets, Engine für Engine in der Reihenfolge des Racks (VA,
   DRUMS, ACID, FM6, PD, ORGAN; die Nummern fangen je Engine bei 01 an, die Farbe der Glyphe zeigt die Engine).
   `PRESET` in der Fußzeile zählt jetzt bis 71.
 - [ ] B7 Auf ALL PRESET weiterdrehen bis über `15 POLY KEYS` hinaus: danach kommt `01 606` (DRUMS). Der Part spielt
   jetzt DRUMS (Kopfzeile `1 DRUMS`, die Tasten spielen Drums), in der Zeile von 606 stehen `1` und `2` (Part 2 spielt
-  das Kit auch). PRESET zurück: wieder VA POLY KEYS.
+  das Kit auch). Die Probenote ist hier Bassdrum, Snare, Hi-Hat nacheinander. PRESET zurück: wieder VA POLY KEYS.
 - [ ] B8 K1 von ALL nach rechts: `VA` (die Engine des Parts), weiter nach rechts: `DRUMS`, wie K1 im Rack (der Part
   spielt DRUMS mit seinem Kit). K1 zurück nach links bis `VA`.
 - [ ] B9 K2, K3, K4 tun auf LIST nichts. HOME zeigt hier nicht `RESET TURN K1-K4` (es gibt nichts zurückzusetzen).

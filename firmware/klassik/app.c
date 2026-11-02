@@ -2405,6 +2405,50 @@ static int snd_index(const uint8_t *l, int n)        /* where the chosen part's 
     return 0;
 }
 
+/* a sound chosen on LIST plays a note to hear it by (Fabio, 02.11.): PV_WAIT after PRESET (or K1) came to rest, C in
+ * the part's octave held PV_HOLD (DRUMS: BD, SD, CH PV_GAP apart; ACID without accent), straight to the part's
+ * engine: not recorded, not sent; none while a key is held (that is heard already). The next choice ends it */
+#define PV_WAIT 100u
+#define PV_GAP 150u
+#define PV_HOLD 500u
+static struct {
+    uint32_t t0;                                     /* when the first goes on (plat_ms) */
+    uint8_t part, n, on, vel;                        /* the part; its notes; those gone on so far; their velocity */
+    uint8_t note[3];
+} pv;
+
+static void pv_stop(void)
+{
+    uint32_t i;
+    for (i = 0; i < pv.on; i++)
+        kl_key(pv.part, 0, pv.note[i], 0);
+    pv.n = pv.on = 0;
+}
+
+static void pv_start(void)                           /* the chosen part's sound, as LIST chose it */
+{
+    static const uint8_t DRUM_PC[3] = {0, 2, 6};     /* BD, SD, CH */
+    int e = eng_cur(), c = 60 + 12 * part_cur()->octave;
+    uint32_t i;
+    pv_stop();
+    if (ui.keys)
+        return;
+    pv.part = set.part;
+    pv.n = e == KL_DRUMS ? 3 : 1;
+    for (i = 0; i < pv.n; i++)
+        pv.note[i] = (uint8_t)(c + DRUM_PC[i]);
+    pv.vel = e == KL_ACID ? 64 : 100;                /* ACID: 100 or more accents */
+    pv.t0 = plat_ms() + PV_WAIT;
+}
+
+static void pv_tick(uint32_t now)                    /* main loop: its notes on and off in time */
+{
+    while (pv.on < pv.n && (int32_t)(now - (pv.t0 + pv.on * PV_GAP)) >= 0)
+        kl_key(pv.part, 1, pv.note[pv.on++], pv.vel);
+    if (pv.n && pv.on == pv.n && (int32_t)(now - (pv.t0 + (pv.n - 1u) * PV_GAP + PV_HOLD)) >= 0)
+        pv_stop();
+}
+
 static void snd_step(int32_t d)                      /* PRESET on LIST: the next sound shown, or the one
                                                      * before; on ALL another engine's too (the part plays it) */
 {
@@ -2423,7 +2467,9 @@ static void snd_step(int32_t d)                      /* PRESET on LIST: the next
     ps->preset[e] = (uint8_t)(s & 15);
     sound_load(set.part, e);
     set_dirty = 1;
+    pv_stop();                                       /* the note before: off with the sound it was */
     sound_select(set.part);
+    pv_start();
     ui.redraw = 1;
     text_cat(t, snd_name(s));
     announce(t);
@@ -2438,7 +2484,9 @@ static void snd_engine(int32_t d)                    /* K1 on LIST: ALL, then th
     if (ui.snd_all) {
         announce("ENGINE ALL");
     } else if (pos - 1 != engine_pos(eng_cur())) {
+        pv_stop();
         engine_step(pos - 1 - engine_pos(eng_cur()));   /* as K1 in the rack */
+        pv_start();
     } else {                                         /* from ALL to the engine playing */
         char t[16] = "ENGINE ";
         text_cat(t, TILES[TILE_OF[eng_cur()]].name);
@@ -5380,6 +5428,7 @@ void app_frame(void)
     uint32_t hits;
     input();
     speak();
+    pv_tick(now);                                    /* LIST's note to hear a sound by */
     if (lp.tempo != fx_tempo)                        /* DELAY's time follows TEMPO */
         fx_apply();
     lfo_follow();                                    /* the LFOs too, and each part's engine */
