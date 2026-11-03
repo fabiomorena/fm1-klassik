@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Das Delay
+wait 600
+master 4096
+tap GLO
+wait 30
+tap GLO
+wait 30
+spin K1 60
+wait 30
+expect send0 60
+tap OCT-
+wait 30
+## **FX** öffnet die Effekt-Seite auf DELAY. Part 1 schickt 60 an das Delay (eingestellt im Mixer, Tab SEND).
+tap FX
+wait 30
+expect fx 1
+expect tab 1
+## Ein kurzer Ton: Echos im Abstand 1/8. (bei 120 BPM 375 ms), zuerst links, dann rechts.
+#> hear
+expect dlyd >16500
+expect dlyd <16600
+key 7 down
+wait 150
+key 7 up
+wait 1650
+peakreset
+wait 700
+expect peak_db_max <-55
+wait 150
+## **K2 FDBK** auf 70 %: mehr Echos, sie klingen länger nach.
+#> hear
+spin K2 35
+wait 30
+key 7 down
+wait 150
+key 7 up
+wait 1650
+peakreset
+wait 700
+expect peak_db_max >-50
+wait 1150
+## **K1 TIME** auf 1/16: Die Echos rücken enger zusammen (125 ms).
+#> hear
+spin K1 -5
+wait 60
+expect dlyd >5500
+expect dlyd <5530
+key 7 down
+wait 150
+key 7 up
+wait 2500

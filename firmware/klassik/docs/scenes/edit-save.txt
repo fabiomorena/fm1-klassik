@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Einen Sound ändern und speichern
+wait 600
+master 4096
+## **EDIT** öffnet die erste Seite von Part 1 (VA, SAW LEAD): OSC. Die vier Parameter auf K1–K4 stehen an den
+## Strahlen der Glyphe.
+tap EDIT
+wait 30
+expect edit 1
+expect page 1
+expect edited 0
+## **K1 WAVE** auf SQR: Klang und Glyphe ändern sich sofort. Der Name bekommt ein `*`, SAVE leuchtet, und eine
+## Marke im Balken zeigt, wo der Sound WAVE hat.
+#> hear
+spin K1 1
+wait 30
+expect v0 1
+expect edited 1
+expect dirty 1
+key 7 down
+wait 500
+key 7 up
+wait 500
+## **HOME** halten und **K1** drehen: WAVE springt zurück auf SAW, `*` und Marke sind weg.
+press HOME
+wait 30
+spin K1 1
+wait 30
+release HOME
+wait 30
+expect v0 0
+expect edited 0
+## **K3 MIX** ändern und **SAVE**: Der geänderte Sound wird zum USER-Sound von VA und bleibt über den Neustart.
+spin K3 20
+wait 30
+expect edited 1
+tap SAVE
+wait 100
+expect user 1
+expect dirty 0

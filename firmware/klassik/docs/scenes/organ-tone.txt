@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Registrierung und Rotor
+wait 600
+master 4096
+## **SELECT** fünf nach rechts: Part 6 (ORGAN, FULL ORGAN). **EDIT** öffnet BARS. Ein Akkord, alle Zugriegel.
+#> hear
+spin SELECT 5
+wait 30
+expect part 6
+expect engine 2
+tap EDIT
+wait 30
+key 7 down
+key 11 down
+key 14 down
+wait 1200
+key 7 up
+key 11 up
+key 14 up
+wait 400
+## **K1 REG** ganz nach links: FLUTE, nur der 8'-Zugriegel, eine weiche Flöte.
+#> hear
+spin K1 -15
+wait 30
+expect v0 0
+key 7 down
+key 11 down
+key 14 down
+wait 1200
+key 7 up
+key 11 up
+key 14 up
+wait 400
+## **EDIT**: die Seite TONE. **K4 ROTR** auf FAST: Der Rotor läuft hoch, der Ton schwebt.
+#> hear
+tap EDIT
+wait 30
+expect page 2
+spin K4 2
+wait 30
+expect v7 2
+key 7 down
+key 11 down
+key 14 down
+wait 2500
+key 7 up
+key 11 up
+key 14 up
+wait 400

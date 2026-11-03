@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: DCW, die Phasenverzerrung
+wait 600
+master 4096
+## **SELECT** vier nach rechts: Part 5 (PD, BRASS). **EDIT** öffnet die Seite PHS.
+#> hear
+spin SELECT 4
+wait 30
+expect part 5
+expect engine 1
+tap EDIT
+wait 30
+expect page 1
+key 7 down
+wait 900
+key 7 up
+wait 500
+## **K3 DCW** auf 0: kaum Verzerrung, fast ein Sinus, weich.
+#> hear
+spin K3 -127
+wait 30
+expect v2 0
+key 7 down
+wait 900
+key 7 up
+wait 500
+## **K3 DCW** ganz auf: viel Verzerrung, hell und scharf.
+#> hear
+spin K3 127
+wait 30
+expect v2 127
+key 7 down
+wait 900
+key 7 up
+wait 500
+## **K1 WAVE** auf RSAW: eine Resonanz-Welle, sie klingt wie ein Filter mit Resonanz.
+#> hear
+spin K1 -7
+wait 30
+spin K1 5
+wait 30
+expect v0 5
+key 7 down
+wait 900
+key 7 up
+wait 500

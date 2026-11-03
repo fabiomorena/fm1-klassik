@@ -33,6 +33,7 @@ int app_expect(const char *what, int *got);
 #define APP_HOST_REBOOT
 void app_host_reboot(void);
 /* the simulator's own commands: klsb, klsa, kls8, kls7 (the settings saved as KLSB, KLSA, KLS8 or v0.5's KLS7 would
- * have them, the USER sounds after the presets KLSB had; KLS8, KLS7 four parts: for the takeover's check) */
+ * have them, the USER sounds after the presets KLSB had; KLS8, KLS7 four parts: for the takeover's check); labels
+ * (every name the screen shows, a line "label KIND TEXT": the manual's glossary is checked against them) */
 #define APP_HOST_CMD
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d);

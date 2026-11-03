@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Das Filter von VA
+wait 600
+master 4096
+## **EDIT** zweimal: die Seite FLT von Part 1 (VA, SAW LEAD) mit der Filterkurve. Ein Ton, wie das Preset klingt.
+#> hear
+tap EDIT
+wait 30
+tap EDIT
+wait 30
+expect page 2
+expect v4 90
+key 7 down
+wait 900
+key 7 up
+wait 500
+## **K1 CUT** weit zu: Das Filter nimmt die Höhen weg, der Ton wird dunkel und dumpf.
+#> hear
+spin K1 -60
+wait 30
+expect v4 30
+key 7 down
+wait 900
+key 7 up
+wait 500
+## **K2 RES** hoch: Die Grenzfrequenz wird betont, der Ton pfeift; die Kurve bekommt eine Spitze.
+#> hear
+spin K2 70
+wait 30
+expect v5 100
+key 7 down
+wait 900
+key 7 up
+wait 500

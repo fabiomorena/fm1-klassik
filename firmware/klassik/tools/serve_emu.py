@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (C) 2026 fabiomorena
-"""KLASSIK's browser emulator on http://localhost:8000, as `python3 -m http.server` serves it, but never cached.
+"""KLASSIK's browser emulator on http://localhost:8000, as `python3 -m http.server` serves it, but never cached; the
+manual (tools/gen_manual.py, build/manual) on http://localhost:8000/manual/.
 
   python3 firmware/klassik/tools/serve_emu.py [PORT]
 
@@ -15,12 +16,20 @@ import sys
 from pathlib import Path
 
 EMU = Path(__file__).resolve().parents[1] / "build" / "emu"
+MANUAL = Path(__file__).resolve().parents[1] / "build" / "manual"
 
 
 class NoCache(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    def translate_path(self, path):                 # /manual/... from build/manual, the rest from build/emu
+        p = path.split("?", 1)[0].split("#", 1)[0]
+        if p == "/manual" or p.startswith("/manual/"):
+            rest = p[len("/manual"):] or "/"
+            return str(MANUAL) + super().translate_path(rest)[len(self.directory):]
+        return super().translate_path(path)
 
 
 def main():

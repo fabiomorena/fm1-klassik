@@ -1,4 +1,5 @@
-# Every push: the host simulator built and every one of KLASSIK's tests run; the screenshots kept as an artifact.
+# Every push: the host simulator built and every one of KLASSIK's tests run; the screenshots and the manual kept as
+# artifacts.
 name: host
 on: [push, pull_request]
 jobs:
@@ -15,6 +16,12 @@ jobs:
             echo "== $t"
             firmware/klassik/build/host/klassik_host "$t" firmware/klassik/build/host || exit 1
           done
+      # the manual: its scenes run as tests, and every name on the screen needs its glossary entry (--strict)
+      - run: python3 firmware/klassik/tools/gen_manual.py --strict
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manual
+          path: firmware/klassik/build/manual/
       - uses: actions/upload-artifact@v4
         with:
           name: screens

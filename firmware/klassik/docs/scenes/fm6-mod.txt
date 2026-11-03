@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Algorithmus und Modulation
+wait 600
+master 4096
+## **SELECT** drei nach rechts: Part 4 (FM6, E.PIANO). **EDIT** öffnet ALGO: unten die Träger, darüber die
+## Modulatoren.
+#> hear
+spin SELECT 3
+wait 30
+expect part 4
+expect engine 3
+tap EDIT
+wait 30
+expect page 1
+key 7 down
+wait 900
+key 7 up
+wait 700
+## **K3 MOD** höher: Die Modulatoren werden lauter (Balken unten), ab der nächsten Note klingt es heller.
+#> hear
+spin K3 30
+wait 30
+expect edited 1
+key 7 down
+wait 900
+key 7 up
+wait 700
+## **K1 ALGO** weiter: eine andere Schaltung, das Bild zeigt sie; ALGO wirkt sofort.
+#> hear
+spin K1 4
+wait 30
+key 7 down
+wait 900
+key 7 up
+wait 700

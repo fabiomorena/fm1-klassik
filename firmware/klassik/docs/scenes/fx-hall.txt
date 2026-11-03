@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Der Hall
+wait 600
+master 4096
+tap GLO
+wait 30
+tap GLO
+wait 30
+spin K2 100
+wait 30
+expect send1 100
+tap OCT-
+wait 30
+## **FX** zweimal: der Tab HALL. Part 1 schickt 100 an den Hall.
+tap FX
+wait 30
+tap FX
+wait 30
+expect fx 1
+expect tab 2
+## Ein kurzer Ton mit dem Hall am Anfang (DECAY 50 %, etwa 2 s).
+#> hear
+key 7 down
+wait 150
+key 7 up
+wait 1850
+peakreset
+wait 1000
+expect peak_db_max <-45
+## **K2 DECAY** auf 90 %: ein großer Raum, der Ton klingt viel länger nach.
+#> hear
+spin K2 40
+wait 30
+key 7 down
+wait 150
+key 7 up
+wait 1850
+peakreset
+wait 1000
+expect peak_db_max >-40
+wait 1650
+## **K1 PRE** auf 100 ms: Die Lücke vor dem Hall wird länger; das Bild zeigt sie.
+spin K1 80
+wait 30

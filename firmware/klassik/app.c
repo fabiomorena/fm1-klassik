@@ -3739,18 +3739,20 @@ static void draw_row(int32_t row)                    /* three tiles, 93 rows hig
     cv_blit(0, 22 + row * 93);
 }
 
+static const char *const RACK_LABEL[4] = {"K1 ENGINE", "PRESET", "OCTAVE", "MASTER"};
+static const char *const STEP_LABEL[4] = {"K1 BAR", "K2 NOTE", "K3 VEL", "K4 LEN"};
+
 static void footer_rack(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
 {
     char t[8];
     int e = eng_cur();
     int32_t n = sound_count(e), p = part_cur()->preset[e];
     uint32_t pct = plat_master() * 100u / 4096u;
-    static const char *const LAB[4] = {"K1 ENGINE", "PRESET", "OCTAVE", "MASTER"};
     int32_t i;
     for (i = 0; i < 4; i++) {
         lab[i][0] = v[i][0] = 0;
         mark[i] = -1;
-        text_cat(lab[i], LAB[i]);
+        text_cat(lab[i], RACK_LABEL[i]);
     }
     text_cat(v[0], TILES[TILE_OF[e]].name);
     frac[0] = engine_pos(e) * 256 / (KL_NENG - 1);
@@ -3964,7 +3966,6 @@ static void footer_loop(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
  * the part's octave or BD, 100, 1/16) */
 static void footer_step(char lab[4][16], char v[4][12], int32_t frac[4], int32_t mark[4])
 {
-    static const char *const LAB[4] = {"K1 BAR", "K2 NOTE", "K3 VEL", "K4 LEN"};
     int p = set.part, drums = eng_cur() == KL_DRUMS, s0 = step_edit_first();
     int note = stp.note[p], vel = stp.vel[p], len = stp.len[p], home = step_home_note();
     int32_t i, bars = (int32_t)step_bars();
@@ -3973,7 +3974,7 @@ static void footer_step(char lab[4][16], char v[4][12], int32_t frac[4], int32_t
         step_get(s0, &note, &vel, &len);
     for (i = 0; i < 4; i++) {
         lab[i][0] = v[i][0] = 0;
-        text_cat(lab[i], i == 1 && drums ? "K2 INST" : LAB[i]);
+        text_cat(lab[i], i == 1 && drums ? "K2 INST" : STEP_LABEL[i]);
     }
     int_text(ui.bar + 1, v[0]);
     text_cat(v[0], "/");
@@ -5546,6 +5547,8 @@ void app_frame(void)
 }
 
 #ifdef PLAT_HOST
+#include <stdio.h>                                  /* labels (app_host_cmd) */
+
 void app_host_reboot(void)
 {
     uint32_t i;
@@ -5570,9 +5573,91 @@ static uint8_t preset_then(const part_set_t *ps, uint32_t e)   /* a part's sound
     return ps->preset[e] >= kl_presets((int)e) ? KLSB_NPRE[e] : ps->preset[e];
 }
 
+static void label_out(const char *kind, const char *s)   /* labels: a line "label KIND TEXT" ("": none) */
+{
+    if (s && *s)
+        printf("label %s %s\n", kind, s);
+}
+
+static void labels_out(const char *kind, const char *const *s, uint32_t n)
+{
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        label_out(kind, s[i]);
+}
+
+/* every name the screen shows for the controls, the pages and their values, for the manual's glossary
+ * (tools/gen_manual.py checks each has an entry). Kinds: button, encoder, engine, tab, page, param (K1..K4's on the
+ * pages, with "K1 " where the footer shows it), value (what a parameter is set to), mark (in the header or a strip).
+ * A new page, tab or list of names comes in here too */
+static void labels_print(void)
+{
+    static const char *const ENC[8] = {"SELECT", "ALGO", "PRESET", "K1", "K2", "K3", "K4", "MASTER"};
+    static const char *const MARK[6] = {"ACC", "LIM", "USER", "ALL", "PARTS", "K2 INST"};
+    int e, p, k, i;
+    labels_out("button", BTN_NAME, NB);
+    labels_out("encoder", ENC, 8);
+    for (i = 0; i < 6; i++) {
+        label_out("engine", TILES[i].name);
+        label_out("engine", TILES[i].sub);
+    }
+    for (e = 0; e < KL_NENG; e++)
+        label_out("engine", kl_engine_name(e));
+    labels_out("tab", TABS_LOOP, 2);
+    labels_out("tab", TABS_MIX, GT_N);
+    labels_out("tab", TABS_FX, 2);
+    labels_out("tab", TABS_LFO, 2);
+    labels_out("tab", TABS_ARP, 2);
+    for (e = 0; e < KL_NENG; e++) {
+        for (i = 0; i < kl_pages(e); i++)
+            label_out("page", kl_page_title(e, i));
+        for (p = 0; p < kl_presets(e); p++) {        /* a name may depend on another value: each preset's */
+            int8_t v[KL_NV];
+            kl_preset_values(e, p, v);
+            for (k = 0; k < KL_NV; k++) {
+                kl_param_t d;
+                kl_param(e, k, v, &d);
+                label_out("param", d.label);
+                if (d.fmt == KL_ENUM)
+                    for (i = 0; i <= d.max - d.min; i++)
+                        label_out("value", d.names[i]);
+            }
+        }
+    }
+    for (p = 0; p < kl_presets(KL_DRUMS); p++)
+        for (i = 0; i < 12; i++)
+            label_out("value", kl_drum_name(p, i));
+    labels_out("param", RACK_LABEL, 4);
+    labels_out("param", MIX_LABEL, 6);
+    labels_out("param", FX_LABEL[0], 4);
+    labels_out("param", FX_LABEL[1], 4);
+    labels_out("param", LOOP_LABEL, 4);
+    labels_out("param", LFO_LABEL[0], 4);
+    labels_out("param", LFO_LABEL[1], 4);
+    labels_out("param", ARP_LABEL, 4);
+    labels_out("param", STEP_LABEL, 4);
+    labels_out("value", DLY_NAME, 9);
+    labels_out("value", QUANT_NAME, 5);
+    labels_out("value", CLICK_NAME, 3);
+    labels_out("value", LFO_SYNC_NAME, LFO_NSYNC);
+    labels_out("value", LFO_WAVE_NAME, KL_NWAVE);
+    labels_out("value", LFO_DEST_NAME, KL_LFO_NDEST);
+    for (p = 0; p < KL_NPART; p++)
+        for (i = 0; i < KL_LFO_NDEST; i++)
+            label_out("value", lfo_dest_short(p, i));
+    labels_out("value", ARP_MODE_NAME, ARP_NMODE);
+    labels_out("value", ARP_RATE_NAME, ARP_NRATE);
+    labels_out("value", LEN_NAME, 9);
+    labels_out("mark", MARK, 6);
+}
+
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
 {
     (void)a, (void)b, (void)c, (void)d;
+    if (!strcmp(cmd, "labels")) {
+        labels_print();
+        return 1;
+    }
     if (!strcmp(cmd, "klsb")) {                      /* the settings into the store as KLSB (no preset counts: as many
                                                      * presets as KLSB_NPRE) */
         settingsB_t old;

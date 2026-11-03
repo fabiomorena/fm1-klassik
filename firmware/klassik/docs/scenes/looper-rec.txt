@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Die erste Aufnahme
+wait 600
+master 4096
+## **SEQ** öffnet die Looper-Seite, Tab LOOP: sechs leere Spuren, LENGTH AUTO.
+tap SEQ
+wait 30
+expect loop 1
+expect bars 0
+## **REC**: ein Takt Vorzähler mit Klick (120 BPM, 2 s); oben zählen die Schläge herunter.
+tap REC
+wait 300
+expect lstate 1
+## Nach dem Vorzähler läuft die Aufnahme: vier Töne, einer je Schlag (C, E, G, C).
+#> hear
+wait 1690
+expect lstate 2
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 11 down
+wait 300
+key 11 up
+wait 200
+key 14 down
+wait 300
+key 14 up
+wait 200
+key 19 down
+wait 300
+key 19 up
+wait 100
+## **REC** kurz vor dem Ende des Takts: Die erste Aufnahme ist fertig, die Schleife ist einen Takt lang und spielt
+## weiter; Part 1 hat jetzt Noten in seiner Spur.
+#> hear
+tap REC
+wait 30
+expect bars 1
+expect lstate 2
+expect rec 0
+wait 2000
+## **HOME + REC** nimmt die Aufnahme zurück (`UNDO 1 VA`). Es war die erste und einzige: die Schleife ist wieder
+## leer und gestoppt.
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+expect bars 0
+expect lstate 0
+## **HOME + REC** noch einmal: `REDO`, die Noten sind wieder da.
+press HOME
+wait 30
+tap REC
+wait 30
+release HOME
+wait 30
+expect bars 1

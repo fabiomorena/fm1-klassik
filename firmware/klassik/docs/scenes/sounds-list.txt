@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Sounds wählen und probehören
+wait 600
+master 4096
+## **GLO** dreimal: der Tab LIST mit den Sounds von VA; SAW LEAD, der Sound von Part 1, steht umrandet in der Mitte.
+tap GLO
+wait 30
+tap GLO
+wait 30
+tap GLO
+wait 30
+expect tab 3
+expect sndall 0
+## **PRESET** eins weiter: SOFT PAD. Nach 0,1 s Ruhe spielt die Probenote, C in der Oktave des Parts.
+#> hear
+spin PRESET 1
+wait 30
+expect preset 1
+wait 1600
+## **K1** nach links: `ALL`, alle 71 Sounds aller Engines, in der Reihenfolge des Racks.
+spin K1 -1
+wait 30
+expect sndall 1
+## **K1** zwei nach rechts: VA, dann DRUMS. Part 1 spielt jetzt DRUMS, die Probenote ist Bassdrum, Snare, Hi-Hat.
+#> hear
+spin K1 2
+wait 30
+expect sndall 0
+expect engine 4
+wait 1400

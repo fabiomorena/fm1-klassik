@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Hall und Delay dazugeben (Sends)
+wait 600
+master 4096
+tap GLO
+wait 30
+tap GLO
+wait 30
+expect tab 2
+## Tab **SEND**, Part 1 (VA) gewählt. Ein kurzer Ton, ganz trocken: Beide Sends stehen auf 0.
+#> hear
+key 7 down
+wait 200
+key 7 up
+wait 400
+peakreset
+wait 1400
+expect peak_db_max <-90
+## **K2 HALL** ganz auf (100): Part 1 schickt sein Signal zusätzlich an den Hall. Derselbe kurze Ton klingt jetzt
+## im Raum nach.
+#> hear
+spin K2 100
+wait 30
+expect send1 100
+key 7 down
+wait 200
+key 7 up
+wait 400
+peakreset
+wait 2400
+expect peak_db_max >-60
+## **HOME** halten und **K2** drehen: HALL springt zurück auf 0.
+press HOME
+wait 30
+spin K2 1
+wait 30
+release HOME
+wait 30
+expect send1 0
+## **K1 DELAY** auf 50: Jetzt kommen Echos, abwechselnd links und rechts (Ping-Pong), jedes leiser als das davor.
+#> hear
+spin K1 50
+wait 30
+expect send0 50
+key 7 down
+wait 200
+key 7 up
+wait 2800

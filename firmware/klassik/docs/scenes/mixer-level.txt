@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+# Levels at full MASTER: one voice of SAW LEAD peaks near -19.5 dBFS at 0 dB (tests/mixer.txt: -31.5 at MASTER 50 %)
+#: Lautstärke und Panorama eines Parts
+wait 600
+master 4096
+tap GLO
+wait 30
+## Der Mixer ist offen, Part 1 (VA, SAW LEAD) gewählt. Eine Taste spielt ihn bei 0 dB.
+#> hear
+peakreset
+key 7 down
+wait 600
+key 7 up
+wait 500
+expect peak_db_max -18
+expect peak_db_min -21
+## **K1 LEVEL** nach links auf −12 dB: derselbe Ton, deutlich leiser. Der Fader im Zug geht mit nach unten.
+#> hear
+spin K1 -12
+wait 30
+expect level -12
+peakreset
+key 7 down
+wait 600
+key 7 up
+wait 500
+expect peak_db_max -30
+expect peak_db_min -33
+## **K2 PAN** ganz nach links (`L50`): Jetzt ist der rechte Kanal still, der linke spielt weiter (mit Kopfhörer
+## gut zu hören).
+#> hear
+spin K2 -50
+wait 30
+expect pan -50
+expect outl >-1
+expect outr >-1
+key 7 down
+wait 600
+key 7 up
+wait 500
+expect outl >10000
+expect outr 0
+## **HOME** halten und **K1** drehen: LEVEL springt zurück auf 0 dB. PAN steht noch links; solange ein Regler
+## nicht auf seinem Grundwert steht, zeigt eine helle Marke im Balken der Fußzeile, wo er ist (bei K2 die Mitte).
+press HOME
+wait 30
+spin K1 1
+wait 30
+expect level 0
+## **HOME** weiter halten und **K2** drehen: PAN springt in die Mitte (`C`). Dann HOME loslassen.
+spin K2 1
+wait 30
+release HOME
+wait 30
+expect pan 0

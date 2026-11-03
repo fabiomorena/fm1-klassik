@@ -15,6 +15,9 @@ Nie behaupten, etwas sei auf Hardware getestet.
 - Rechnungen (Speicher, Pegel, Zeiten) mit Rechenweg zeigen.
 - Neue Erkenntnisse mit Quelle in `docs/RESEARCH.md`, neue Entscheidungen mit Datum in `docs/DECISIONS.md` eintragen.
 - Design-Änderungen zuerst im passenden Mockup in `docs/design/` (Fabio sieht sie über `docs/design/index.html`), dann im Code.
+- Das Handbuch wächst mit: Ändert sich Bedienung, Anzeige oder Klang, ändern sich im selben Commit `MANUAL.md`, die
+  betroffenen Szenen (`docs/scenes/`) und `GLOSSARY.md`; neue Namen auf dem Display (neue Seite, Tab, Liste) kommen in
+  `labels_print` (`app.c`). Danach `gen_manual.py` laufen lassen.
 
 ## Aufbau
 | Pfad | Was |
@@ -39,6 +42,10 @@ Nie behaupten, etwas sei auf Hardware getestet.
 | `firmware/klassik/dsp/hall/` | Rings' Hall nach C portiert (o2-Einheit, MIT, `float`, `FxEngine<32768, 16 Bit>`); Änderungen im Dateikopf von `hall.c` |
 | `firmware/klassik/fm1.toml` | Build-Einstellungen (o2: `engines.c`, `msfa.c`, `drums.c`, `acid.c`, `fx.c`, `hall.c`; include; gen für `fe_tables.h`, `fm6_tables.h` und `acid_tables.h`) |
 | `firmware/klassik/tests/*.txt` | Host-Tests (Syntax: Kopfkommentar von `base/host/plat_host.c`; eigene Prüfungen über `app_expect`) |
+| `firmware/klassik/docs/MANUAL.md`, `GLOSSARY.md` | Handbuch: Kapitel (`## ` Kapitel, darunter `<!-- chapter: Gruppe \| Symbol \| Farbe -->`, erster kurzer Absatz = Kurztext, `### ` = Karte, `<!-- scene: NAME -->` = Szene; Stichpunkte statt Fließtext, Format im Kopf von `tools/gen_manual.py`) und Glossar (`## Gruppe`, `### Begriff`, Format im Dateikopf) |
+| `firmware/klassik/docs/scenes/*.txt` | Szenen des Handbuchs: Host-Skripte in Schritten (`#: Titel`, `## Text`, `#> hear`), laufen als Tests |
+| `firmware/klassik/docs/manual/` | Seite des Handbuchs (`manual.css`, `manual.js`: Bilderfolgen, Bedienfeld, Suche, Glossar) und Bilder zum Text (MPL-2.0) |
+| `firmware/klassik/tools/gen_manual.py` | baut das Handbuch nach `build/manual/` (MPL-2.0): Szenen im Simulator, Glossar gegen den Host-Befehl `labels` (`labels_print` in `app.c`) |
 | `docs/CONCEPT.md` | Konzept und Fahrplan |
 | `docs/design/` | Mockups aller Screens (HTML + PNG, Übersicht `index.html`, siehe `docs/design/README.md`), **maßgebliche Design-Quelle** |
 | `docs/RESEARCH.md` | Recherche mit Quellen: Hardware, Firmwares, Engines, Lizenzen, Entwicklungsumgebung |
@@ -62,6 +69,8 @@ for t in firmware/klassik/tests/*.txt; do firmware/klassik/build/host/klassik_ho
   `JIELI_TOOLCHAIN=~/.jieli/toolchain .venv/bin/python firmware/klassik/tools/device_check.py`; alle Zeilen „ok“,
   Exit-Code 0. Zeigt App-Größe, RAM und Pool (Stand: RESEARCH.md „Geräte-Build“). Das Paket
   (`base/tools/build.py firmware/klassik`) braucht das AC79-SDK: noch nicht geladen (DECISIONS.md).
+- Handbuch (nach dem Host-Build): `.venv/bin/python firmware/klassik/tools/gen_manual.py` (mit `--strict` wie die CI,
+  sobald das Glossar vollständig ist); ansehen unter `localhost:8000/manual/` (`serve_emu.py`).
 - Der FM-1 hat keine libc: in DSP-Einheiten nur `memset`, `memcpy`, `memcmp` (selbst deklarieren, wie `engines.c`).
 
 ## Plattform-Regeln (fm1-base)

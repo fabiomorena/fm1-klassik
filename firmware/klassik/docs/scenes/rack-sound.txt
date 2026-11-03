@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Sound, Oktave und Engine eines Parts
+wait 600
+master 4096
+## Das Rack, Part 1 (VA): Die Fußzeile zeigt `PRESET 01/15`, die Taste C spielt SAW LEAD.
+#> hear
+expect preset 0
+key 7 down
+wait 500
+key 7 up
+wait 500
+## **PRESET** eins weiter: SOFT PAD (02/15). Der Name steht in der Kopfzeile und auf der Kachel.
+#> hear
+spin PRESET 1
+wait 30
+expect preset 1
+key 7 down
+wait 900
+key 7 up
+wait 1200
+## **OCT+**: Part 1 spielt eine Oktave höher (`OCT +1`).
+#> hear
+tap OCT+
+wait 30
+expect octave 1
+key 7 down
+wait 900
+key 7 up
+wait 1200
+## **K1**: Part 1 spielt jetzt die nächste Engine, DRUMS. Die Kachel DRUMS trägt die 1, SAVE leuchtet: Es gibt
+## Ungespeichertes.
+#> hear
+spin K1 1
+wait 30
+expect engine 4
+expect dirty 1
+key 7 down
+wait 100
+key 7 up
+wait 600
+## **SAVE** speichert, das Licht geht aus.
+tap SAVE
+wait 100
+expect dirty 0

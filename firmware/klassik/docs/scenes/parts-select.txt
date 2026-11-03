@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Parts wählen und spielen
+wait 600
+master 4096
+## Das Rack: Part 1 (VA) ist gewählt, die Kopfzeile zeigt `1 VA`. Die Taste C spielt SAW LEAD.
+#> hear
+expect part 1
+key 7 down
+wait 400
+key 7 up
+wait 500
+## **SEL**: Part 2 (DRUMS) ist gewählt. Dieselbe Taste spielt jetzt die Bassdrum.
+#> hear
+tap SEL
+wait 30
+expect part 2
+expect engine 4
+key 7 down
+wait 100
+key 7 up
+wait 700
+## **SELECT** zwei nach rechts: Part 4 (FM6, E.PIANO).
+#> hear
+spin SELECT 2
+wait 30
+expect part 4
+expect engine 3
+key 7 down
+wait 400
+key 7 up
+wait 900
+## **SELECT** nach links: zurück über Part 3 und 2 zu Part 1.
+spin SELECT -3
+wait 30
+expect part 1

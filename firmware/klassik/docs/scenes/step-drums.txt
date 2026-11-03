@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Ein Beat im Step-Sequencer
+wait 600
+master 4096
+tap SEL
+wait 30
+expect part 2
+## **SEQ** zweimal: der Tab STEP. Part 2 (DRUMS) ist gewählt, K2 INST steht auf BD.
+tap SEQ
+wait 30
+tap SEQ
+wait 30
+expect tab 2
+expect snote 0
+## Die weißen Tasten 1, 5, 9 und 13 setzen die Bassdrum auf jedes Viertel. Der erste Step macht die leere
+## Schleife einen Takt lang.
+tapkey w0
+wait 30
+tapkey w4
+wait 30
+tapkey w8
+wait 30
+tapkey w12
+wait 30
+expect bars 1
+expect smask 4369
+## **K2 INST** auf SD, dann die Tasten 5 und 13: die Snare auf 2 und 4.
+spin K2 2
+wait 30
+expect snote 2
+tapkey w4
+wait 30
+tapkey w12
+wait 30
+expect smask 4112
+## **K2 INST** auf CH, dann die Tasten 3, 7, 11 und 15: die geschlossene Hi-Hat zwischen die Viertel.
+spin K2 4
+wait 30
+expect snote 6
+tapkey w2
+wait 30
+tapkey w6
+wait 30
+tapkey w10
+wait 30
+tapkey w14
+wait 30
+expect smask 17476
+## **PLAY**: Die Schleife spielt den Takt; das Lauflicht wandert über die Steps.
+#> hear
+tap PLAY
+wait 30
+expect lstate 2
+wait 4000

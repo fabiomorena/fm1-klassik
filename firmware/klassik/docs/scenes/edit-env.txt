@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Die Hüllkurve
+wait 600
+master 4096
+## **ENV** öffnet die Hüllkurve von Part 1 (VA, SAW LEAD): die Seite ENV, A D S R auf K1–K4.
+tap ENV
+wait 30
+expect edit 1
+expect page 3
+## Ein kurzer Ton: Nach dem Loslassen klingt SAW LEAD schnell aus (REL).
+#> hear
+key 7 down
+wait 300
+key 7 up
+wait 500
+peakreset
+wait 1000
+expect peak_db_max <-90
+## **K4 REL** weit auf: Derselbe Ton klingt jetzt lange nach. Der weiße Punkt zeigt, wo die Note gerade ist.
+#> hear
+spin K4 50
+wait 30
+expect edited 1
+key 7 down
+wait 300
+key 7 up
+wait 500
+peakreset
+wait 700
+expect peak_db_max >-60
+## **K1 ATK** auf: Der Ton schwillt langsam an.
+#> hear
+spin K1 70
+wait 30
+peakreset
+key 7 down
+wait 60
+expect peak_db_max <-40
+peakreset
+wait 1440
+expect peak_db_max >-30
+key 7 up
+wait 2500

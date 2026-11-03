@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Slide und Accent
+wait 600
+master 4096
+## **SEL** zweimal: Part 3 (ACID, ACID LINE); **OCT−** für Bass. Zwei Töne, jeder mit eigenem Anschlag.
+#> hear
+tap SEL
+wait 30
+tap SEL
+wait 30
+tap OCT-
+wait 30
+expect part 3
+expect octave -1
+peakreset
+key 7 down
+wait 250
+key 7 up
+expect peak_db_max <-11
+wait 100
+key 14 down
+wait 250
+key 14 up
+wait 500
+## Slide: C halten und G dazu drücken: Der Ton gleitet hinauf, ohne neuen Anschlag; G loslassen: zurück zu C.
+#> hear
+key 7 down
+wait 250
+key 14 down
+wait 250
+expect note 55
+key 14 up
+wait 250
+expect note 48
+key 7 up
+wait 500
+## Accent: **ENV** halten (`ACC` in der Kopfzeile), dann anschlagen: lauter, das Filter schwingt kräftiger.
+#> hear
+press ENV
+wait 30
+peakreset
+key 7 down
+wait 250
+key 7 up
+expect peak_db_max >-9
+wait 100
+key 14 down
+wait 250
+key 14 up
+wait 500

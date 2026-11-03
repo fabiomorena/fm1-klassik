@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Vibrato und Filterbewegung
+wait 600
+master 4096
+## **LFO** öffnet die Seite von Part 1 (VA, SAW LEAD). DEPTH steht auf 0: Der LFO ist aus, der Ton steht still.
+#> hear
+tap LFO
+wait 30
+expect lfo 1
+expect lfodepth 0
+expect lfodest 0
+key 7 down
+wait 1200
+key 7 up
+wait 400
+## **K2 DEPTH** auf 30: Der LFO bewegt die Tonhöhe um etwa einen Halbton, viermal je Sekunde (RATE 1/8 bei 120
+## BPM): ein Vibrato.
+#> hear
+spin K2 30
+wait 30
+expect lfodepth 30
+key 7 down
+wait 1200
+key 7 up
+wait 400
+## **K3 WAVE** auf SQR: Die Tonhöhe springt zwischen zwei Stufen hin und her, ein Triller.
+#> hear
+spin K3 3
+wait 30
+expect lfowave 3
+key 7 down
+wait 1200
+key 7 up
+wait 400
+## **K4 DEST** auf FILTER: Jetzt öffnet und schließt der LFO das Filter, die Tonhöhe bleibt.
+#> hear
+spin K4 1
+wait 30
+expect lfodest 1
+key 7 down
+wait 1200
+key 7 up
+wait 400
+## **LFO** (oder OCT+): der Tab MORE mit SYNC, RETRIG und FADE.
+tap LFO
+wait 30
+expect tab 2

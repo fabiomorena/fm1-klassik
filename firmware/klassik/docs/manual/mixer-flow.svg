@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 270" width="1000" height="270" font-family="'Barlow SC', 'Barlow Semi Condensed', system-ui, sans-serif">
+  <!-- SPDX-License-Identifier: MPL-2.0 · Copyright (C) 2026 fabiomorena
+       KLASSIK's mixer as app_render (app.c) mixes: the sends after LEVEL/MUTE/SOLO and before PAN (mono), the
+       returns into the stereo sum, MASTER, then the limiter (-0.5 dBFS) -->
+  <defs>
+    <marker id="mf-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9aa3b2"/>
+    </marker>
+    <marker id="mf-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5cc8ff"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="270" rx="16" fill="#0b0e14" fill-opacity=".55"/>
+  <g fill="#151922" stroke="#2a3242" stroke-width="2">
+    <rect x="12" y="40" width="108" height="64" rx="10"/>
+    <rect x="150" y="40" width="172" height="64" rx="10"/>
+    <rect x="352" y="40" width="88" height="64" rx="10"/>
+    <rect x="470" y="40" width="120" height="64" rx="10"/>
+    <rect x="620" y="40" width="110" height="64" rx="10"/>
+    <rect x="760" y="40" width="120" height="64" rx="10"/>
+    <rect x="910" y="40" width="78" height="64" rx="10"/>
+    <rect x="252" y="176" width="188" height="64" rx="10" stroke="#5cc8ff"/>
+    <rect x="470" y="176" width="120" height="64" rx="10" stroke="#5cc8ff"/>
+  </g>
+  <g fill="#eceef1" font-size="19" font-weight="700" text-anchor="middle">
+    <text x="66" y="68">Part 1–6</text>
+    <text x="236" y="68">LEVEL · MUTE · SOLO</text>
+    <text x="396" y="68">PAN</text>
+    <text x="530" y="68">Summe</text>
+    <text x="675" y="68">MASTER</text>
+    <text x="820" y="68">Limiter</text>
+    <text x="949" y="68">Ausgang</text>
+    <text x="346" y="204">Sends DLY · HALL</text>
+    <text x="530" y="204">DELAY · HALL</text>
+  </g>
+  <g fill="#9aa3b2" font-size="15" font-weight="500" text-anchor="middle">
+    <text x="66" y="89">je eine Engine</text>
+    <text x="236" y="89">K1, K3, K4 (Tab MIX)</text>
+    <text x="396" y="89">K2</text>
+    <text x="530" y="89">stereo</text>
+    <text x="675" y="89">Regler</text>
+    <text x="820" y="89">max. −0,5 dBFS</text>
+    <text x="949" y="89">L / R</text>
+    <text x="346" y="225">mono, je 0–100 (Tab SEND)</text>
+    <text x="530" y="225">Effekte (FX)</text>
+  </g>
+  <g stroke="#9aa3b2" stroke-width="2.5" fill="none" marker-end="url(#mf-a)">
+    <path d="M120 72 H148"/>
+    <path d="M322 72 H350"/>
+    <path d="M440 72 H468"/>
+    <path d="M590 72 H618"/>
+    <path d="M730 72 H758"/>
+    <path d="M880 72 H908"/>
+  </g>
+  <g stroke="#5cc8ff" stroke-width="2.5" fill="none" marker-end="url(#mf-b)">
+    <path d="M336 72 V174"/>
+    <path d="M440 208 H468"/>
+    <path d="M530 176 V106"/>
+  </g>
+  <circle cx="336" cy="72" r="4.5" fill="#5cc8ff"/>
+  <g fill="#5cc8ff" font-size="15" font-weight="600">
+    <text x="542" y="146">Rückwege (stereo,</text>
+    <text x="542" y="162">LEVEL der FX-Seite)</text>
+    <text x="344" y="130">vor PAN</text>
+  </g>
+  <text x="12" y="24" fill="#9aa3b2" font-size="14" font-weight="700" letter-spacing="2">SIGNALFLUSS IM MIXER</text>
+</svg>

@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (C) 2026 fabiomorena
+# A scene of the manual (tools/gen_manual.py): "## " a step's text, "#> hear" records it; the rest a host script.
+#: Kits spielen
+wait 600
+master 4096
+## **SEL**: Part 2 (DRUMS, Kit 606). Bassdrum, Snare, Hi-Hat zu, Hi-Hat offen: die Tasten C, D, F#, A#.
+#> hear
+tap SEL
+wait 30
+expect part 2
+expect preset 0
+key 7 down
+key 7 up
+wait 250
+key 9 down
+key 9 up
+wait 250
+key 13 down
+key 13 up
+wait 250
+key 17 down
+key 17 up
+wait 700
+## **PRESET** zwei weiter: Kit 808, dieselben Tasten.
+#> hear
+spin PRESET 2
+wait 30
+expect preset 2
+key 7 down
+key 7 up
+wait 250
+key 9 down
+key 9 up
+wait 250
+key 13 down
+key 13 up
+wait 250
+key 17 down
+key 17 up
+wait 900
+## **PRESET** drei weiter: BOOM, 808-artig, tief und lang.
+#> hear
+spin PRESET 3
+wait 30
+expect preset 5
+key 7 down
+key 7 up
+wait 250
+key 9 down
+key 9 up
+wait 250
+key 13 down
+key 13 up
+wait 250
+key 17 down
+key 17 up
+wait 1200
+## **EDIT**: die Pads der Oktave, jede Taste mit ihrem Instrument; lila umrandet, was die Regler der Seite DRUM ändern.
+tap EDIT
+wait 30
+expect edit 1
+expect page 1
